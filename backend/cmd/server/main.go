@@ -23,15 +23,21 @@ func main() {
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}); err != nil {
+	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
 	// Dependency Injection
+	// Auth
 	userRepo := persistence.NewUserRepository(dbConn)
 	authUsecase := usecase.NewAuthUsecase(userRepo, cfg.JWTSecret, 24*time.Hour)
 	authHandler := handler.NewAuthHandler(authUsecase)
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
+
+	// Tags
+	tagRepo := persistence.NewTagRepository(dbConn)
+	tagUsecase := usecase.NewTagUsecase(tagRepo)
+	tagHandler := handler.NewTagHandler(tagUsecase)
 
 	r := gin.Default()
 
@@ -44,7 +50,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
