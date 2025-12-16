@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { apiRequest } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -16,10 +16,8 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
     try {
-      await apiRequest('/auth/register', {
-        method: 'POST',
-        body: { name, email, password },
-      });
+
+      await authApi.register(name, email, password);
       // Automatically redirect to login or login directly
       router.push('/login');
     } catch (err: any) {

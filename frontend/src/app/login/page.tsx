@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
-import { apiRequest } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -16,10 +16,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     try {
-      const res = await apiRequest<{ token: string; user: any }>('/auth/login', {
-        method: 'POST',
-        body: { email, password },
-      });
+
+      const res = await authApi.login(email, password);
       login(res.token, res.user);
       router.push('/');
     } catch (err: any) {
