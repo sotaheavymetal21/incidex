@@ -23,7 +23,7 @@ func main() {
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}); err != nil {
+	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -39,6 +39,15 @@ func main() {
 	tagUsecase := usecase.NewTagUsecase(tagRepo)
 	tagHandler := handler.NewTagHandler(tagUsecase)
 
+	// Incidents
+	incidentRepo := persistence.NewIncidentRepository(dbConn)
+	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo)
+	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
+
+	// Users
+	userUsecase := usecase.NewUserUsecase(userRepo)
+	userHandler := handler.NewUserHandler(userUsecase)
+
 	r := gin.Default()
 
 	// Health Check
@@ -50,7 +59,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
