@@ -45,7 +45,29 @@ Incidex は、高速でモダンなインシデント管理システムです。
     ```
 
 2.  **環境変数の設定**
-    ルートディレクトリの `.env` ファイルとフロントエンドの `frontend/.env.local` が存在することを確認してください（初回はデフォルト値が設定されています）。必要に応じて修正してください。
+
+    **重要**: 本番環境にデプロイする前に、必ず [SECURITY.md](./SECURITY.md) を確認してください。
+
+    ```bash
+    # ルートディレクトリ（Docker Compose用）
+    cp .env.example .env
+
+    # バックエンド
+    cp backend/.env.example backend/.env
+
+    # フロントエンド
+    cp frontend/.env.example frontend/.env.local
+    ```
+
+    開発環境では、デフォルト値をそのまま使用できます。
+
+    **本番環境では必ず以下を変更してください**:
+    - `JWT_SECRET`: 強力なランダム文字列（32文字以上）
+    - `POSTGRES_PASSWORD`: 強力なパスワード
+    - `MINIO_ROOT_PASSWORD`: 強力なパスワード
+    - `APP_ENV`: `production` に設定
+
+    詳細は [SECURITY.md](./SECURITY.md) を参照してください。
 
 3.  **アプリケーションの起動**
     付属の `Makefile` を使用して簡単に起動できます。
