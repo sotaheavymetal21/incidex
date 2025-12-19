@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler) {
 	api := r.Group("/api")
 	{
 		// Auth routes
@@ -39,6 +39,19 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				tags.PUT("/:id", tagHandler.Update)
 				tags.DELETE("/:id", tagHandler.Delete)
 			}
+
+			// Incident routes
+			incidents := protected.Group("/incidents")
+			{
+				incidents.POST("", incidentHandler.Create)
+				incidents.GET("", incidentHandler.GetAll)
+				incidents.GET("/:id", incidentHandler.GetByID)
+				incidents.PUT("/:id", incidentHandler.Update)
+				incidents.DELETE("/:id", incidentHandler.Delete)
+			}
+
+			// User routes
+			protected.GET("/users", userHandler.GetAll)
 		}
 	}
 }
