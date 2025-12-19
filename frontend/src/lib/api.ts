@@ -8,6 +8,7 @@ type RequestOptions = {
 };
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
+import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User } from '../types/incident';
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
@@ -56,11 +57,11 @@ export const authApi = {
 
 export const tagApi = {
   getAll: (token: string) => apiRequest<Tag[]>('/tags', { token }),
-  create: (token: string, data: CreateTagRequest) => 
-    apiRequest<Tag>('/tags', { 
-      method: 'POST', 
-      body: data, 
-      token 
+  create: (token: string, data: CreateTagRequest) =>
+    apiRequest<Tag>('/tags', {
+      method: 'POST',
+      body: data,
+      token
     }),
   update: (token: string, id: number, data: UpdateTagRequest) =>
     apiRequest<Tag>(`/tags/${id}`, {
@@ -73,4 +74,45 @@ export const tagApi = {
       method: 'DELETE',
       token
     }),
+};
+
+export const incidentApi = {
+  getAll: (token: string, params?: IncidentFilters) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.severity) queryParams.append('severity', params.severity);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.tag_ids) queryParams.append('tag_ids', params.tag_ids);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.sort) queryParams.append('sort', params.sort);
+      if (params.order) queryParams.append('order', params.order);
+    }
+    const queryString = queryParams.toString();
+    return apiRequest<IncidentListResponse>(`/incidents${queryString ? `?${queryString}` : ''}`, { token });
+  },
+  getById: (token: string, id: number) =>
+    apiRequest<Incident>(`/incidents/${id}`, { token }),
+  create: (token: string, data: CreateIncidentRequest) =>
+    apiRequest<Incident>('/incidents', {
+      method: 'POST',
+      body: data,
+      token
+    }),
+  update: (token: string, id: number, data: UpdateIncidentRequest) =>
+    apiRequest<Incident>(`/incidents/${id}`, {
+      method: 'PUT',
+      body: data,
+      token
+    }),
+  delete: (token: string, id: number) =>
+    apiRequest<void>(`/incidents/${id}`, {
+      method: 'DELETE',
+      token
+    }),
+};
+
+export const userApi = {
+  getAll: (token: string) => apiRequest<User[]>('/users', { token }),
 };
