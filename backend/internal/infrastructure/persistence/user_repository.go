@@ -41,3 +41,11 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*domain.User, e
 	}
 	return &user, nil
 }
+
+func (r *userRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
+	var users []*domain.User
+	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
