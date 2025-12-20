@@ -78,4 +78,11 @@ type IncidentRepository interface {
 	FindByID(ctx context.Context, id uint) (*Incident, error)
 	Update(ctx context.Context, incident *Incident) error
 	Delete(ctx context.Context, id uint) error
+
+	// Stats methods
+	Count(count *int64) error
+	CountBySeverity(severity Severity, count *int64) error
+	CountByStatus(status Status, count *int64) error
+	FindRecent(limit int) ([]*Incident, error)
+	FindAll() ([]*Incident, error)
 }

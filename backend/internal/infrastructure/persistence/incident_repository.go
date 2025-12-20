@@ -113,3 +113,39 @@ func (r *incidentRepository) Update(ctx context.Context, incident *domain.Incide
 func (r *incidentRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&domain.Incident{}, id).Error
 }
+
+// Stats methods
+
+func (r *incidentRepository) Count(count *int64) error {
+	return r.db.Model(&domain.Incident{}).Count(count).Error
+}
+
+func (r *incidentRepository) CountBySeverity(severity domain.Severity, count *int64) error {
+	return r.db.Model(&domain.Incident{}).Where("severity = ?", severity).Count(count).Error
+}
+
+func (r *incidentRepository) CountByStatus(status domain.Status, count *int64) error {
+	return r.db.Model(&domain.Incident{}).Where("status = ?", status).Count(count).Error
+}
+
+func (r *incidentRepository) FindRecent(limit int) ([]*domain.Incident, error) {
+	var incidents []*domain.Incident
+	if err := r.db.
+		Preload("Assignee").
+		Preload("Creator").
+		Preload("Tags").
+		Order("detected_at DESC").
+		Limit(limit).
+		Find(&incidents).Error; err != nil {
+		return nil, err
+	}
+	return incidents, nil
+}
+
+func (r *incidentRepository) FindAll() ([]*domain.Incident, error) {
+	var incidents []*domain.Incident
+	if err := r.db.Find(&incidents).Error; err != nil {
+		return nil, err
+	}
+	return incidents, nil
+}
