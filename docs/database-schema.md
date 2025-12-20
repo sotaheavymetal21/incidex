@@ -390,3 +390,6 @@ CREATE TRIGGER incidents_search_vector_update_trigger
 - RPO（Recovery Point Objective）: 1時間
 - RTO（Recovery Time Objective）: 4時間
 
+
+
+
