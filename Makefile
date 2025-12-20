@@ -3,21 +3,32 @@
 	backend-build backend-test backend-fmt \
 	frontend-build frontend-start frontend-lint \
 	setup setup-backend setup-frontend \
-	seed seed-docker
+	seed seed-docker docker-build docker-rebuild
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down
+	docker compose down
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
+
+logs-backend:
+	docker compose logs -f backend
 
 ps:
-	docker-compose ps
+	docker compose ps
 
 restart: down up
+
+docker-build:
+	docker compose build
+
+docker-rebuild:
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d
 
 dev:
 	make -j 2 backend-dev frontend-dev
@@ -58,4 +69,4 @@ seed:
 	cd backend && go run cmd/seed/main.go
 
 seed-docker:
-	docker-compose exec backend go run cmd/seed/main.go
+	docker compose exec backend go run cmd/seed/main.go
