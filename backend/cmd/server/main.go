@@ -49,6 +49,10 @@ func main() {
 	userUsecase := usecase.NewUserUsecase(userRepo)
 	userHandler := handler.NewUserHandler(userUsecase)
 
+	// Stats
+	statsUsecase := usecase.NewStatsUsecase(incidentRepo)
+	statsHandler := handler.NewStatsHandler(statsUsecase)
+
 	r := gin.Default()
 
 	// CORS middleware
@@ -70,7 +74,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
