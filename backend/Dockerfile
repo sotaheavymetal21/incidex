@@ -19,6 +19,9 @@ COPY . .
 # アプリケーションをビルド
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server/main.go
 
+# シードツールをビルド
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o seeder ./cmd/seed/main.go
+
 # 実行ステージ
 FROM alpine:latest
 
@@ -30,6 +33,7 @@ WORKDIR /root/
 
 # ビルドステージから実行ファイルをコピー
 COPY --from=builder /app/server .
+COPY --from=builder /app/seeder .
 
 # ポートを公開
 EXPOSE 8080
