@@ -148,7 +148,7 @@ export default function CreateIncidentPage() {
               onChange={(e) => setTitle(e.target.value)}
               maxLength={500}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
             />
           </div>
 
@@ -163,7 +163,7 @@ export default function CreateIncidentPage() {
               onChange={(e) => setDescription(e.target.value)}
               required
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
             />
           </div>
 
@@ -178,7 +178,7 @@ export default function CreateIncidentPage() {
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value as Severity)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -196,7 +196,7 @@ export default function CreateIncidentPage() {
                 value={status}
                 onChange={(e) => setStatus(e.target.value as Status)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="open">Open</option>
                 <option value="investigating">Investigating</option>
@@ -217,7 +217,7 @@ export default function CreateIncidentPage() {
               value={impactScope}
               onChange={(e) => setImpactScope(e.target.value)}
               maxLength={500}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
             />
           </div>
 
@@ -232,7 +232,7 @@ export default function CreateIncidentPage() {
               value={detectedAt}
               onChange={(e) => setDetectedAt(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             />
           </div>
 
@@ -245,7 +245,7 @@ export default function CreateIncidentPage() {
               id="assignee"
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value ? parseInt(e.target.value) : '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">Unassigned</option>
               {users.map((user) => (

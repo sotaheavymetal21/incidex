@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { incidentApi, tagApi } from '@/lib/api';
 import { Incident, Severity, Status, PaginationResult } from '@/types/incident';
 import { Tag } from '@/types/tag';
+import SeverityGuide from '@/components/SeverityGuide';
 
 export default function IncidentsPage() {
   const { token, loading: authLoading } = useAuth();
@@ -128,6 +129,9 @@ export default function IncidentsPage() {
           </button>
         </div>
 
+        {/* Severity Guide */}
+        <SeverityGuide />
+
         {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -141,7 +145,7 @@ export default function IncidentsPage() {
                 value={search}
                 onChange={handleSearchChange}
                 placeholder="Search title or description..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
               />
             </div>
 
@@ -156,7 +160,7 @@ export default function IncidentsPage() {
                   setSeverity(e.target.value as Severity | '');
                   setPagination({ ...pagination, page: 1 });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">All</option>
                 <option value="critical">Critical</option>
@@ -177,7 +181,7 @@ export default function IncidentsPage() {
                   setStatus(e.target.value as Status | '');
                   setPagination({ ...pagination, page: 1 });
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">All</option>
                 <option value="open">Open</option>
