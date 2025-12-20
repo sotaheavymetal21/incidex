@@ -69,4 +69,4 @@ seed:
 	cd backend && go run cmd/seed/main.go
 
 seed-docker:
-	docker compose exec backend go run cmd/seed/main.go
+	docker compose exec backend ./seeder
