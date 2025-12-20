@@ -9,6 +9,7 @@ type RequestOptions = {
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
 import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User } from '../types/incident';
+import { DashboardStats, TrendPeriod } from '../types/stats';
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
@@ -115,4 +116,9 @@ export const incidentApi = {
 
 export const userApi = {
   getAll: (token: string) => apiRequest<User[]>('/users', { token }),
+};
+
+export const statsApi = {
+  getDashboardStats: (token: string, period: TrendPeriod = 'daily') =>
+    apiRequest<DashboardStats>(`/stats/dashboard?period=${period}`, { token }),
 };
