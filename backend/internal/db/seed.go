@@ -13,7 +13,6 @@ import (
 // Seed populates the database with test data
 func Seed(db *gorm.DB) error {
 	log.Println("Starting database seeding...")
-
 	// Check if data already exists
 	var userCount int64
 	db.Model(&domain.User{}).Count(&userCount)
@@ -50,29 +49,29 @@ func seedUsers(db *gorm.DB, ctx context.Context) ([]*domain.User, error) {
 
 	users := []*domain.User{
 		{
-			Email:    "admin@example.com",
-			Name:     "管理者ユーザー",
-			Role:     domain.RoleAdmin,
+			Email: "admin@example.com",
+			Name:  "管理者ユーザー",
+			Role:  domain.RoleAdmin,
 		},
 		{
-			Email:    "editor1@example.com",
-			Name:     "編集者 太郎",
-			Role:     domain.RoleEditor,
+			Email: "editor1@example.com",
+			Name:  "編集者 太郎",
+			Role:  domain.RoleEditor,
 		},
 		{
-			Email:    "editor2@example.com",
-			Name:     "編集者 花子",
-			Role:     domain.RoleEditor,
+			Email: "editor2@example.com",
+			Name:  "編集者 花子",
+			Role:  domain.RoleEditor,
 		},
 		{
-			Email:    "viewer1@example.com",
-			Name:     "閲覧者 一郎",
-			Role:     domain.RoleViewer,
+			Email: "viewer1@example.com",
+			Name:  "閲覧者 一郎",
+			Role:  domain.RoleViewer,
 		},
 		{
-			Email:    "viewer2@example.com",
-			Name:     "閲覧者 二郎",
-			Role:     domain.RoleViewer,
+			Email: "viewer2@example.com",
+			Name:  "閲覧者 二郎",
+			Role:  domain.RoleViewer,
 		},
 	}
 
@@ -97,16 +96,16 @@ func seedTags(db *gorm.DB) ([]*domain.Tag, error) {
 	log.Println("Seeding tags...")
 
 	tags := []*domain.Tag{
-		{Name: "ネットワーク障害", Color: "#ef4444"},     // red
-		{Name: "サーバー障害", Color: "#f97316"},       // orange
-		{Name: "アプリケーション", Color: "#3b82f6"},   // blue
-		{Name: "データベース", Color: "#8b5cf6"},      // purple
-		{Name: "セキュリティ", Color: "#dc2626"},      // dark red
-		{Name: "パフォーマンス", Color: "#f59e0b"},    // amber
-		{Name: "メンテナンス", Color: "#10b981"},      // green
-		{Name: "ユーザー報告", Color: "#06b6d4"},      // cyan
-		{Name: "バグ", Color: "#ec4899"},             // pink
-		{Name: "設定変更", Color: "#6366f1"},         // indigo
+		{Name: "ネットワーク障害", Color: "#ef4444"}, // red
+		{Name: "サーバー障害", Color: "#f97316"},   // orange
+		{Name: "アプリケーション", Color: "#3b82f6"}, // blue
+		{Name: "データベース", Color: "#8b5cf6"},   // purple
+		{Name: "セキュリティ", Color: "#dc2626"},   // dark red
+		{Name: "パフォーマンス", Color: "#f59e0b"},  // amber
+		{Name: "メンテナンス", Color: "#10b981"},   // green
+		{Name: "ユーザー報告", Color: "#06b6d4"},   // cyan
+		{Name: "バグ", Color: "#ec4899"},       // pink
+		{Name: "設定変更", Color: "#6366f1"},     // indigo
 	}
 
 	for _, tag := range tags {
