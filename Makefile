@@ -2,7 +2,8 @@
 	dev backend-dev frontend-dev \
 	backend-build backend-test backend-fmt \
 	frontend-build frontend-start frontend-lint \
-	setup setup-backend setup-frontend
+	setup setup-backend setup-frontend \
+	seed seed-docker
 
 up:
 	docker-compose up -d
@@ -52,3 +53,9 @@ setup-backend:
 
 setup-frontend:
 	cd frontend && npm install
+
+seed:
+	cd backend && go run cmd/seed/main.go
+
+seed-docker:
+	docker-compose exec backend go run cmd/seed/main.go
