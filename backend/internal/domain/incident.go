@@ -84,5 +84,5 @@ type IncidentRepository interface {
 	CountBySeverity(severity Severity, count *int64) error
 	CountByStatus(status Status, count *int64) error
 	FindRecent(limit int) ([]*Incident, error)
-	FindAll() ([]*Incident, error)
+	GetAllIncidents() ([]*Incident, error)
 }

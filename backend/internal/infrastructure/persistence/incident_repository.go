@@ -142,7 +142,7 @@ func (r *incidentRepository) FindRecent(limit int) ([]*domain.Incident, error) {
 	return incidents, nil
 }
 
-func (r *incidentRepository) FindAll() ([]*domain.Incident, error) {
+func (r *incidentRepository) GetAllIncidents() ([]*domain.Incident, error) {
 	var incidents []*domain.Incident
 	if err := r.db.Find(&incidents).Error; err != nil {
 		return nil, err
