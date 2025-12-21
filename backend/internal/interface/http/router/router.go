@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, templateHandler *handler.IncidentTemplateHandler) {
 	api := r.Group("/api")
 	{
 		// Auth routes
@@ -67,12 +67,32 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			stats := protected.Group("/stats")
 			{
 				stats.GET("/dashboard", statsHandler.GetDashboardStats)
+				stats.GET("/sla", statsHandler.GetSLAMetrics)
 			}
 
 			// Export routes
 			export := protected.Group("/export")
 			{
 				export.GET("/incidents", exportHandler.ExportIncidentsCSV)
+			}
+
+			// Notification routes
+			notifications := protected.Group("/notifications")
+			{
+				notifications.GET("/settings", notificationHandler.GetMyNotificationSetting)
+				notifications.PUT("/settings", notificationHandler.UpdateMyNotificationSetting)
+				notifications.GET("/settings/:id", notificationHandler.GetUserNotificationSetting)
+			}
+
+			// Template routes
+			templates := protected.Group("/templates")
+			{
+				templates.POST("", templateHandler.Create)
+				templates.GET("", templateHandler.GetAll)
+				templates.GET("/:id", templateHandler.GetByID)
+				templates.PUT("/:id", templateHandler.Update)
+				templates.DELETE("/:id", templateHandler.Delete)
+				templates.POST("/create-incident", templateHandler.CreateIncidentFromTemplate)
 			}
 		}
 	}

@@ -4,6 +4,8 @@ import (
 	"incidex/internal/config"
 	"incidex/internal/db"
 	"incidex/internal/domain"
+	"incidex/internal/infrastructure/ai"
+	"incidex/internal/infrastructure/notification"
 	"incidex/internal/infrastructure/persistence"
 	"incidex/internal/infrastructure/storage"
 	"incidex/internal/interface/http/handler"
@@ -25,7 +27,7 @@ func main() {
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}); err != nil {
+	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -56,9 +58,18 @@ func main() {
 	// Incident Activities
 	activityRepo := persistence.NewIncidentActivityRepository(dbConn)
 
+	// Notifications
+	notificationRepo := persistence.NewNotificationSettingRepository(dbConn)
+	notificationService := notification.NewNotificationService(notificationRepo, userRepo)
+	notificationUsecase := usecase.NewNotificationUsecase(notificationRepo)
+	notificationHandler := handler.NewNotificationHandler(notificationUsecase)
+
+	// AI Service
+	aiService := ai.NewOpenAIService()
+
 	// Incidents
 	incidentRepo := persistence.NewIncidentRepository(dbConn)
-	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo)
+	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, notificationService, aiService)
 	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
 
 	// Users
@@ -70,7 +81,7 @@ func main() {
 	statsHandler := handler.NewStatsHandler(statsUsecase)
 
 	// Activity handler
-	activityUsecase := usecase.NewIncidentActivityUsecase(activityRepo)
+	activityUsecase := usecase.NewIncidentActivityUsecase(activityRepo, incidentRepo, userRepo, notificationService)
 	activityHandler := handler.NewIncidentActivityHandler(activityUsecase)
 
 	// Export
@@ -80,6 +91,11 @@ func main() {
 	attachmentRepo := persistence.NewAttachmentRepository(dbConn)
 	attachmentUsecase := usecase.NewAttachmentUsecase(attachmentRepo, incidentRepo, minioStorage)
 	attachmentHandler := handler.NewAttachmentHandler(attachmentUsecase)
+
+	// Templates
+	templateRepo := persistence.NewIncidentTemplateRepository(dbConn)
+	templateUsecase := usecase.NewIncidentTemplateUsecase(templateRepo, tagRepo, incidentRepo, userRepo)
+	templateHandler := handler.NewIncidentTemplateHandler(templateUsecase)
 
 	r := gin.Default()
 
@@ -102,7 +118,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, templateHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

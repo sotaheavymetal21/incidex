@@ -44,7 +44,7 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("user_id", claims["user_id"])
+			c.Set("userID", claims["user_id"])
 			c.Set("role", claims["role"])
 		}
 
