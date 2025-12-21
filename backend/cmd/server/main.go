@@ -27,7 +27,7 @@ func main() {
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}); err != nil {
+	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}, &domain.PostMortem{}, &domain.ActionItem{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -97,6 +97,16 @@ func main() {
 	templateUsecase := usecase.NewIncidentTemplateUsecase(templateRepo, tagRepo, incidentRepo, userRepo)
 	templateHandler := handler.NewIncidentTemplateHandler(templateUsecase)
 
+	// Post-mortems
+	postMortemRepo := persistence.NewPostMortemRepository(dbConn)
+	postMortemUsecase := usecase.NewPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo, aiService)
+	postMortemHandler := handler.NewPostMortemHandler(postMortemUsecase)
+
+	// Action items
+	actionItemRepo := persistence.NewActionItemRepository(dbConn)
+	actionItemUsecase := usecase.NewActionItemUsecase(actionItemRepo, postMortemRepo)
+	actionItemHandler := handler.NewActionItemHandler(actionItemUsecase)
+
 	r := gin.Default()
 
 	// CORS middleware
@@ -118,7 +128,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, templateHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, templateHandler, postMortemHandler, actionItemHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
