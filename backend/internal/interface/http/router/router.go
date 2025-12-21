@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler) {
 	api := r.Group("/api")
 	{
 		// Auth routes
@@ -48,6 +48,16 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				incidents.GET("/:id", incidentHandler.GetByID)
 				incidents.PUT("/:id", incidentHandler.Update)
 				incidents.DELETE("/:id", incidentHandler.Delete)
+
+				// Incident activity routes
+				incidents.POST("/:id/comments", activityHandler.AddComment)
+				incidents.GET("/:id/activities", activityHandler.GetActivities)
+
+				// Incident attachment routes
+				incidents.POST("/:id/attachments", attachmentHandler.Upload)
+				incidents.GET("/:id/attachments", attachmentHandler.GetByIncidentID)
+				incidents.GET("/:id/attachments/:attachmentId", attachmentHandler.Download)
+				incidents.DELETE("/:id/attachments/:attachmentId", attachmentHandler.Delete)
 			}
 
 			// User routes
@@ -57,6 +67,12 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			stats := protected.Group("/stats")
 			{
 				stats.GET("/dashboard", statsHandler.GetDashboardStats)
+			}
+
+			// Export routes
+			export := protected.Group("/export")
+			{
+				export.GET("/incidents", exportHandler.ExportIncidentsCSV)
 			}
 		}
 	}

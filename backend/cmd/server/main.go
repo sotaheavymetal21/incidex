@@ -5,6 +5,7 @@ import (
 	"incidex/internal/db"
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/persistence"
+	"incidex/internal/infrastructure/storage"
 	"incidex/internal/interface/http/handler"
 	"incidex/internal/interface/http/middleware"
 	"incidex/internal/interface/http/router"
@@ -24,8 +25,20 @@ func main() {
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}); err != nil {
+	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	// Initialize MinIO Storage
+	minioStorage, err := storage.NewMinIOStorage(
+		cfg.MinioEndpoint,
+		cfg.MinioAccessKey,
+		cfg.MinioSecretKey,
+		storage.DefaultBucketName,
+		false, // useSSL = false for local development
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize MinIO storage: %v", err)
 	}
 
 	// Dependency Injection
@@ -40,9 +53,12 @@ func main() {
 	tagUsecase := usecase.NewTagUsecase(tagRepo)
 	tagHandler := handler.NewTagHandler(tagUsecase)
 
+	// Incident Activities
+	activityRepo := persistence.NewIncidentActivityRepository(dbConn)
+
 	// Incidents
 	incidentRepo := persistence.NewIncidentRepository(dbConn)
-	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo)
+	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo)
 	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
 
 	// Users
@@ -52,6 +68,18 @@ func main() {
 	// Stats
 	statsUsecase := usecase.NewStatsUsecase(incidentRepo)
 	statsHandler := handler.NewStatsHandler(statsUsecase)
+
+	// Activity handler
+	activityUsecase := usecase.NewIncidentActivityUsecase(activityRepo)
+	activityHandler := handler.NewIncidentActivityHandler(activityUsecase)
+
+	// Export
+	exportHandler := handler.NewExportHandler(incidentUsecase)
+
+	// Attachments
+	attachmentRepo := persistence.NewAttachmentRepository(dbConn)
+	attachmentUsecase := usecase.NewAttachmentUsecase(attachmentRepo, incidentRepo, minioStorage)
+	attachmentHandler := handler.NewAttachmentHandler(attachmentUsecase)
 
 	r := gin.Default()
 
@@ -74,7 +102,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

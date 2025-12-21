@@ -20,13 +20,15 @@ type incidentUsecase struct {
 	incidentRepo domain.IncidentRepository
 	tagRepo      domain.TagRepository
 	userRepo     domain.UserRepository
+	activityRepo domain.IncidentActivityRepository
 }
 
-func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository) IncidentUsecase {
+func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository) IncidentUsecase {
 	return &incidentUsecase{
 		incidentRepo: incidentRepo,
 		tagRepo:      tagRepo,
 		userRepo:     userRepo,
+		activityRepo: activityRepo,
 	}
 }
 
@@ -69,6 +71,18 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 
 	if err := u.incidentRepo.Create(ctx, incident); err != nil {
 		return nil, err
+	}
+
+	// Log creation activity
+	activity := &domain.IncidentActivity{
+		IncidentID:   incident.ID,
+		UserID:       creatorID,
+		ActivityType: domain.ActivityTypeCreated,
+		CreatedAt:    time.Now(),
+	}
+	if err := u.activityRepo.Create(activity); err != nil {
+		// Log error but don't fail the incident creation
+		fmt.Printf("Failed to log creation activity: %v\n", err)
 	}
 
 	// Reload to get all relations
@@ -125,6 +139,82 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		}
 	}
 
+	// Track changes and log activities
+	var activities []*domain.IncidentActivity
+
+	// Check severity change
+	if incident.Severity != severity {
+		activities = append(activities, &domain.IncidentActivity{
+			IncidentID:   incident.ID,
+			UserID:       userID,
+			ActivityType: domain.ActivityTypeSeverityChange,
+			OldValue:     string(incident.Severity),
+			NewValue:     string(severity),
+			CreatedAt:    time.Now(),
+		})
+	}
+
+	// Check status change
+	if incident.Status != status {
+		activities = append(activities, &domain.IncidentActivity{
+			IncidentID:   incident.ID,
+			UserID:       userID,
+			ActivityType: domain.ActivityTypeStatusChange,
+			OldValue:     string(incident.Status),
+			NewValue:     string(status),
+			CreatedAt:    time.Now(),
+		})
+
+		// Log resolved activity if status changed to resolved
+		if status == domain.StatusResolved && incident.Status != domain.StatusResolved {
+			activities = append(activities, &domain.IncidentActivity{
+				IncidentID:   incident.ID,
+				UserID:       userID,
+				ActivityType: domain.ActivityTypeResolved,
+				CreatedAt:    time.Now(),
+			})
+		}
+
+		// Log reopened activity if status changed from resolved/closed to open/investigating
+		if (incident.Status == domain.StatusResolved || incident.Status == domain.StatusClosed) &&
+			(status == domain.StatusOpen || status == domain.StatusInvestigating) {
+			activities = append(activities, &domain.IncidentActivity{
+				IncidentID:   incident.ID,
+				UserID:       userID,
+				ActivityType: domain.ActivityTypeReopened,
+				CreatedAt:    time.Now(),
+			})
+		}
+	}
+
+	// Check assignee change
+	oldAssigneeID := incident.AssigneeID
+	if (oldAssigneeID == nil && assigneeID != nil) ||
+		(oldAssigneeID != nil && assigneeID == nil) ||
+		(oldAssigneeID != nil && assigneeID != nil && *oldAssigneeID != *assigneeID) {
+
+		var oldAssigneeName, newAssigneeName string
+		if oldAssigneeID != nil {
+			if oldAssignee, err := u.userRepo.FindByID(ctx, *oldAssigneeID); err == nil {
+				oldAssigneeName = oldAssignee.Name
+			}
+		}
+		if assigneeID != nil {
+			if newAssignee, err := u.userRepo.FindByID(ctx, *assigneeID); err == nil {
+				newAssigneeName = newAssignee.Name
+			}
+		}
+
+		activities = append(activities, &domain.IncidentActivity{
+			IncidentID:   incident.ID,
+			UserID:       userID,
+			ActivityType: domain.ActivityTypeAssigneeChange,
+			OldValue:     oldAssigneeName,
+			NewValue:     newAssigneeName,
+			CreatedAt:    time.Now(),
+		})
+	}
+
 	// Update incident fields
 	incident.Title = title
 	incident.Description = description
@@ -138,6 +228,14 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 
 	if err := u.incidentRepo.Update(ctx, incident); err != nil {
 		return nil, err
+	}
+
+	// Save all activities
+	for _, activity := range activities {
+		if err := u.activityRepo.Create(activity); err != nil {
+			// Log error but don't fail the update
+			fmt.Printf("Failed to log activity: %v\n", err)
+		}
 	}
 
 	// Reload to get all relations
