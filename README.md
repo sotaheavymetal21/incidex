@@ -2,9 +2,9 @@
 
 <div align="center">
 
-![Incidex Logo](./frontend/public/incidex_full_logo.jpg)
+![Incidex Logo](./incidex_full_logo.jpg)
 
-**Modern Open-Source Incident Management System for SRE, DevOps, and Development Teams**
+**Modern Incident Management System for SRE, DevOps, and Development Teams**
 
 [English](./README_EN.md) | [日本語](./README.md)
 
@@ -12,8 +12,6 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org/)
 [![Next.js Version](https://img.shields.io/badge/Next.js-14+-000000?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-
-**🚧 このプロジェクトは現在開発中です | This project is under active development 🚧**
 
 </div>
 
@@ -32,8 +30,10 @@
 - 🏷️ **タグ管理**: カラー付きタグによる柔軟な分類とフィルタリング
 - 📈 **統計ダッシュボード**: インシデント傾向の可視化とMTTRなどの指標追跡
 - 📎 **ファイル添付**: ログやスクリーンショットなどの関連ファイルを管理
+- 🔍 **高度な検索**: PostgreSQL全文検索による高速な検索機能
+- 📄 **PDFレポート生成**: 期間指定でのサマリーレポート自動生成
 - 🔐 **セルフホスト対応**: Docker Composeで簡単セットアップ、データは組織内に保持
-- 🌐 **多言語対応**: 日本語・英語のUI対応
+- 🌐 **多言語対応**: 日本語・英語のUI対応（予定）
 
 ### 🎯 ターゲットユーザー
 
@@ -56,7 +56,7 @@
 
 ```bash
 # リポジトリのクローン
-git clone https://github.com/[your-username]/incidex.git
+git clone https://github.com/your-org/incidex.git
 cd incidex
 
 # 環境変数のセットアップ
@@ -100,49 +100,73 @@ npm install
 npm run dev
 ```
 
-詳細なセットアップ手順は [CLAUDE.md](./CLAUDE.md) を参照してください。
+詳細なセットアップ手順は [ドキュメント](./docs/) を参照してください。
 
 ---
 
-## 📋 現在の機能（Phase 1: MVP）
+## 📋 機能一覧
 
-### ✅ 実装済み
+### Phase 1: 基本機能（実装済み）
 
-- **認証・ユーザー管理**
+- ✅ **認証・ユーザー管理**
   - ユーザー登録・ログイン（JWT認証）
   - ロールベースアクセス制御（管理者/編集者/閲覧者）
   - パスワードハッシュ化（bcrypt）
 
-- **インシデント管理**
+- ✅ **インシデント管理**
   - インシデントの作成・編集・削除・一覧表示
   - 深刻度（Critical/High/Medium/Low）とステータス管理
   - ページネーションと検索・フィルタリング機能
   - SLA管理と違反追跡
 
-- **AI要約機能**
+- ✅ **AI要約機能**
   - インシデント作成時の自動要約生成
   - 手動での要約再生成
   - OpenAI API / Claude API対応
 
-- **タイムライン機能**
+- ✅ **タイムライン機能**
   - インシデントに紐づく時系列イベントの記録
   - イベントタイプ（検知、調査開始、原因特定、緩和、解決等）
   - コメント機能
 
-- **タグ管理**
+- ✅ **タグ管理**
   - タグの作成・編集・削除
   - カラー設定による視覚的な分類
   - タグによるフィルタリング
 
-- **ダッシュボード**
+- ✅ **ダッシュボード**
   - インシデント件数推移（日別・週別・月別）
   - 深刻度別・ステータス別の分布グラフ
   - 最近のインシデント一覧
 
-- **ファイル添付**
+- ✅ **ファイル添付**
   - インシデントへのファイル添付（画像、PDF、ログ等）
   - MinIOによるオブジェクトストレージ管理
   - ファイルのダウンロード・削除
+
+### Phase 2: 高度な機能（開発中）
+
+- 🔄 **ポストモーテム機能**
+  - 根本原因分析（Five Whysテンプレート）
+  - アクションアイテム管理
+  - AI支援による根本原因分析の提案
+
+- 🔄 **高度な検索・フィルタリング**
+  - PostgreSQL全文検索（日本語・英語対応）
+  - 複数条件での絞り込み
+  - 検索結果のRedisキャッシュ
+
+- 🔄 **統計・分析**
+  - MTTR（平均復旧時間）の計算・表示
+  - カテゴリ別のインシデント傾向分析
+  - 再発率のトラッキング
+
+### Phase 3: レポート機能（予定）
+
+- 📄 **PDF自動生成**
+  - 単体インシデントのPDFレポート出力
+  - 期間指定でのサマリーレポート生成
+  - カスタマイズ可能なレポートテンプレート
 
 ---
 
@@ -197,46 +221,55 @@ incidex/
 │   │   └── types/         # TypeScript型定義
 │   └── Dockerfile
 ├── docs/                   # ドキュメント
+│   ├── 要件定義書.md
+│   ├── api-specification.md
+│   ├── database-schema.md
+│   └── プロジェクト計画書.md
 ├── docker-compose.yml      # Docker Compose設定
 ├── Makefile               # 開発用コマンド
-├── CLAUDE.md              # 開発ガイド・アーキテクチャ説明
 ├── README.md              # このファイル（日本語）
-└── README_EN.md           # English README
+├── README_EN.md           # English README
+├── SECURITY.md            # セキュリティガイドライン
+├── CONTRIBUTING.md        # コントリビューションガイド
+└── LICENSE                # ライセンスファイル
 ```
 
 ---
 
-## 🗺 ロードマップ
+## 📚 ドキュメント
 
-### Phase 1: MVP（基本機能）✅ **完了**
-- 認証・ユーザー管理
-- インシデントCRUD・検索・フィルタリング
-- タグ管理
-- AI要約機能
-- タイムライン機能
-- ダッシュボード
-- ファイル添付
+詳細なドキュメントは [`docs/`](./docs/) ディレクトリにあります：
 
-### Phase 2: 運用高度化 🔄 **開発中**
-- ポストモーテム機能（根本原因分析、アクションアイテム管理）
-- 高度な検索・フィルタリング（PostgreSQL全文検索）
-- 統計・分析機能の拡張（MTTR計算、再発率トラッキング）
+- [要件定義書](./docs/要件定義書.md) - 機能要件と非機能要件の詳細
+- [API仕様書](./docs/api-specification.md) - REST APIの詳細仕様
+- [データベーススキーマ](./docs/database-schema.md) - データベース設計
+- [ER図](./docs/er-diagram.md) - エンティティ関係図
+- [プロジェクト計画書](./docs/プロジェクト計画書.md) - プロジェクト全体の計画
 
-### Phase 3: レポート機能 📅 **予定**
-- PDFレポート生成
-- カスタマイズ可能なレポートテンプレート
+---
 
-### 将来の計画
-- マルチテナント対応（SaaS化）
-- Webhook通知・Slack連携
-- 多言語UI対応の拡張
-- Kubernetes Operator
+## 🔐 セキュリティ
+
+セキュリティに関する重要な情報は [`SECURITY.md`](./SECURITY.md) に記載されています。
+
+**本番環境で使用する前に必ず一読してください。**
+
+主な注意事項：
+
+- 強力な `JWT_SECRET` の設定（最低32文字）
+- データベースSSLの有効化
+- MinIO認証情報の変更
+- HTTPS/TLSの設定
+
+セキュリティ脆弱性を発見した場合は、公開Issueではなく、プロジェクトメンテナーに直接連絡してください。
 
 ---
 
 ## 🤝 コントリビューション
 
-Incidexへのコントリビューションを歓迎します！このプロジェクトはオープンソースとして開発を進めており、コミュニティからの貢献を積極的に受け入れています。
+Incidexへのコントリビューションを歓迎します！
+
+コントリビューション方法の詳細は [`CONTRIBUTING.md`](./CONTRIBUTING.md) を参照してください。
 
 ### コントリビューションの種類
 
@@ -254,23 +287,6 @@ Incidexへのコントリビューションを歓迎します！このプロジ�
 4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
 5. Pull Requestを作成
 
-詳細は [CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください（作成予定）。
-
----
-
-## 🔐 セキュリティ
-
-セキュリティに関する重要な情報は [`SECURITY.md`](./SECURITY.md)（作成予定）に記載予定です。
-
-**本番環境で使用する前の注意事項：**
-
-- 強力な `JWT_SECRET` の設定（最低32文字）
-- データベースSSLの有効化
-- MinIO認証情報の変更
-- HTTPS/TLSの設定
-
-セキュリティ脆弱性を発見した場合は、公開Issueではなく、プロジェクトメンテナーに直接連絡してください。
-
 ---
 
 ## 📝 ライセンス
@@ -279,15 +295,49 @@ Incidexへのコントリビューションを歓迎します！このプロジ�
 
 ---
 
-## 💬 サポート・お問い合わせ
+## 🗺 ロードマップ
+
+### Phase 1: MVP（基本機能）✅
+- 認証・ユーザー管理
+- インシデントCRUD・検索・フィルタリング
+- タグ管理
+- AI要約機能
+- タイムライン機能
+- ダッシュボード
+
+### Phase 2: 運用高度化 🔄
+- ポストモーテム機能
+- 高度な検索・フィルタリング
+- 統計・分析機能の拡張
+
+### Phase 3: レポート機能 📅
+- PDFレポート生成
+- カスタマイズ可能なレポートテンプレート
+
+### 将来の計画
+- マルチテナント対応（SaaS化）
+- Webhook通知
+- Slack連携
+- 多言語UI対応の拡張
+- Kubernetes Operator
+
+詳細は [プロジェクト計画書](./docs/プロジェクト計画書.md) を参照してください。
+
+---
+
+## 💬 サポート
 
 ### Issue報告
 
-バグ報告や機能要望は GitHub Issues で受け付けています。
+バグ報告や機能要望は [GitHub Issues](https://github.com/your-org/incidex/issues) で受け付けています。
 
 ### ディスカッション
 
-一般的な質問や議論は GitHub Discussions で行えます（準備中）。
+一般的な質問や議論は [GitHub Discussions](https://github.com/your-org/incidex/discussions) で行えます。
+
+### セキュリティ問題
+
+セキュリティに関する問題は、公開Issueではなく、プロジェクトメンテナーに直接連絡してください。
 
 ---
 
@@ -307,8 +357,18 @@ Incidexは以下のオープンソースプロジェクトに依存していま�
 
 ---
 
+## 📞 連絡先
+
+- **GitHub**: [https://github.com/your-org/incidex](https://github.com/your-org/incidex)
+- **Issues**: [https://github.com/your-org/incidex/issues](https://github.com/your-org/incidex/issues)
+- **Discussions**: [https://github.com/your-org/incidex/discussions](https://github.com/your-org/incidex/discussions)
+
+---
+
 <div align="center">
 
-**Made with ❤️ by the Incidex Community**
+**Made with ❤️ by the Incidex Team**
+
+[⭐ Star us on GitHub](https://github.com/your-org/incidex) | [📖 Documentation](./docs/) | [🤝 Contribute](./CONTRIBUTING.md)
 
 </div>
