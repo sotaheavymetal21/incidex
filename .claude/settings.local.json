@@ -8,7 +8,14 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYzMTYxNTIsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOjF9.C309730yCeVBKSMM_HZ89JRdUXLjQHBUy1yKB4NuJI8\")",
       "Bash(grep:*)",
       "Bash(find:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(make:*)",
+      "Bash(lsof:*)",
+      "Bash(go run:*)",
+      "Bash(python3:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYzNjg5MDAsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOjF9.M6PkoFXYESFoIbYN4GGbqu925HKTYRRH9UYgU2-Q-6U\")",
+      "Bash(go get:*)"
     ]
   }
 }

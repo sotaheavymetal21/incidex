@@ -1,5 +1,6 @@
 .PHONY: up down logs ps restart \
 	dev backend-dev frontend-dev \
+	local-dev local-up local-down local-logs local-setup \
 	backend-build backend-test backend-fmt \
 	frontend-build frontend-start frontend-lint \
 	setup setup-backend setup-frontend \
@@ -32,6 +33,35 @@ docker-rebuild:
 
 dev:
 	make -j 2 backend-dev frontend-dev
+
+# ローカル開発環境の起動（インフラ + フロントエンド + バックエンド）
+local-dev: local-up
+	@echo "Starting local development environment..."
+	@echo "Infrastructure services are running in Docker"
+	@echo "Starting backend and frontend..."
+	@make -j 2 backend-dev frontend-dev
+
+# インフラサービスのみ起動（DB, Redis, MinIO）
+local-up:
+	@echo "Starting infrastructure services (PostgreSQL, Redis, MinIO)..."
+	@docker compose up -d db redis minio
+	@echo "Waiting for services to be ready..."
+	@sleep 3
+	@echo "Infrastructure services are ready!"
+
+# インフラサービスの停止
+local-down:
+	@echo "Stopping infrastructure services..."
+	@docker compose stop db redis minio
+
+# インフラサービスのログ確認
+local-logs:
+	@docker compose logs -f db redis minio
+
+# 初回セットアップ（依存関係インストール + インフラ起動 + シードデータ投入）
+local-setup: setup local-up
+	@echo "Setup completed!"
+	@echo "Run 'make seed' to seed the database with test data"
 
 backend-dev:
 	cd backend && go run cmd/server/main.go
