@@ -16,6 +16,7 @@ type IncidentUsecase interface {
 	GetIncidentByID(ctx context.Context, id uint) (*domain.Incident, error)
 	UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, resolvedAt *time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error)
 	DeleteIncident(ctx context.Context, userRole domain.Role, id uint) error
+	RegenerateSummary(ctx context.Context, id uint) (string, error)
 }
 
 type incidentUsecase struct {
@@ -332,6 +333,39 @@ func (u *incidentUsecase) DeleteIncident(ctx context.Context, userRole domain.Ro
 	}
 
 	return u.incidentRepo.Delete(ctx, id)
+}
+
+func (u *incidentUsecase) RegenerateSummary(ctx context.Context, id uint) (string, error) {
+	// Fetch incident
+	incident, err := u.incidentRepo.FindByID(ctx, id)
+	if err != nil {
+		return "", err
+	}
+
+	// Generate AI summary
+	var summary string
+	if u.aiService != nil {
+		aiSummary, err := u.aiService.GenerateIncidentSummary(
+			incident.Title,
+			incident.Description,
+			string(incident.Severity),
+			incident.ImpactScope,
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate summary: %w", err)
+		}
+		summary = aiSummary
+	} else {
+		return "", errors.New("AI service is not configured")
+	}
+
+	// Update incident summary
+	incident.Summary = summary
+	if err := u.incidentRepo.Update(ctx, incident); err != nil {
+		return "", err
+	}
+
+	return summary, nil
 }
 
 // Helper functions

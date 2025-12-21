@@ -265,3 +265,36 @@ func (h *IncidentHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Incident deleted successfully"})
 }
+
+func (h *IncidentHandler) RegenerateSummary(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	// Get user role from JWT context (editors and admins can regenerate)
+	role, exists := c.Get("role")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+		return
+	}
+
+	userRole := domain.Role(role.(string))
+	if userRole == domain.RoleViewer {
+		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied: viewers cannot regenerate summaries"})
+		return
+	}
+
+	summary, err := h.incidentUsecase.RegenerateSummary(c.Request.Context(), uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"summary":     summary,
+		"generated_at": time.Now().Format(time.RFC3339),
+	})
+}
