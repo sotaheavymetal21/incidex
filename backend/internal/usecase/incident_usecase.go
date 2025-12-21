@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"incidex/internal/domain"
+	"incidex/internal/infrastructure/ai"
+	"incidex/internal/infrastructure/notification"
 	"time"
 )
 
@@ -17,18 +19,22 @@ type IncidentUsecase interface {
 }
 
 type incidentUsecase struct {
-	incidentRepo domain.IncidentRepository
-	tagRepo      domain.TagRepository
-	userRepo     domain.UserRepository
-	activityRepo domain.IncidentActivityRepository
+	incidentRepo        domain.IncidentRepository
+	tagRepo             domain.TagRepository
+	userRepo            domain.UserRepository
+	activityRepo        domain.IncidentActivityRepository
+	notificationService *notification.NotificationService
+	aiService           *ai.OpenAIService
 }
 
-func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository) IncidentUsecase {
+func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository, notificationService *notification.NotificationService, aiService *ai.OpenAIService) IncidentUsecase {
 	return &incidentUsecase{
-		incidentRepo: incidentRepo,
-		tagRepo:      tagRepo,
-		userRepo:     userRepo,
-		activityRepo: activityRepo,
+		incidentRepo:        incidentRepo,
+		tagRepo:             tagRepo,
+		userRepo:            userRepo,
+		activityRepo:        activityRepo,
+		notificationService: notificationService,
+		aiService:           aiService,
 	}
 }
 
@@ -55,19 +61,38 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		}
 	}
 
+	// Generate AI summary
+	var summary string
+	if u.aiService != nil {
+		aiSummary, err := u.aiService.GenerateIncidentSummary(title, description, string(severity), impactScope)
+		if err != nil {
+			// Log error but don't fail the incident creation
+			fmt.Printf("Failed to generate AI summary: %v\n", err)
+		} else {
+			summary = aiSummary
+		}
+	}
+
+	// Set default SLA based on severity
+	slaHours := domain.GetDefaultSLAHours(severity)
+
 	// Create incident
 	incident := &domain.Incident{
-		Title:       title,
-		Description: description,
-		Summary:     "", // AI summary will be implemented in Phase 1C
-		Severity:    severity,
-		Status:      status,
-		ImpactScope: impactScope,
-		DetectedAt:  detectedAt,
-		AssigneeID:  assigneeID,
-		CreatorID:   creatorID,
-		Tags:        tags,
+		Title:                    title,
+		Description:              description,
+		Summary:                  summary,
+		Severity:                 severity,
+		Status:                   status,
+		ImpactScope:              impactScope,
+		DetectedAt:               detectedAt,
+		AssigneeID:               assigneeID,
+		CreatorID:                creatorID,
+		Tags:                     tags,
+		SLATargetResolutionHours: slaHours,
 	}
+
+	// Calculate and set SLA deadline
+	incident.SLADeadline = incident.CalculateSLADeadline()
 
 	if err := u.incidentRepo.Create(ctx, incident); err != nil {
 		return nil, err
@@ -83,6 +108,16 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 	if err := u.activityRepo.Create(activity); err != nil {
 		// Log error but don't fail the incident creation
 		fmt.Printf("Failed to log creation activity: %v\n", err)
+	}
+
+	// Send notification
+	if u.notificationService != nil {
+		creator, err := u.userRepo.FindByID(ctx, creatorID)
+		if err == nil {
+			if notifyErr := u.notificationService.NotifyIncidentCreated(incident, creator); notifyErr != nil {
+				fmt.Printf("Failed to send notification: %v\n", notifyErr)
+			}
+		}
 	}
 
 	// Reload to get all relations
@@ -226,6 +261,15 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 	incident.AssigneeID = assigneeID
 	incident.Tags = tags
 
+	// Update SLA if severity changed
+	if incident.Severity != severity {
+		incident.SLATargetResolutionHours = domain.GetDefaultSLAHours(severity)
+		incident.SLADeadline = incident.CalculateSLADeadline()
+	}
+
+	// Check and update SLA violation status
+	incident.SLAViolated = incident.CheckSLAViolation()
+
 	if err := u.incidentRepo.Update(ctx, incident); err != nil {
 		return nil, err
 	}
@@ -235,6 +279,40 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		if err := u.activityRepo.Create(activity); err != nil {
 			// Log error but don't fail the update
 			fmt.Printf("Failed to log activity: %v\n", err)
+		}
+	}
+
+	// Send notifications
+	if u.notificationService != nil {
+		updater, _ := u.userRepo.FindByID(ctx, userID)
+
+		// Notify assignee change
+		if (oldAssigneeID == nil && assigneeID != nil) ||
+			(oldAssigneeID != nil && assigneeID != nil && *oldAssigneeID != *assigneeID) {
+			if assigneeID != nil {
+				assignee, err := u.userRepo.FindByID(ctx, *assigneeID)
+				if err == nil && updater != nil {
+					if notifyErr := u.notificationService.NotifyAssigned(incident, assignee, updater); notifyErr != nil {
+						fmt.Printf("Failed to send assignee notification: %v\n", notifyErr)
+					}
+				}
+			}
+		}
+
+		// Notify status change
+		if incident.Status != status {
+			oldStatusStr := string(incident.Status)
+			newStatusStr := string(status)
+			if notifyErr := u.notificationService.NotifyStatusChange(incident, oldStatusStr, newStatusStr); notifyErr != nil {
+				fmt.Printf("Failed to send status change notification: %v\n", notifyErr)
+			}
+
+			// Notify resolved
+			if status == domain.StatusResolved && incident.Status != domain.StatusResolved && updater != nil {
+				if notifyErr := u.notificationService.NotifyResolved(incident, updater); notifyErr != nil {
+					fmt.Printf("Failed to send resolved notification: %v\n", notifyErr)
+				}
+			}
 		}
 	}
 

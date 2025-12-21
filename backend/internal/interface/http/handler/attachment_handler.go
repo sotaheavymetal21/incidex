@@ -35,6 +35,12 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 		return
 	}
 
+	userIDFloat, ok := userID.(float64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+		return
+	}
+
 	// Get file from form data
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -60,7 +66,7 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 	attachment, err := h.attachmentUsecase.UploadAttachment(
 		c.Request.Context(),
 		uint(incidentID),
-		userID.(uint),
+		uint(userIDFloat),
 		file.Filename,
 		file.Size,
 		contentType,
@@ -150,6 +156,12 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	userIDFloat, ok := userID.(float64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+		return
+	}
+
 	role, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user role not found"})
@@ -160,7 +172,7 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 	if err := h.attachmentUsecase.DeleteAttachment(
 		c.Request.Context(),
 		uint(attachmentID),
-		userID.(uint),
+		uint(userIDFloat),
 		role.(domain.Role),
 	); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

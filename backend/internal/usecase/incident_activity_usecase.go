@@ -1,17 +1,30 @@
 package usecase
 
 import (
+	"fmt"
 	"incidex/internal/domain"
+	"incidex/internal/infrastructure/notification"
 	"time"
 )
 
 type IncidentActivityUsecase struct {
-	activityRepo domain.IncidentActivityRepository
+	activityRepo        domain.IncidentActivityRepository
+	incidentRepo        domain.IncidentRepository
+	userRepo            domain.UserRepository
+	notificationService *notification.NotificationService
 }
 
-func NewIncidentActivityUsecase(activityRepo domain.IncidentActivityRepository) *IncidentActivityUsecase {
+func NewIncidentActivityUsecase(
+	activityRepo domain.IncidentActivityRepository,
+	incidentRepo domain.IncidentRepository,
+	userRepo domain.UserRepository,
+	notificationService *notification.NotificationService,
+) *IncidentActivityUsecase {
 	return &IncidentActivityUsecase{
-		activityRepo: activityRepo,
+		activityRepo:        activityRepo,
+		incidentRepo:        incidentRepo,
+		userRepo:            userRepo,
+		notificationService: notificationService,
 	}
 }
 
@@ -25,7 +38,24 @@ func (u *IncidentActivityUsecase) AddComment(incidentID uint, userID uint, comme
 		CreatedAt:    time.Now(),
 	}
 
-	return u.activityRepo.Create(activity)
+	if err := u.activityRepo.Create(activity); err != nil {
+		return err
+	}
+
+	// Send notification
+	if u.notificationService != nil && u.incidentRepo != nil && u.userRepo != nil {
+		incident, err := u.incidentRepo.FindByID(nil, incidentID)
+		if err == nil {
+			commenter, err := u.userRepo.FindByID(nil, userID)
+			if err == nil {
+				if notifyErr := u.notificationService.NotifyComment(incident, commenter, comment); notifyErr != nil {
+					fmt.Printf("Failed to send comment notification: %v\n", notifyErr)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // LogActivityChange logs a change to an incident (status, severity, assignee, etc.).

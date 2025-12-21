@@ -61,6 +61,12 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 		return
 	}
 
+	userIDFloat, ok := userID.(float64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+		return
+	}
+
 	// Parse detected_at
 	detectedAt, err := time.Parse(time.RFC3339, req.DetectedAt)
 	if err != nil {
@@ -70,7 +76,7 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 
 	incident, err := h.incidentUsecase.CreateIncident(
 		c.Request.Context(),
-		userID.(uint),
+		uint(userIDFloat),
 		req.Title,
 		req.Description,
 		domain.Severity(req.Severity),
@@ -176,6 +182,12 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		return
 	}
 
+	userIDFloat, ok := userID.(float64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+		return
+	}
+
 	role, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
@@ -202,7 +214,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 
 	incident, err := h.incidentUsecase.UpdateIncident(
 		c.Request.Context(),
-		userID.(uint),
+		uint(userIDFloat),
 		domain.Role(role.(string)),
 		uint(id),
 		req.Title,
