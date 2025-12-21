@@ -9,13 +9,15 @@ type RequestOptions = {
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
 import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User } from '../types/incident';
-import { DashboardStats, TrendPeriod } from '../types/stats';
+import { DashboardStats, TrendPeriod, SLAMetrics } from '../types/stats';
 import { IncidentActivity, AddCommentRequest } from '../types/activity';
 import { Attachment } from '../types/attachment';
+import { NotificationSetting } from '../types/notification';
+import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -123,6 +125,9 @@ export const userApi = {
 export const statsApi = {
   getDashboardStats: (token: string, period: TrendPeriod = 'daily') =>
     apiRequest<DashboardStats>(`/stats/dashboard?period=${period}`, { token }),
+
+  getSLAMetrics: (token: string) =>
+    apiRequest<SLAMetrics>('/stats/sla', { token }),
 };
 
 export const exportApi = {
@@ -223,5 +228,59 @@ export const attachmentApi = {
     apiRequest<{ message: string }>(`/incidents/${incidentId}/attachments/${attachmentId}`, {
       method: 'DELETE',
       token,
+    }),
+};
+
+export const notificationApi = {
+  getMySettings: (token: string) =>
+    apiRequest<NotificationSetting>('/notifications/settings', {
+      token,
+    }),
+
+  updateMySettings: (token: string, settings: Partial<NotificationSetting>) =>
+    apiRequest<NotificationSetting>('/notifications/settings', {
+      method: 'PUT',
+      token,
+      body: settings,
+    }),
+
+  getUserSettings: (token: string, userId: number) =>
+    apiRequest<NotificationSetting>(`/notifications/settings/${userId}`, {
+      token,
+    }),
+};
+
+export const templateApi = {
+  getAll: (token: string) =>
+    apiRequest<IncidentTemplate[]>('/templates', { token }),
+
+  getById: (token: string, id: number) =>
+    apiRequest<IncidentTemplate>(`/templates/${id}`, { token }),
+
+  create: (token: string, data: CreateTemplateRequest) =>
+    apiRequest<IncidentTemplate>('/templates', {
+      method: 'POST',
+      token,
+      body: data,
+    }),
+
+  update: (token: string, id: number, data: UpdateTemplateRequest) =>
+    apiRequest<IncidentTemplate>(`/templates/${id}`, {
+      method: 'PUT',
+      token,
+      body: data,
+    }),
+
+  delete: (token: string, id: number) =>
+    apiRequest<{ message: string }>(`/templates/${id}`, {
+      method: 'DELETE',
+      token,
+    }),
+
+  createIncidentFromTemplate: (token: string, data: CreateIncidentFromTemplateRequest) =>
+    apiRequest<Incident>('/templates/create-incident', {
+      method: 'POST',
+      token,
+      body: data,
     }),
 };

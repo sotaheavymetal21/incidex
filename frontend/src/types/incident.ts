@@ -27,6 +27,11 @@ export interface Incident {
   tags: Tag[];
   created_at: string;
   updated_at: string;
+
+  // SLA fields
+  sla_target_resolution_hours: number;
+  sla_deadline: string | null;
+  sla_violated: boolean;
 }
 
 export interface CreateIncidentRequest {
