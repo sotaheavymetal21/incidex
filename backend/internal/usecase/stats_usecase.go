@@ -169,3 +169,8 @@ func (u *StatsUsecase) generateTrendData(period string) ([]TrendDataPoint, error
 
 	return trendData, nil
 }
+
+// GetSLAMetrics returns SLA performance metrics
+func (u *StatsUsecase) GetSLAMetrics() (*domain.SLAMetrics, error) {
+	return u.incidentRepo.GetSLAMetrics()
+}

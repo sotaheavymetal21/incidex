@@ -14,3 +14,13 @@ export interface TrendDataPoint {
 }
 
 export type TrendPeriod = 'daily' | 'weekly' | 'monthly';
+
+export interface SLAMetrics {
+  total_incidents: number;
+  resolved_incidents: number;
+  sla_violated_count: number;
+  sla_compliance_rate: number;
+  average_mttr: number;
+  median_mttr: number;
+  currently_overdue: number;
+}

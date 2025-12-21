@@ -39,3 +39,23 @@ func (h *StatsHandler) GetDashboardStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+
+// GetSLAMetrics godoc
+// @Summary Get SLA performance metrics
+// @Description Retrieve SLA metrics including compliance rate, MTTR, and violations
+// @Tags stats
+// @Accept json
+// @Produce json
+// @Success 200 {object} domain.SLAMetrics
+// @Failure 500 {object} map[string]string
+// @Router /api/stats/sla [get]
+// @Security BearerAuth
+func (h *StatsHandler) GetSLAMetrics(c *gin.Context) {
+	metrics, err := h.statsUsecase.GetSLAMetrics()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
+}
