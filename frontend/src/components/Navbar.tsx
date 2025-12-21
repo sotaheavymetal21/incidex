@@ -49,9 +49,13 @@ export default function Navbar() {
             <div className="flex-shrink-0 flex items-center">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition"
+                className="flex items-center transition-opacity hover:opacity-80"
               >
-                Incidex
+                <img
+                  src="/incidex_full_logo.jpg"
+                  alt="Incidex"
+                  className="h-8 w-auto"
+                />
               </button>
             </div>
 

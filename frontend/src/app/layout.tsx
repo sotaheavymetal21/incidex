@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Incidex - インシデント管理システム",
   description: "モダンなインシデント管理システム",
+  icons: {
+    icon: "/incidex_i_logo.jpg",
+  },
 };
 
 import { AuthProvider } from "@/context/AuthContext";
