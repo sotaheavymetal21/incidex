@@ -10,6 +10,8 @@ type RequestOptions = {
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
 import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User } from '../types/incident';
 import { DashboardStats, TrendPeriod } from '../types/stats';
+import { IncidentActivity, AddCommentRequest } from '../types/activity';
+import { Attachment } from '../types/attachment';
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
@@ -121,4 +123,105 @@ export const userApi = {
 export const statsApi = {
   getDashboardStats: (token: string, period: TrendPeriod = 'daily') =>
     apiRequest<DashboardStats>(`/stats/dashboard?period=${period}`, { token }),
+};
+
+export const exportApi = {
+  exportIncidentsCSV: async (token: string, params?: IncidentFilters): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      if (params.severity) queryParams.append('severity', params.severity);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.tag_ids) queryParams.append('tag_ids', params.tag_ids);
+      if (params.search) queryParams.append('search', params.search);
+    }
+    const queryString = queryParams.toString();
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/export/incidents${queryString ? `?${queryString}` : ''}`;
+
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${token}`,
+    };
+
+    const response = await fetch(url, { headers });
+
+    if (!response.ok) {
+      throw new Error(`Export failed with status ${response.status}`);
+    }
+
+    return response.blob();
+  },
+};
+
+export const activityApi = {
+  getActivities: (token: string, incidentId: number, limit?: number) => {
+    const queryParams = new URLSearchParams();
+    if (limit) queryParams.append('limit', limit.toString());
+    const queryString = queryParams.toString();
+    return apiRequest<IncidentActivity[]>(
+      `/incidents/${incidentId}/activities${queryString ? `?${queryString}` : ''}`,
+      { token }
+    );
+  },
+  addComment: (token: string, incidentId: number, data: AddCommentRequest) =>
+    apiRequest<{ message: string }>(`/incidents/${incidentId}/comments`, {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+};
+
+export const attachmentApi = {
+  getAttachments: (token: string, incidentId: number) =>
+    apiRequest<Attachment[]>(`/incidents/${incidentId}/attachments`, { token }),
+
+  uploadAttachment: async (token: string, incidentId: number, file: File): Promise<Attachment> => {
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/incidents/${incidentId}/attachments`;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  downloadAttachment: async (token: string, incidentId: number, attachmentId: number, fileName: string): Promise<void> => {
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/incidents/${incidentId}/attachments/${attachmentId}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed with status ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  deleteAttachment: (token: string, incidentId: number, attachmentId: number) =>
+    apiRequest<{ message: string }>(`/incidents/${incidentId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      token,
+    }),
 };
