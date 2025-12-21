@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { incidentApi } from '@/lib/api';
+import { incidentApi, activityApi, attachmentApi } from '@/lib/api';
 import { Incident, Severity, Status } from '@/types/incident';
+import { IncidentActivity } from '@/types/activity';
+import { Attachment } from '@/types/attachment';
+import Timeline from '@/components/Timeline';
 
 export default function IncidentDetailPage() {
   const { token, user, loading: authLoading } = useAuth();
@@ -15,6 +18,13 @@ export default function IncidentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [activities, setActivities] = useState<IncidentActivity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(true);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -25,6 +35,8 @@ export default function IncidentDetailPage() {
   useEffect(() => {
     if (token && id) {
       fetchIncident();
+      fetchActivities();
+      fetchAttachments();
     }
   }, [token, id]);
 
@@ -38,6 +50,84 @@ export default function IncidentDetailPage() {
       setError(err.message || 'Failed to fetch incident');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActivities = async () => {
+    setLoadingActivities(true);
+    try {
+      const data = await activityApi.getActivities(token!, parseInt(id));
+      setActivities(data);
+    } catch (err: any) {
+      console.error('Failed to fetch activities:', err);
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
+  const fetchAttachments = async () => {
+    setLoadingAttachments(true);
+    try {
+      const data = await attachmentApi.getAttachments(token!, parseInt(id));
+      setAttachments(data);
+    } catch (err: any) {
+      console.error('Failed to fetch attachments:', err);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    try {
+      await attachmentApi.uploadAttachment(token!, parseInt(id), file);
+      await fetchAttachments(); // Refresh attachments list
+      // Reset file input
+      e.target.value = '';
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleFileDownload = async (attachmentId: number, fileName: string) => {
+    try {
+      await attachmentApi.downloadAttachment(token!, parseInt(id), attachmentId, fileName);
+    } catch (err: any) {
+      alert(err.message || 'Failed to download file');
+    }
+  };
+
+  const handleFileDelete = async (attachmentId: number) => {
+    if (!confirm('このファイルを削除しますか？')) {
+      return;
+    }
+
+    try {
+      await attachmentApi.deleteAttachment(token!, parseInt(id), attachmentId);
+      await fetchAttachments(); // Refresh attachments list
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete file');
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    setSubmittingComment(true);
+    try {
+      await activityApi.addComment(token!, parseInt(id), { comment: newComment });
+      setNewComment('');
+      await fetchActivities(); // アクティビティを再取得
+    } catch (err: any) {
+      alert(err.message || 'Failed to add comment');
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -84,6 +174,14 @@ export default function IncidentDetailPage() {
 
   const canDelete = () => {
     return user?.role === 'admin';
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   if (authLoading || !token) {
@@ -248,12 +346,107 @@ export default function IncidentDetailPage() {
           )}
         </div>
 
-        {/* Timeline Section - Placeholder */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Timeline</h2>
-          <p className="text-sm text-gray-500 italic">
-            Timeline feature will be available in Phase 1B
-          </p>
+        {/* Attachments Section */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">添付ファイル</h2>
+
+          {/* Upload Form */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ファイルをアップロード
+            </label>
+            <input
+              type="file"
+              onChange={handleFileUpload}
+              disabled={uploadingFile}
+              className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              対応ファイル: 画像 (jpg, png, gif), PDF, テキスト, アーカイブ (zip, tar, gz) - 最大 50MB
+            </p>
+          </div>
+
+          {/* Attachments List */}
+          {loadingAttachments ? (
+            <div className="text-center py-4 text-gray-500">読み込み中...</div>
+          ) : attachments.length === 0 ? (
+            <p className="text-sm text-gray-500">添付ファイルはありません</p>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {attachments.map((attachment) => (
+                <div key={attachment.id} className="py-3 flex items-center justify-between">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <svg className="w-8 h-8 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                    </svg>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {attachment.file_name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(attachment.file_size)} • {attachment.user?.name} • {new Date(attachment.created_at).toLocaleString('ja-JP')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={() => handleFileDownload(attachment.id, attachment.file_name)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      ダウンロード
+                    </button>
+                    {(user?.role === 'admin' || user?.id === attachment.user_id) && (
+                      <button
+                        onClick={() => handleFileDelete(attachment.id)}
+                        className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                      >
+                        削除
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Timeline Section */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">タイムライン</h2>
+
+          {/* Comment Form */}
+          <form onSubmit={handleAddComment} className="mb-6">
+            <div className="mb-2">
+              <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
+                コメントを追加
+              </label>
+              <textarea
+                id="comment"
+                rows={3}
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="コメントを入力してください..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                disabled={submittingComment}
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={submittingComment || !newComment.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingComment ? '送信中...' : 'コメントを投稿'}
+              </button>
+            </div>
+          </form>
+
+          {/* Timeline */}
+          {loadingActivities ? (
+            <div className="text-center py-4 text-gray-500">読み込み中...</div>
+          ) : (
+            <Timeline activities={activities} />
+          )}
         </div>
       </div>
     </div>
