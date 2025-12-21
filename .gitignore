@@ -39,3 +39,7 @@ go.work.sum
 # .vscode/
 .settings.local.json
 *.local.json
+
+# Claude AI / Cursor IDE settings
+.claude/
+.cursor/
