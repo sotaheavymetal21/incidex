@@ -1,289 +1,314 @@
-## Incidex - Modern Incident Management System
+# Incidex
 
-Incidex は、**SRE / DevOps / 開発チーム向けのモダンなインシデント管理システム**です。  
-Go 製バックエンドと Next.js 製フロントエンドで構成され、**クリーンアーキテクチャ**と **コンテナベースのインフラ**を採用しています。
+<div align="center">
 
-将来的には **SaaS 提供**と **OSS としての一般公開**の両立を目指しており、  
-「セルフホストでも、マネージドでも使えるインシデント管理プラットフォーム」をゴールとしています。
+![Incidex Logo](./frontend/public/incidex_full_logo.jpg)
 
----
+**Modern Open-Source Incident Management System for SRE, DevOps, and Development Teams**
 
-### ✨ コンセプトと特徴
+[English](./README_EN.md) | [日本語](./README.md)
 
-- **インシデントライフサイクルの一元管理**  
-  - 登録 → 調査 → 対応 → 解決 → ポストモーテムまでを一つのタイムラインで管理
-- **SaaS / OSS を見据えたアーキテクチャ**  
-  - クリーンアーキテクチャにより、クラウド / オンプレ / マルチテナント構成への拡張を意識
-- **チームのナレッジ蓄積を支援**  
-  - AI 要約、タイムライン、タグ、ポストモーテム機能（Phase 2 以降）で「再発しないための知識」を残す
-- **セルフホストしやすい設計**  
-  - Docker Compose + Makefile で、ワンコマンド起動を前提にした構成
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org/)
+[![Next.js Version](https://img.shields.io/badge/Next.js-14+-000000?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
-#### 現在実装済み / 開発中の主な機能
+**🚧 このプロジェクトは現在開発中です | This project is under active development 🚧**
 
-- **認証・認可**
-  - JWT ベースのサインアップ・ログイン
-  - ロール（`admin` / `editor` / `viewer`）による権限制御
-- **タグ管理**
-  - インシデントに紐づくタグの作成・編集・削除
-  - 色付きタグによる分類とフィルタリング
-- **インシデント管理（Phase 1 実装中）**
-  - インシデントの作成・編集・削除
-  - 深刻度・ステータス・影響範囲・担当者などの属性管理
-  - 一覧・詳細閲覧、フィルタリング・検索
-- **タイムライン / ポストモーテム / 統計（Phase 2 以降）**
-  - タイムラインイベント、ポストモーテム、ダッシュボード、PDF 出力などを順次実装予定
-
-詳細な要件は `docs/要件定義書.md` を参照してください。
+</div>
 
 ---
 
-### 🧭 SaaS / OSS としての方向性
+## 📖 概要
 
-- **現時点**
-  - 主にセルフホストを想定した開発中プロジェクトです。
-  - 個人 / 小規模チームのインシデント管理・学習用途での利用を想定しています。
-- **中期的なロードマップ**
-  - マルチテナント対応や監査ログなど、SaaS 提供に必要な機能の追加
-  - OSS として公開し、コントリビューションを受け入れられる体制の整備
-- **長期ビジョン**
-  - Incidex をベースにしたマネージド SaaS 提供
-  - コアは OSS として公開しつつ、エンタープライズ拡張や運用支援ツールをオプション提供
+**Incidex**（インシデックス）は、組織内で発生したインシデントを記録・管理し、AI要約とポストモーテムを通じて継続的な改善を促進するオープンソースのインシデント管理システムです。
 
-OSS 化後は、Issue / Discussion / Pull Request を通じて幅広いコントリビューションを歓迎する予定です。
+インシデント情報をインデックス化し、組織の知見として蓄積することで、類似インシデントの再発を防ぎ、チームの学習と改善を支援します。
+
+### ✨ 主な特徴
+
+- 🤖 **AI要約機能**: インシデント詳細から自動で概要を生成（OpenAI API / Claude API対応）
+- 📊 **タイムライン管理**: インシデントの経緯を時系列で記録・可視化
+- 🏷️ **タグ管理**: カラー付きタグによる柔軟な分類とフィルタリング
+- 📈 **統計ダッシュボード**: インシデント傾向の可視化とMTTRなどの指標追跡
+- 📎 **ファイル添付**: ログやスクリーンショットなどの関連ファイルを管理
+- 🔐 **セルフホスト対応**: Docker Composeで簡単セットアップ、データは組織内に保持
+- 🌐 **多言語対応**: 日本語・英語のUI対応
+
+### 🎯 ターゲットユーザー
+
+- 中小規模の開発チーム・SREチーム（5-50名）
+- セキュリティオペレーションチーム（SOC）
+- IT部門・情報システム部門
+- コスト重視でセルフホスティングを希望する組織
+- データを外部SaaSに出したくない組織（金融機関、官公庁等）
 
 ---
 
-### 🛠 技術スタック
+## 🚀 クイックスタート
+
+### 前提条件
+
+- Docker 20.10+ および Docker Compose 2.0+
+- または、Go 1.21+ と Node.js 18+ がインストールされていること
+
+### Docker Composeを使用した起動（推奨）
+
+```bash
+# リポジトリのクローン
+git clone https://github.com/[your-username]/incidex.git
+cd incidex
+
+# 環境変数のセットアップ
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+
+# 本番環境の場合は、.envファイルの値を必ず変更してください
+# 詳細は SECURITY.md を参照してください
+
+# アプリケーションの起動
+make up
+
+# または
+docker-compose up -d
+```
+
+起動後、以下のURLでアクセスできます：
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080
+- **MinIO Console**: http://localhost:9090（デフォルト: `minioadmin` / `minioadmin`）
+
+### ローカル開発環境での起動
 
 #### Backend
-- **Language**: Go 1.21+
-- **Framework**: Gin Web Framework
-- **ORM**: GORM
-- **Architecture**: Clean Architecture（`domain` / `usecase` / `interface` / `infrastructure`）
-- **Database**: PostgreSQL
-- **Cache**: Redis（統計・AI 要約などのキャッシュ用途を想定）
-- **Storage**: MinIO（S3 互換オブジェクトストレージ、ファイル添付など Phase 3 で利用予定）
-
-#### Frontend
-- **Framework**: Next.js 14+（App Router）
-- **Language**: TypeScript
-- **Styling**: TailwindCSS
-- **State Management**: React Context API（`AuthContext` など）
-
-#### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Tooling**: Make（開発・起動コマンドを共通化）
-
----
-
-### 🚀 クイックスタート（Docker 利用）
-
-#### 前提条件
-
-- Docker / Docker Compose がインストールされていること
-
-#### 1. リポジトリのクローン
-
-```bash
-git clone <repository-url>
-cd incidex
-```
-
-#### 2. 環境変数のセットアップ
-
-**本番環境での利用・インターネットに公開する場合は、必ず先に [SECURITY.md](./SECURITY.md) を確認してください。**
-
-```bash
-# ルートディレクトリ（Docker Compose 用）
-cp .env.example .env
-
-# バックエンド
-cp backend/.env.example backend/.env
-
-# フロントエンド
-cp frontend/.env.example frontend/.env.local
-```
-
-- 開発用途であれば、`.env.example` のデフォルト値で動作します。
-- 本番 / インターネット公開時は、**以下の値を必ず変更してください**。
-  - `JWT_SECRET`（32 文字以上の十分に強いランダム文字列）
-  - Database / Redis / MinIO などの各種パスワード・シークレット
-  - `APP_ENV=production`
-
-より詳細な項目や推奨値は `SECURITY.md` を参照してください。
-
-#### 3. アプリケーションの起動
-
-```bash
-make up
-```
-
-このコマンドで PostgreSQL / Redis / MinIO / Backend / Frontend が一括で起動します。
-
-#### 4. アクセス
-
-- **Frontend**: `http://localhost:3000`
-- **Backend API**: `http://localhost:8080`
-- **MinIO Console**: `http://localhost:9090`（初期値: User `minioadmin`, Password `minioadmin`）
-
----
-
-### 🔧 ローカル開発（Docker を使わない場合）
-
-Backend / Frontend を個別に立ち上げたい場合の手順です。
-
-#### Backend（Go）
 
 ```bash
 cd backend
-cp .env.example .env  # 未作成の場合
+cp .env.example .env
+go mod download
 go run cmd/server/main.go
 ```
 
-- デフォルトではポート `8080` で起動します。
-- DB などの接続先は `.env` の `DATABASE_URL` などで調整してください。
-
-#### Frontend（Next.js）
+#### Frontend
 
 ```bash
 cd frontend
-cp .env.example .env.local  # 未作成の場合
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-- `http://localhost:3000` で起動します。
-- `NEXT_PUBLIC_API_URL`（例: `http://localhost:8080/api`）がバックエンドに向くように設定してください。
-
-#### Makefile でのサポートコマンド
-
-- `make up`：全サービスの Docker コンテナ起動
-- `make down`：コンテナの停止・削除
-- `make logs`：すべてのコンテナのログ表示
-- `make restart`：再起動
-- `make dev`：バックエンド / フロントエンドをローカル実行（開発向け）
+詳細なセットアップ手順は [CLAUDE.md](./CLAUDE.md) を参照してください。
 
 ---
 
-### 🏗 アーキテクチャ概要
+## 📋 現在の機能（Phase 1: MVP）
 
-#### Backend（Clean Architecture）
+### ✅ 実装済み
 
-- `internal/domain`  
-  - `User` / `Tag` / `Incident` などのドメインエンティティ
-  - `UserRepository` などのリポジトリインターフェース
-- `internal/usecase`  
-  - `AuthUsecase` / `TagUsecase` / `IncidentUsecase` などアプリケーションロジック
-- `internal/interface/http`  
-  - Gin のハンドラー / ルーター / 認証ミドルウェア
-- `internal/infrastructure/persistence`  
-  - GORM を利用した DB リポジトリ実装
+- **認証・ユーザー管理**
+  - ユーザー登録・ログイン（JWT認証）
+  - ロールベースアクセス制御（管理者/編集者/閲覧者）
+  - パスワードハッシュ化（bcrypt）
 
-この構成により、**UI やインフラに依存しないビジネスロジック**を維持しつつ、SaaS 化や他プロトコル（gRPC など）への拡張がしやすくなっています。
+- **インシデント管理**
+  - インシデントの作成・編集・削除・一覧表示
+  - 深刻度（Critical/High/Medium/Low）とステータス管理
+  - ページネーションと検索・フィルタリング機能
+  - SLA管理と違反追跡
 
-#### Frontend（App Router 構成）
+- **AI要約機能**
+  - インシデント作成時の自動要約生成
+  - 手動での要約再生成
+  - OpenAI API / Claude API対応
 
-- `src/app`  
-  - `/login` / `/signup` / `/tags` / `/incidents` などのページ
-- `src/context`  
-  - `AuthContext` によるログイン状態・トークン管理
-- `src/lib/api.ts`  
-  - 共通 API クライアント、`authApi` / `tagApi` など
-- `src/types`  
-  - バックエンド API と対応する TypeScript 型
+- **タイムライン機能**
+  - インシデントに紐づく時系列イベントの記録
+  - イベントタイプ（検知、調査開始、原因特定、緩和、解決等）
+  - コメント機能
+
+- **タグ管理**
+  - タグの作成・編集・削除
+  - カラー設定による視覚的な分類
+  - タグによるフィルタリング
+
+- **ダッシュボード**
+  - インシデント件数推移（日別・週別・月別）
+  - 深刻度別・ステータス別の分布グラフ
+  - 最近のインシデント一覧
+
+- **ファイル添付**
+  - インシデントへのファイル添付（画像、PDF、ログ等）
+  - MinIOによるオブジェクトストレージ管理
+  - ファイルのダウンロード・削除
 
 ---
 
-### 📂 リポジトリ構成（概要）
+## 🛠 技術スタック
+
+### Backend
+
+- **Language**: Go 1.21+
+- **Framework**: [Gin Web Framework](https://gin-gonic.com/)
+- **ORM**: [GORM](https://gorm.io/)
+- **Architecture**: Clean Architecture（`domain` / `usecase` / `interface` / `infrastructure`）
+- **Database**: PostgreSQL 15+
+- **Cache**: Redis 7+
+- **Storage**: MinIO（S3互換オブジェクトストレージ）
+- **AI**: OpenAI API / Claude API
+
+### Frontend
+
+- **Framework**: [Next.js 14+](https://nextjs.org/)（App Router）
+- **Language**: TypeScript 5+
+- **Styling**: [TailwindCSS](https://tailwindcss.com/)
+- **State Management**: React Context API
+
+### Infrastructure
+
+- **Containerization**: Docker & Docker Compose
+- **Tooling**: Make（開発・起動コマンドの共通化）
+
+---
+
+## 📁 プロジェクト構成
 
 ```
 incidex/
-├── backend/            # Go Backend
-│   ├── cmd/            # エントリポイント
-│   ├── internal/       # アプリケーションコード
-│   │   ├── config/     # 設定読み込み
-│   │   ├── domain/     # エンティティ・リポジトリIF
-│   │   ├── usecase/    # ビジネスロジック
-│   │   ├── interface/  # HTTPハンドラ・ルータ
-│   │   └── infrastructure/ # DB など外部依存
-├── frontend/           # Next.js Frontend
+├── backend/                 # Go Backend
+│   ├── cmd/
+│   │   ├── server/         # メインサーバー
+│   │   └── seed/          # データベースシードツール
+│   ├── internal/
+│   │   ├── config/         # 設定管理
+│   │   ├── domain/         # ドメインエンティティ・リポジトリIF
+│   │   ├── usecase/       # ビジネスロジック
+│   │   ├── interface/     # HTTPハンドラ・ルータ
+│   │   └── infrastructure/ # DB・ストレージ・AI等の実装
+│   └── Dockerfile
+├── frontend/               # Next.js Frontend
 │   ├── src/
-│   │   ├── app/        # App Router ページ
-│   │   ├── context/    # グローバル状態（認証など）
-│   │   ├── lib/        # API クライアント等
-│   │   └── types/      # 型定義
-├── docker-compose.yml  # 各種サービス定義
-├── Makefile            # 開発用コマンド
-└── docs/               # 仕様・設計ドキュメント
+│   │   ├── app/           # App Router ページ
+│   │   ├── components/    # Reactコンポーネント
+│   │   ├── context/       # グローバル状態管理
+│   │   ├── lib/           # APIクライアント等
+│   │   └── types/         # TypeScript型定義
+│   └── Dockerfile
+├── docs/                   # ドキュメント
+├── docker-compose.yml      # Docker Compose設定
+├── Makefile               # 開発用コマンド
+├── CLAUDE.md              # 開発ガイド・アーキテクチャ説明
+├── README.md              # このファイル（日本語）
+└── README_EN.md           # English README
 ```
 
 ---
 
-### 📖 ドキュメント
+## 🗺 ロードマップ
 
-より詳細な仕様・設計は `docs/` 以下にまとまっています。
-
-- **要件定義**: `docs/要件定義書.md`
-- **API 仕様**: `docs/api-specification.md`
-- **DB スキーマ / ER 図**: `docs/database-schema.md`, `docs/er-diagram.md`
-- **プロジェクト計画**: `docs/プロジェクト計画書.md`
-
----
-
-### 🤝 コントリビューション（予定方針）
-
-Incidex は将来的に OSS として一般公開し、外部からのコントリビューションを積極的に受け入れることを目指しています。  
-現時点ではクローズドな開発フェーズですが、以下のような貢献を歓迎する予定です。
-
-- 機能提案・ Issue 作成（新機能 / 不具合報告 / 改善案）
-- バグ修正・リファクタリング
-- ドキュメントの改善・翻訳
-- SaaS 運用を見据えた監視・運用プラクティスの共有
-
-公開後の基本的な方針（予定）:
-
-- **Pull Request ベースの開発フロー**
-- Go / TypeScript の標準的な Lint / Format に準拠
-- 可能な範囲でユニットテスト / E2E テストの追加を推奨
-
-具体的なガイドラインは OSS 公開時に `CONTRIBUTING.md` として整備する予定です。
-
----
-
-### 🔐 セキュリティと責任ある開示
-
-セキュリティに関する設計・運用の詳細は `SECURITY.md` にまとめています。
-
-- 本番環境での利用前に **必ず** 一読してください。
-- セキュリティインシデントを発見した場合は、公開 Issue ではなく、**メンテナーへの直接連絡**を推奨しています。
-
----
-
-### 🗺 ロードマップ（抜粋）
-
-**Phase 1（基本機能）**
-- 認証 / ユーザー管理（ロールベースアクセス制御）
-- インシデント CRUD・検索・フィルタリング
+### Phase 1: MVP（基本機能）✅ **完了**
+- 認証・ユーザー管理
+- インシデントCRUD・検索・フィルタリング
 - タグ管理
+- AI要約機能
+- タイムライン機能
+- ダッシュボード
+- ファイル添付
 
-**Phase 2（運用高度化）**
-- タイムライン
-- ポストモーテム
-- 高度な検索・統計（MTTR, タグ別集計など）
+### Phase 2: 運用高度化 🔄 **開発中**
+- ポストモーテム機能（根本原因分析、アクションアイテム管理）
+- 高度な検索・フィルタリング（PostgreSQL全文検索）
+- 統計・分析機能の拡張（MTTR計算、再発率トラッキング）
 
-**Phase 3（レポーティング・ファイル連携）**
-- PDF レポート生成
-- ファイル添付（MinIO 連携）
-- より高度なダッシュボード・レポーティング
+### Phase 3: レポート機能 📅 **予定**
+- PDFレポート生成
+- カスタマイズ可能なレポートテンプレート
 
-詳細は `docs/要件定義書.md` および `docs/api-specification.md` を参照してください。
+### 将来の計画
+- マルチテナント対応（SaaS化）
+- Webhook通知・Slack連携
+- 多言語UI対応の拡張
+- Kubernetes Operator
 
 ---
 
-### 📝 ライセンス
+## 🤝 コントリビューション
 
-現在、Incidex のライセンス形態は **検討中** です。  
-OSS として一般公開するタイミングで、適切な OSS ライセンス（例: MIT / Apache-2.0 など）を明示します。
+Incidexへのコントリビューションを歓迎します！このプロジェクトはオープンソースとして開発を進めており、コミュニティからの貢献を積極的に受け入れています。
 
-それまでは、事前の合意なく商用サービスとして再配布・再販売することはお控えください。
+### コントリビューションの種類
+
+- 🐛 **バグ報告**: Issueで問題を報告
+- 💡 **機能提案**: 新機能や改善案の提案
+- 🔧 **コード改善**: Pull Requestでのコード改善
+- 📝 **ドキュメント改善**: ドキュメントの改善や翻訳
+- 🧪 **テスト追加**: テストカバレッジの向上
+
+### 開発フロー
+
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. Pull Requestを作成
+
+詳細は [CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください（作成予定）。
+
+---
+
+## 🔐 セキュリティ
+
+セキュリティに関する重要な情報は [`SECURITY.md`](./SECURITY.md)（作成予定）に記載予定です。
+
+**本番環境で使用する前の注意事項：**
+
+- 強力な `JWT_SECRET` の設定（最低32文字）
+- データベースSSLの有効化
+- MinIO認証情報の変更
+- HTTPS/TLSの設定
+
+セキュリティ脆弱性を発見した場合は、公開Issueではなく、プロジェクトメンテナーに直接連絡してください。
+
+---
+
+## 📝 ライセンス
+
+このプロジェクトは [MIT License](./LICENSE) の下で公開されています。
+
+---
+
+## 💬 サポート・お問い合わせ
+
+### Issue報告
+
+バグ報告や機能要望は GitHub Issues で受け付けています。
+
+### ディスカッション
+
+一般的な質問や議論は GitHub Discussions で行えます（準備中）。
+
+---
+
+## 🙏 謝辞
+
+Incidexは以下のオープンソースプロジェクトに依存しています：
+
+- [Gin](https://gin-gonic.com/) - Go Web Framework
+- [GORM](https://gorm.io/) - Go ORM
+- [Next.js](https://nextjs.org/) - React Framework
+- [TailwindCSS](https://tailwindcss.com/) - CSS Framework
+- [PostgreSQL](https://www.postgresql.org/) - Database
+- [Redis](https://redis.io/) - Cache
+- [MinIO](https://min.io/) - Object Storage
+
+その他、すべての依存パッケージの開発者に感謝します。
+
+---
+
+<div align="center">
+
+**Made with ❤️ by the Incidex Community**
+
+</div>
