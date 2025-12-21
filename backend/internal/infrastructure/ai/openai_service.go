@@ -3,7 +3,9 @@ package ai
 import (
 	"context"
 	"fmt"
+	"incidex/internal/domain"
 	"os"
+	"strings"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -133,4 +135,81 @@ func (s *OpenAIService) GenerateRootCauseAnalysis(incidentDetails, resolution st
 
 	rca := resp.Choices[0].Message.Content
 	return rca, nil
+}
+
+// GeneratePostMortemRootCauseSuggestion はインシデント情報とタイムラインから根本原因の候補を提案します
+func (s *OpenAIService) GeneratePostMortemRootCauseSuggestion(
+	incidentTitle, incidentDescription string,
+	timeline []*domain.IncidentActivity,
+) (string, error) {
+	if s == nil || s.client == nil {
+		return "", nil
+	}
+
+	// タイムラインをテキスト化（最大100件）
+	var timelineText strings.Builder
+	maxTimeline := 100
+	if len(timeline) > maxTimeline {
+		timeline = timeline[:maxTimeline]
+	}
+
+	for _, activity := range timeline {
+		timelineText.WriteString(fmt.Sprintf("- [%s] %s",
+			activity.CreatedAt.Format("2006-01-02 15:04:05"),
+			activity.ActivityType))
+		if activity.Comment != "" {
+			timelineText.WriteString(fmt.Sprintf(": %s", activity.Comment))
+		}
+		if activity.OldValue != "" && activity.NewValue != "" {
+			timelineText.WriteString(fmt.Sprintf(" (%s → %s)", activity.OldValue, activity.NewValue))
+		}
+		timelineText.WriteString("\n")
+	}
+
+	prompt := fmt.Sprintf(`以下のインシデント情報とタイムラインから、根本原因の候補を3-5つ提案してください。
+優先度が高いと考えられる順に、以下の形式で記載してください:
+
+1. [根本原因候補1]: 説明
+2. [根本原因候補2]: 説明
+3. [根本原因候補3]: 説明
+
+インシデントタイトル: %s
+
+インシデント詳細:
+%s
+
+タイムライン:
+%s
+
+根本原因候補:`, incidentTitle, incidentDescription, timelineText.String())
+
+	resp, err := s.client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model: s.model,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: "あなたはインシデント管理と根本原因分析のエキスパートです。インシデントのタイムラインと詳細から、考えられる根本原因を優先度順に提案します。",
+				},
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
+			},
+			MaxTokens:   800,
+			Temperature: 0.3,
+		},
+	)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to generate root cause suggestion: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("no root cause suggestion generated")
+	}
+
+	suggestion := resp.Choices[0].Message.Content
+	return suggestion, nil
 }
