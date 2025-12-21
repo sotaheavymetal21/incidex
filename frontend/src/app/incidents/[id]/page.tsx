@@ -25,6 +25,12 @@ export default function IncidentDetailPage() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
+  const [showTimelineEventForm, setShowTimelineEventForm] = useState(false);
+  const [timelineEventType, setTimelineEventType] = useState<'detected' | 'investigation_started' | 'root_cause_identified' | 'mitigation' | 'timeline_resolved' | 'other'>('other');
+  const [timelineEventTime, setTimelineEventTime] = useState('');
+  const [timelineEventDescription, setTimelineEventDescription] = useState('');
+  const [submittingTimelineEvent, setSubmittingTimelineEvent] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -144,6 +150,48 @@ export default function IncidentDetailPage() {
       alert(err.message || 'Failed to delete incident');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleRegenerateSummary = async () => {
+    if (!confirm('AI要約を再生成しますか？')) {
+      return;
+    }
+
+    setRegeneratingSummary(true);
+    try {
+      const result = await incidentApi.regenerateSummary(token!, parseInt(id));
+      // Update incident summary
+      if (incident) {
+        setIncident({ ...incident, summary: result.summary });
+      }
+    } catch (err: any) {
+      alert(err.message || '要約の再生成に失敗しました');
+    } finally {
+      setRegeneratingSummary(false);
+    }
+  };
+
+  const handleAddTimelineEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!timelineEventDescription.trim()) return;
+
+    setSubmittingTimelineEvent(true);
+    try {
+      await activityApi.addTimelineEvent(token!, parseInt(id), {
+        event_type: timelineEventType,
+        event_time: timelineEventTime || new Date().toISOString(),
+        description: timelineEventDescription,
+      });
+      setTimelineEventType('other');
+      setTimelineEventTime('');
+      setTimelineEventDescription('');
+      setShowTimelineEventForm(false);
+      await fetchActivities(); // Refresh activities
+    } catch (err: any) {
+      alert(err.message || 'タイムラインイベントの追加に失敗しました');
+    } finally {
+      setSubmittingTimelineEvent(false);
     }
   };
 
@@ -316,13 +364,35 @@ export default function IncidentDetailPage() {
 
         {/* Summary Section */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Summary</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">AI Summary</h2>
+            {canEdit() && (
+              <button
+                onClick={handleRegenerateSummary}
+                disabled={regeneratingSummary}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {regeneratingSummary ? '再生成中...' : '要約を再生成'}
+              </button>
+            )}
+          </div>
           {incident.summary ? (
             <p className="text-sm text-gray-700">{incident.summary}</p>
           ) : (
-            <p className="text-sm text-gray-500 italic">
-              AI summary will be available in Phase 1C
-            </p>
+            <div>
+              <p className="text-sm text-gray-500 italic mb-2">
+                AI要約がまだ生成されていません
+              </p>
+              {canEdit() && (
+                <button
+                  onClick={handleRegenerateSummary}
+                  disabled={regeneratingSummary}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {regeneratingSummary ? '生成中...' : '要約を生成'}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -412,7 +482,88 @@ export default function IncidentDetailPage() {
 
         {/* Timeline Section */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">タイムライン</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">タイムライン</h2>
+            {canEdit() && (
+              <button
+                onClick={() => {
+                  setShowTimelineEventForm(!showTimelineEventForm);
+                  if (!showTimelineEventForm) {
+                    // Set default event time to current time
+                    const now = new Date();
+                    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                      .toISOString()
+                      .slice(0, 16);
+                    setTimelineEventTime(localDateTime);
+                  }
+                }}
+                className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                {showTimelineEventForm ? 'キャンセル' : 'イベントを追加'}
+              </button>
+            )}
+          </div>
+
+          {/* Timeline Event Form */}
+          {showTimelineEventForm && canEdit() && (
+            <form onSubmit={handleAddTimelineEvent} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mb-4">
+                <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 mb-1">
+                  イベントタイプ
+                </label>
+                <select
+                  id="event_type"
+                  value={timelineEventType}
+                  onChange={(e) => setTimelineEventType(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                >
+                  <option value="detected">検知</option>
+                  <option value="investigation_started">調査開始</option>
+                  <option value="root_cause_identified">原因特定</option>
+                  <option value="mitigation">緩和</option>
+                  <option value="timeline_resolved">解決</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label htmlFor="event_time" className="block text-sm font-medium text-gray-700 mb-1">
+                  イベント時刻
+                </label>
+                <input
+                  type="datetime-local"
+                  id="event_time"
+                  value={timelineEventTime}
+                  onChange={(e) => setTimelineEventTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="event_description" className="block text-sm font-medium text-gray-700 mb-1">
+                  説明
+                </label>
+                <textarea
+                  id="event_description"
+                  rows={3}
+                  value={timelineEventDescription}
+                  onChange={(e) => setTimelineEventDescription(e.target.value)}
+                  placeholder="イベントの説明を入力してください..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  disabled={submittingTimelineEvent}
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={submittingTimelineEvent || !timelineEventDescription.trim()}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingTimelineEvent ? '追加中...' : 'イベントを追加'}
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Comment Form */}
           <form onSubmit={handleAddComment} className="mb-6">

@@ -7,7 +7,13 @@ export type ActivityType =
   | 'severity_change'
   | 'assignee_change'
   | 'resolved'
-  | 'reopened';
+  | 'reopened'
+  | 'detected'
+  | 'investigation_started'
+  | 'root_cause_identified'
+  | 'mitigation'
+  | 'timeline_resolved'
+  | 'other';
 
 export interface IncidentActivity {
   id: number;
@@ -23,4 +29,10 @@ export interface IncidentActivity {
 
 export interface AddCommentRequest {
   comment: string;
+}
+
+export interface AddTimelineEventRequest {
+  event_type: 'detected' | 'investigation_started' | 'root_cause_identified' | 'mitigation' | 'timeline_resolved' | 'other';
+  event_time: string;
+  description: string;
 }

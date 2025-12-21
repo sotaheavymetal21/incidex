@@ -10,7 +10,7 @@ type RequestOptions = {
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
 import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User } from '../types/incident';
 import { DashboardStats, TrendPeriod, SLAMetrics } from '../types/stats';
-import { IncidentActivity, AddCommentRequest } from '../types/activity';
+import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '../types/activity';
 import { Attachment } from '../types/attachment';
 import { NotificationSetting } from '../types/notification';
 import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
@@ -116,6 +116,11 @@ export const incidentApi = {
       method: 'DELETE',
       token
     }),
+  regenerateSummary: (token: string, id: number) =>
+    apiRequest<{ summary: string; generated_at: string }>(`/incidents/${id}/summarize`, {
+      method: 'POST',
+      token
+    }),
 };
 
 export const userApi = {
@@ -168,6 +173,12 @@ export const activityApi = {
   },
   addComment: (token: string, incidentId: number, data: AddCommentRequest) =>
     apiRequest<{ message: string }>(`/incidents/${incidentId}/comments`, {
+      method: 'POST',
+      body: data,
+      token,
+    }),
+  addTimelineEvent: (token: string, incidentId: number, data: AddTimelineEventRequest) =>
+    apiRequest<IncidentActivity>(`/incidents/${incidentId}/timeline`, {
       method: 'POST',
       body: data,
       token,
