@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"incidex/internal/domain"
 	"incidex/internal/usecase"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -105,4 +107,72 @@ func (h *IncidentActivityHandler) GetActivities(c *gin.Context) {
 
 type AddCommentRequest struct {
 	Comment string `json:"comment" binding:"required,min=1,max=5000"`
+}
+
+type AddTimelineEventRequest struct {
+	EventType   string `json:"event_type" binding:"required,oneof=detected investigation_started root_cause_identified mitigation timeline_resolved other"`
+	EventTime   string `json:"event_time" binding:"required"`
+	Description string `json:"description" binding:"required,min=1,max=5000"`
+}
+
+// AddTimelineEvent godoc
+// @Summary Add a timeline event to an incident
+// @Description Add a timeline event (detected, investigation_started, root_cause_identified, mitigation, timeline_resolved, other) to an incident
+// @Tags incident-activities
+// @Accept json
+// @Produce json
+// @Param id path int true "Incident ID"
+// @Param event body AddTimelineEventRequest true "Timeline Event"
+// @Success 201 {object} domain.IncidentActivity
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/incidents/{id}/timeline [post]
+// @Security BearerAuth
+func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
+	idStr := c.Param("id")
+	incidentID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
+		return
+	}
+
+	var req AddTimelineEventRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Convert float64 to uint (JWT claims are parsed as float64)
+	userIDFloat, ok := userID.(float64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+		return
+	}
+
+	// Parse event_time
+	eventTime, err := time.Parse(time.RFC3339, req.EventTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event_time format (expected RFC3339)"})
+		return
+	}
+
+	activity, err := h.activityUsecase.AddTimelineEvent(
+		uint(incidentID),
+		uint(userIDFloat),
+		domain.ActivityType(req.EventType),
+		eventTime,
+		req.Description,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, activity)
 }

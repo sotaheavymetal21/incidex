@@ -13,6 +13,13 @@ const (
 	ActivityTypeAssigneeChange  ActivityType = "assignee_change"
 	ActivityTypeResolved        ActivityType = "resolved"
 	ActivityTypeReopened        ActivityType = "reopened"
+	// Timeline event types
+	ActivityTypeDetected              ActivityType = "detected"
+	ActivityTypeInvestigationStarted   ActivityType = "investigation_started"
+	ActivityTypeRootCauseIdentified    ActivityType = "root_cause_identified"
+	ActivityTypeMitigation             ActivityType = "mitigation"
+	ActivityTypeTimelineResolved       ActivityType = "timeline_resolved"
+	ActivityTypeOther                  ActivityType = "other"
 )
 
 // IncidentActivity represents an activity or event related to an incident.

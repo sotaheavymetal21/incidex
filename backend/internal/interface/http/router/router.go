@@ -48,9 +48,11 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				incidents.GET("/:id", incidentHandler.GetByID)
 				incidents.PUT("/:id", incidentHandler.Update)
 				incidents.DELETE("/:id", incidentHandler.Delete)
+				incidents.POST("/:id/summarize", incidentHandler.RegenerateSummary)
 
 				// Incident activity routes
 				incidents.POST("/:id/comments", activityHandler.AddComment)
+				incidents.POST("/:id/timeline", activityHandler.AddTimelineEvent)
 				incidents.GET("/:id/activities", activityHandler.GetActivities)
 
 				// Incident attachment routes

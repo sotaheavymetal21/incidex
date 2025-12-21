@@ -93,3 +93,40 @@ func (u *IncidentActivityUsecase) GetActivities(incidentID uint, limit int) ([]*
 func (u *IncidentActivityUsecase) GetRecentActivities(limit int) ([]*domain.IncidentActivity, error) {
 	return u.activityRepo.FindRecent(limit)
 }
+
+// AddTimelineEvent adds a timeline event to an incident.
+func (u *IncidentActivityUsecase) AddTimelineEvent(incidentID uint, userID uint, eventType domain.ActivityType, eventTime time.Time, description string) (*domain.IncidentActivity, error) {
+	// Validate event type
+	validEventTypes := []domain.ActivityType{
+		domain.ActivityTypeDetected,
+		domain.ActivityTypeInvestigationStarted,
+		domain.ActivityTypeRootCauseIdentified,
+		domain.ActivityTypeMitigation,
+		domain.ActivityTypeTimelineResolved,
+		domain.ActivityTypeOther,
+	}
+	isValid := false
+	for _, validType := range validEventTypes {
+		if eventType == validType {
+			isValid = true
+			break
+		}
+	}
+	if !isValid {
+		return nil, fmt.Errorf("invalid event type: %s", eventType)
+	}
+
+	activity := &domain.IncidentActivity{
+		IncidentID:   incidentID,
+		UserID:       userID,
+		ActivityType: eventType,
+		Comment:      description,
+		CreatedAt:    eventTime, // Use eventTime as CreatedAt
+	}
+
+	if err := u.activityRepo.Create(activity); err != nil {
+		return nil, err
+	}
+
+	return activity, nil
+}
