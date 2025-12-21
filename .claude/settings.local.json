@@ -15,7 +15,14 @@
       "Bash(go run:*)",
       "Bash(python3:*)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYzNjg5MDAsInJvbGUiOiJhZG1pbiIsInVzZXJfaWQiOjF9.M6PkoFXYESFoIbYN4GGbqu925HKTYRRH9UYgU2-Q-6U\")",
-      "Bash(go get:*)"
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+      "Bash(cat:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYzOTQ3NDksInJvbGUiOiJ2aWV3ZXIiLCJ1c2VyX2lkIjo2fQ.R1Vf9ZMYkYHKyGlhD6aV0NEh40q3tGXfFcL6C4rni3E\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYzOTUxNDIsInJvbGUiOiJ2aWV3ZXIiLCJ1c2VyX2lkIjo3fQ.l_PuLDiP-j2Hhy-4WDLckZvUB0DSARb6kdElPmGIZDs\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYzOTU0MTMsInJvbGUiOiJ2aWV3ZXIiLCJ1c2VyX2lkIjo3fQ.jBxKTf6luxvLGP85L7NrIUcZKOF5LcS8fUA1ySi1-XE\")",
+      "Bash(__NEW_LINE__ echo -e \"\\\\n\\\\n=== 10. 更新後のSLAメトリクス ===\")",
+      "Bash(npm run build:*)"
     ]
   }
 }
