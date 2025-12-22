@@ -180,7 +180,7 @@ export default function IncidentDetailPage() {
     try {
       await activityApi.addTimelineEvent(token!, parseInt(id), {
         event_type: timelineEventType,
-        event_time: timelineEventTime || new Date().toISOString(),
+        event_time: timelineEventTime ? new Date(timelineEventTime).toISOString() : new Date().toISOString(),
         description: timelineEventDescription,
       });
       setTimelineEventType('other');
@@ -290,6 +290,12 @@ export default function IncidentDetailPage() {
             </div>
 
             <div className="flex gap-2">
+              <button
+                onClick={() => router.push(`/incidents/${id}/postmortem`)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              >
+                Post-Mortem
+              </button>
               {canEdit() && (
                 <button
                   onClick={() => router.push(`/incidents/${id}/edit`)}
@@ -313,44 +319,44 @@ export default function IncidentDetailPage() {
 
         {/* Metadata Section */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Metadata</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">メタデータ</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-500">Detected At</p>
+              <p className="text-sm font-medium text-gray-500">検出日時</p>
               <p className="mt-1 text-sm text-gray-900">
-                {new Date(incident.detected_at).toLocaleString()}
+                {new Date(incident.detected_at).toLocaleString('ja-JP')}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Resolved At</p>
+              <p className="text-sm font-medium text-gray-500">解決日時</p>
               <p className="mt-1 text-sm text-gray-900">
                 {incident.resolved_at
-                  ? new Date(incident.resolved_at).toLocaleString()
-                  : 'Not resolved yet'}
+                  ? new Date(incident.resolved_at).toLocaleString('ja-JP')
+                  : '未解決'}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Impact Scope</p>
+              <p className="text-sm font-medium text-gray-500">影響範囲</p>
               <p className="mt-1 text-sm text-gray-900">{incident.impact_scope || '-'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Assignee</p>
+              <p className="text-sm font-medium text-gray-500">担当者</p>
               <p className="mt-1 text-sm text-gray-900">
                 {incident.assignee
                   ? `${incident.assignee.name} (${incident.assignee.email})`
-                  : 'Unassigned'}
+                  : '未割り当て'}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Creator</p>
+              <p className="text-sm font-medium text-gray-500">作成者</p>
               <p className="mt-1 text-sm text-gray-900">
                 {incident.creator.name} ({incident.creator.email})
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Created At</p>
+              <p className="text-sm font-medium text-gray-500">作成日時</p>
               <p className="mt-1 text-sm text-gray-900">
-                {new Date(incident.created_at).toLocaleString()}
+                {new Date(incident.created_at).toLocaleString('ja-JP')}
               </p>
             </div>
           </div>
