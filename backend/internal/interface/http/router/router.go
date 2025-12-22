@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, templateHandler *handler.IncidentTemplateHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, templateHandler *handler.IncidentTemplateHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler) {
 	api := r.Group("/api")
 	{
 		// Auth routes
@@ -60,6 +60,10 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				incidents.GET("/:id/attachments", attachmentHandler.GetByIncidentID)
 				incidents.GET("/:id/attachments/:attachmentId", attachmentHandler.Download)
 				incidents.DELETE("/:id/attachments/:attachmentId", attachmentHandler.Delete)
+
+				// Post-mortem routes under incidents
+				incidents.GET("/:id/postmortem", postMortemHandler.GetByIncidentID)
+				incidents.POST("/:id/postmortem/ai-suggestion", postMortemHandler.GenerateAISuggestion)
 			}
 
 			// User routes
@@ -95,6 +99,28 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				templates.PUT("/:id", templateHandler.Update)
 				templates.DELETE("/:id", templateHandler.Delete)
 				templates.POST("/create-incident", templateHandler.CreateIncidentFromTemplate)
+			}
+
+			// Post-mortem routes
+			postMortems := protected.Group("/post-mortems")
+			{
+				postMortems.POST("", postMortemHandler.Create)
+				postMortems.GET("", postMortemHandler.GetAll)
+				postMortems.GET("/:id", postMortemHandler.GetByID)
+				postMortems.PUT("/:id", postMortemHandler.Update)
+				postMortems.DELETE("/:id", postMortemHandler.Delete)
+				postMortems.POST("/:id/publish", postMortemHandler.Publish)
+				postMortems.GET("/:id/action-items", actionItemHandler.GetByPostMortemID)
+			}
+
+			// Action item routes
+			actionItems := protected.Group("/action-items")
+			{
+				actionItems.POST("", actionItemHandler.Create)
+				actionItems.GET("", actionItemHandler.GetAll)
+				actionItems.GET("/:id", actionItemHandler.GetByID)
+				actionItems.PUT("/:id", actionItemHandler.Update)
+				actionItems.DELETE("/:id", actionItemHandler.Delete)
 			}
 		}
 	}
