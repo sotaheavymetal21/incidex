@@ -405,7 +405,7 @@ func (h *PostMortemHandler) Delete(c *gin.Context) {
 // @Router /api/post-mortems/incident/{incidentId}/ai-suggestion [post]
 // @Security BearerAuth
 func (h *PostMortemHandler) GenerateAISuggestion(c *gin.Context) {
-	idStr := c.Param("incidentId")
+	idStr := c.Param("id")
 	incidentID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
