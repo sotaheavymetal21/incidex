@@ -14,6 +14,8 @@ import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '..
 import { Attachment } from '../types/attachment';
 import { NotificationSetting } from '../types/notification';
 import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
+import { PostMortem, CreatePostMortemRequest, UpdatePostMortemRequest } from '../types/postmortem';
+import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '../types/actionitem';
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
@@ -293,5 +295,115 @@ export const templateApi = {
       method: 'POST',
       token,
       body: data,
+    }),
+};
+
+export const postMortemApi = {
+  getAll: (token: string, params?: {
+    status?: string;
+    author_id?: number;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      if (params.status) queryParams.append('status', params.status);
+      if (params.author_id) queryParams.append('author_id', params.author_id.toString());
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+    }
+    const queryString = queryParams.toString();
+    return apiRequest<{ post_mortems: PostMortem[]; pagination: any }>(
+      `/post-mortems${queryString ? `?${queryString}` : ''}`,
+      { token }
+    );
+  },
+
+  getById: (token: string, id: number) =>
+    apiRequest<PostMortem>(`/post-mortems/${id}`, { token }),
+
+  getByIncidentId: (token: string, incidentId: number) =>
+    apiRequest<PostMortem>(`/incidents/${incidentId}/postmortem`, { token }),
+
+  create: (token: string, data: CreatePostMortemRequest) =>
+    apiRequest<PostMortem>('/post-mortems', {
+      method: 'POST',
+      token,
+      body: data,
+    }),
+
+  update: (token: string, id: number, data: UpdatePostMortemRequest) =>
+    apiRequest<PostMortem>(`/post-mortems/${id}`, {
+      method: 'PUT',
+      token,
+      body: data,
+    }),
+
+  publish: (token: string, id: number) =>
+    apiRequest<PostMortem>(`/post-mortems/${id}/publish`, {
+      method: 'POST',
+      token,
+    }),
+
+  delete: (token: string, id: number) =>
+    apiRequest<{ message: string }>(`/post-mortems/${id}`, {
+      method: 'DELETE',
+      token,
+    }),
+
+  generateAISuggestion: (token: string, incidentId: number) =>
+    apiRequest<{ suggestion: string }>(`/incidents/${incidentId}/postmortem/ai-suggestion`, {
+      method: 'POST',
+      token,
+    }),
+};
+
+export const actionItemApi = {
+  getAll: (token: string, params?: {
+    status?: string;
+    priority?: string;
+    assignee_id?: number;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      if (params.status) queryParams.append('status', params.status);
+      if (params.priority) queryParams.append('priority', params.priority);
+      if (params.assignee_id) queryParams.append('assignee_id', params.assignee_id.toString());
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+    }
+    const queryString = queryParams.toString();
+    return apiRequest<{ action_items: ActionItem[]; pagination: any }>(
+      `/action-items${queryString ? `?${queryString}` : ''}`,
+      { token }
+    );
+  },
+
+  getById: (token: string, id: number) =>
+    apiRequest<ActionItem>(`/action-items/${id}`, { token }),
+
+  getByPostMortemId: (token: string, postMortemId: number) =>
+    apiRequest<ActionItem[]>(`/post-mortems/${postMortemId}/action-items`, { token }),
+
+  create: (token: string, data: CreateActionItemRequest) =>
+    apiRequest<ActionItem>('/action-items', {
+      method: 'POST',
+      token,
+      body: data,
+    }),
+
+  update: (token: string, id: number, data: UpdateActionItemRequest) =>
+    apiRequest<ActionItem>(`/action-items/${id}`, {
+      method: 'PUT',
+      token,
+      body: data,
+    }),
+
+  delete: (token: string, id: number) =>
+    apiRequest<{ message: string }>(`/action-items/${id}`, {
+      method: 'DELETE',
+      token,
     }),
 };
