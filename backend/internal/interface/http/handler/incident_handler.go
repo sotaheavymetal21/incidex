@@ -116,13 +116,24 @@ func (h *IncidentHandler) GetAll(c *gin.Context) {
 		}
 	}
 
+	// Parse assigned_to_id
+	var assignedToID *uint
+	if assignedToIDStr := c.Query("assigned_to_id"); assignedToIDStr != "" {
+		id, err := strconv.ParseUint(assignedToIDStr, 10, 32)
+		if err == nil {
+			uid := uint(id)
+			assignedToID = &uid
+		}
+	}
+
 	filters := domain.IncidentFilters{
-		Severity: severity,
-		Status:   status,
-		TagIDs:   tagIDs,
-		Search:   search,
-		SortBy:   sortBy,
-		Order:    order,
+		Severity:     severity,
+		Status:       status,
+		TagIDs:       tagIDs,
+		Search:       search,
+		SortBy:       sortBy,
+		Order:        order,
+		AssignedToID: assignedToID,
 	}
 
 	pagination := domain.Pagination{
@@ -297,4 +308,44 @@ func (h *IncidentHandler) RegenerateSummary(c *gin.Context) {
 		"summary":     summary,
 		"generated_at": time.Now().Format(time.RFC3339),
 	})
+}
+
+type AssignIncidentRequest struct {
+	AssigneeID *uint `json:"assignee_id"`
+}
+
+func (h *IncidentHandler) AssignIncident(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid incident ID"})
+		return
+	}
+
+	var req AssignIncidentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get user ID from context
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found"})
+		return
+	}
+
+	userID, ok := userIDValue.(float64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	incident, err := h.incidentUsecase.AssignIncident(c.Request.Context(), uint(userID), uint(id), req.AssigneeID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, incident)
 }
