@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"incidex/internal/domain"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -48,4 +49,13 @@ func (r *userRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
+}
+
+func (r *userRepository) Delete(ctx context.Context, id uint) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("deleted_at", now).Error
 }

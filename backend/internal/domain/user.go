@@ -14,13 +14,14 @@ const (
 )
 
 type User struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	Email        string    `gorm:"uniqueIndex;not null" json:"email"`
-	PasswordHash string    `gorm:"not null" json:"-"`
-	Name         string    `gorm:"not null" json:"name"`
-	Role         Role      `gorm:"not null;default:'viewer'" json:"role"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           uint       `gorm:"primaryKey" json:"id"`
+	Email        string     `gorm:"uniqueIndex;not null" json:"email"`
+	PasswordHash string     `gorm:"not null" json:"-"`
+	Name         string     `gorm:"not null" json:"name"`
+	Role         Role       `gorm:"not null;default:'viewer'" json:"role"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	DeletedAt    *time.Time `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 type UserRepository interface {
@@ -28,4 +29,6 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindByID(ctx context.Context, id uint) (*User, error)
 	FindAll(ctx context.Context) ([]*User, error)
+	Update(ctx context.Context, user *User) error
+	Delete(ctx context.Context, id uint) error
 }
