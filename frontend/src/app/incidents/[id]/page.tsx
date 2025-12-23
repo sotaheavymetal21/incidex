@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { incidentApi, activityApi, attachmentApi } from '@/lib/api';
+import { incidentApi, activityApi, attachmentApi, userApi } from '@/lib/api';
 import { Incident, Severity, Status } from '@/types/incident';
 import { IncidentActivity } from '@/types/activity';
 import { Attachment } from '@/types/attachment';
+import { User } from '@/types/user';
 import Timeline from '@/components/Timeline';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function IncidentDetailPage() {
   const { token, user, loading: authLoading } = useAuth();
+  const permissions = usePermissions();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -31,6 +34,8 @@ export default function IncidentDetailPage() {
   const [timelineEventTime, setTimelineEventTime] = useState('');
   const [timelineEventDescription, setTimelineEventDescription] = useState('');
   const [submittingTimelineEvent, setSubmittingTimelineEvent] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [assigningUser, setAssigningUser] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -45,6 +50,22 @@ export default function IncidentDetailPage() {
       fetchAttachments();
     }
   }, [token, id]);
+
+  useEffect(() => {
+    // Fetch users list for assignee selection
+    if (token && permissions.canEdit) {
+      fetchUsers();
+    }
+  }, [token, permissions.canEdit]);
+
+  const fetchUsers = async () => {
+    try {
+      const data = await userApi.getAll(token!);
+      setUsers(data);
+    } catch (err: any) {
+      console.error('Failed to fetch users:', err);
+    }
+  };
 
   const fetchIncident = async () => {
     setLoading(true);
@@ -195,6 +216,19 @@ export default function IncidentDetailPage() {
     }
   };
 
+  const handleAssignIncident = async (assigneeId: number | null) => {
+    setAssigningUser(true);
+    try {
+      const updatedIncident = await incidentApi.assignIncident(token!, parseInt(id), assigneeId);
+      setIncident(updatedIncident);
+      await fetchActivities(); // Refresh activities to show assignment change
+    } catch (err: any) {
+      alert(err.message || '担当者の変更に失敗しました');
+    } finally {
+      setAssigningUser(false);
+    }
+  };
+
   const getSeverityColor = (severity: Severity) => {
     switch (severity) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-300';
@@ -341,11 +375,30 @@ export default function IncidentDetailPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">担当者</p>
-              <p className="mt-1 text-sm text-gray-900">
-                {incident.assignee
-                  ? `${incident.assignee.name} (${incident.assignee.email})`
-                  : '未割り当て'}
-              </p>
+              {permissions.canEdit ? (
+                <select
+                  value={incident.assignee_id || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleAssignIncident(value === '' ? null : parseInt(value));
+                  }}
+                  disabled={assigningUser}
+                  className="mt-1 text-sm text-gray-900 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">未割り当て</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="mt-1 text-sm text-gray-900">
+                  {incident.assignee
+                    ? `${incident.assignee.name} (${incident.assignee.email})`
+                    : '未割り当て'}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">作成者</p>
