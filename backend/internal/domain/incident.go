@@ -56,12 +56,13 @@ type Incident struct {
 
 // IncidentFilters represents filtering options for incidents.
 type IncidentFilters struct {
-	Severity string
-	Status   string
-	TagIDs   []uint
-	Search   string
-	SortBy   string
-	Order    string
+	Severity     string
+	Status       string
+	TagIDs       []uint
+	Search       string
+	SortBy       string
+	Order        string
+	AssignedToID *uint  // Filter by assignee ID
 }
 
 // Pagination represents pagination parameters.
