@@ -16,6 +16,10 @@ type Config struct {
 	MinioSecretKey string
 	JWTSecret      string
 	AppEnv         string
+	// Initial admin user (created on first startup if no users exist)
+	InitialAdminEmail    string
+	InitialAdminPassword string
+	InitialAdminName     string
 }
 
 // Insecure default values - only for local development
@@ -28,14 +32,17 @@ const (
 
 func Load() *Config {
 	cfg := &Config{
-		Port:           getEnv("PORT", "8080"),
-		DatabaseURL:    getEnv("DATABASE_URL", defaultDatabaseURL),
-		RedisURL:       getEnv("REDIS_URL", "localhost:6379"),
-		MinioEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinioAccessKey: getEnv("MINIO_ACCESS_KEY", defaultMinioAccessKey),
-		MinioSecretKey: getEnv("MINIO_SECRET_KEY", defaultMinioSecretKey),
-		JWTSecret:      getEnv("JWT_SECRET", defaultJWTSecret),
-		AppEnv:         getEnv("APP_ENV", "development"),
+		Port:                 getEnv("PORT", "8080"),
+		DatabaseURL:          getEnv("DATABASE_URL", defaultDatabaseURL),
+		RedisURL:             getEnv("REDIS_URL", "localhost:6379"),
+		MinioEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinioAccessKey:       getEnv("MINIO_ACCESS_KEY", defaultMinioAccessKey),
+		MinioSecretKey:       getEnv("MINIO_SECRET_KEY", defaultMinioSecretKey),
+		JWTSecret:            getEnv("JWT_SECRET", defaultJWTSecret),
+		AppEnv:               getEnv("APP_ENV", "development"),
+		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", ""),
+		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
+		InitialAdminName:     getEnv("INITIAL_ADMIN_NAME", ""),
 	}
 
 	// Validate configuration for production environment
