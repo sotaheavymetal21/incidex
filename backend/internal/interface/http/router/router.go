@@ -49,6 +49,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				incidents.PUT("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Update)
 				incidents.DELETE("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Delete)
 				incidents.POST("/:id/summarize", middleware.RequireEditorOrAdmin(), incidentHandler.RegenerateSummary)
+				incidents.POST("/:id/assign", middleware.RequireEditorOrAdmin(), incidentHandler.AssignIncident)
 
 				// Incident activity routes
 				incidents.POST("/:id/comments", middleware.RequireEditorOrAdmin(), activityHandler.AddComment)
