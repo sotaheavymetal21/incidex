@@ -17,6 +17,7 @@ type IncidentUsecase interface {
 	UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, resolvedAt *time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error)
 	DeleteIncident(ctx context.Context, userRole domain.Role, id uint) error
 	RegenerateSummary(ctx context.Context, id uint) (string, error)
+	AssignIncident(ctx context.Context, userID uint, incidentID uint, assigneeID *uint) (*domain.Incident, error)
 }
 
 type incidentUsecase struct {
@@ -366,6 +367,84 @@ func (u *incidentUsecase) RegenerateSummary(ctx context.Context, id uint) (strin
 	}
 
 	return summary, nil
+}
+
+func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incidentID uint, assigneeID *uint) (*domain.Incident, error) {
+	// Get the incident
+	incident, err := u.incidentRepo.FindByID(ctx, incidentID)
+	if err != nil {
+		return nil, err
+	}
+	if incident == nil {
+		return nil, errors.New("incident not found")
+	}
+
+	// Store old assignee for activity log
+	var oldAssigneeID *uint
+	if incident.AssigneeID != nil {
+		oldAssigneeID = incident.AssigneeID
+	}
+
+	// Update assignee
+	incident.AssigneeID = assigneeID
+	if err := u.incidentRepo.Update(ctx, incident); err != nil {
+		return nil, err
+	}
+
+	// Get user info for activity log
+	user, err := u.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create activity log for assignment change
+	var activityDescription string
+	if assigneeID == nil {
+		// Unassigned
+		if oldAssigneeID != nil {
+			oldAssignee, _ := u.userRepo.FindByID(ctx, *oldAssigneeID)
+			oldAssigneeName := "Unknown"
+			if oldAssignee != nil {
+				oldAssigneeName = oldAssignee.Name
+			}
+			activityDescription = fmt.Sprintf("%s が担当者を解除しました（以前の担当者: %s）", user.Name, oldAssigneeName)
+		} else {
+			activityDescription = fmt.Sprintf("%s が担当者を解除しました", user.Name)
+		}
+	} else {
+		// Assigned to someone
+		newAssignee, _ := u.userRepo.FindByID(ctx, *assigneeID)
+		newAssigneeName := "Unknown"
+		if newAssignee != nil {
+			newAssigneeName = newAssignee.Name
+		}
+
+		if oldAssigneeID == nil {
+			activityDescription = fmt.Sprintf("%s が %s を担当者に割り当てました", user.Name, newAssigneeName)
+		} else {
+			oldAssignee, _ := u.userRepo.FindByID(ctx, *oldAssigneeID)
+			oldAssigneeName := "Unknown"
+			if oldAssignee != nil {
+				oldAssigneeName = oldAssignee.Name
+			}
+			activityDescription = fmt.Sprintf("%s が担当者を %s から %s に変更しました", user.Name, oldAssigneeName, newAssigneeName)
+		}
+	}
+
+	// Create activity log
+	activity := &domain.IncidentActivity{
+		IncidentID:   incidentID,
+		UserID:       userID,
+		ActivityType: domain.ActivityTypeAssigneeChange,
+		Comment:      activityDescription,
+	}
+	if err := u.activityRepo.Create(activity); err != nil {
+		// Log error but don't fail the operation
+		fmt.Printf("Failed to create activity log: %v\n", err)
+	}
+
+	// Reload incident with relationships
+	return u.incidentRepo.FindByID(ctx, incidentID)
 }
 
 // Helper functions
