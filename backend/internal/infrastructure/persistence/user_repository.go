@@ -45,6 +45,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*domain.User, e
 
 func (r *userRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
 	var users []*domain.User
+	// Get all users including inactive ones (deleted users are excluded by default GORM soft delete)
 	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
 		return nil, err
 	}
@@ -58,4 +59,8 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 func (r *userRepository) Delete(ctx context.Context, id uint) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("deleted_at", now).Error
+}
+
+func (r *userRepository) ToggleActive(ctx context.Context, id uint, isActive bool) error {
+	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("is_active", isActive).Error
 }
