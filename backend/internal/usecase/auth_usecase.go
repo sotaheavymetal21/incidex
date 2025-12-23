@@ -48,6 +48,7 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password string
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		Role:         domain.RoleViewer, // Default role
+		IsActive:     true,
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
@@ -68,6 +69,11 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (string
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return "", nil, errors.New("invalid credentials")
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		return "", nil, errors.New("account is disabled")
 	}
 
 	// Generate JWT
