@@ -220,8 +220,10 @@ export default function IncidentDetailPage() {
     setAssigningUser(true);
     try {
       const updatedIncident = await incidentApi.assignIncident(token!, parseInt(id), assigneeId);
+      // Update incident state with the full response
       setIncident(updatedIncident);
       await fetchActivities(); // Refresh activities to show assignment change
+      await fetchIncident(); // Refresh incident to ensure all data is up to date
     } catch (err: any) {
       alert(err.message || '担当者の変更に失敗しました');
     } finally {
