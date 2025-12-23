@@ -8,7 +8,7 @@ type RequestOptions = {
 };
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
-import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User } from '../types/incident';
+import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User as IncidentUser } from '../types/incident';
 import { DashboardStats, TrendPeriod, SLAMetrics } from '../types/stats';
 import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '../types/activity';
 import { Attachment } from '../types/attachment';
@@ -16,6 +16,9 @@ import { NotificationSetting } from '../types/notification';
 import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
 import { PostMortem, CreatePostMortemRequest, UpdatePostMortemRequest } from '../types/postmortem';
 import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '../types/actionitem';
+import { User, UpdateUserRequest, UpdatePasswordRequest } from '../types/user';
+import { AuditLog, AuditLogFilters, AuditLogResponse } from '../types/auditLog';
+import { MonthlyReport } from '../types/report';
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
@@ -127,6 +130,24 @@ export const incidentApi = {
 
 export const userApi = {
   getAll: (token: string) => apiRequest<User[]>('/users', { token }),
+  getById: (token: string, id: number) => apiRequest<User>(`/users/${id}`, { token }),
+  update: (token: string, id: number, data: UpdateUserRequest) =>
+    apiRequest<User>(`/users/${id}`, {
+      method: 'PUT',
+      token,
+      body: data,
+    }),
+  updatePassword: (token: string, id: number, data: UpdatePasswordRequest) =>
+    apiRequest<{ message: string }>(`/users/${id}/password`, {
+      method: 'PUT',
+      token,
+      body: data,
+    }),
+  delete: (token: string, id: number) =>
+    apiRequest<{ message: string }>(`/users/${id}`, {
+      method: 'DELETE',
+      token,
+    }),
 };
 
 export const statsApi = {
@@ -406,4 +427,50 @@ export const actionItemApi = {
       method: 'DELETE',
       token,
     }),
+};
+
+export const auditLogApi = {
+  getAll: (token: string, filters?: AuditLogFilters) => {
+    const queryParams = new URLSearchParams();
+    if (filters) {
+      if (filters.page) queryParams.append('page', filters.page.toString());
+      if (filters.limit) queryParams.append('limit', filters.limit.toString());
+      if (filters.user_id) queryParams.append('user_id', filters.user_id.toString());
+      if (filters.action) queryParams.append('action', filters.action);
+      if (filters.resource_type) queryParams.append('resource_type', filters.resource_type);
+      if (filters.start_date) queryParams.append('start_date', filters.start_date);
+      if (filters.end_date) queryParams.append('end_date', filters.end_date);
+    }
+    const queryString = queryParams.toString();
+    return apiRequest<AuditLogResponse>(
+      `/audit-logs${queryString ? `?${queryString}` : ''}`,
+      { token }
+    );
+  },
+
+  getById: (token: string, id: number) =>
+    apiRequest<AuditLog>(`/audit-logs/${id}`, { token }),
+};
+
+export const reportApi = {
+  getMonthlyReport: (token: string, year?: number, month?: number) => {
+    const queryParams = new URLSearchParams();
+    if (year) queryParams.append('year', year.toString());
+    if (month) queryParams.append('month', month.toString());
+    const queryString = queryParams.toString();
+    return apiRequest<MonthlyReport>(
+      `/reports/monthly${queryString ? `?${queryString}` : ''}`,
+      { token }
+    );
+  },
+
+  getCustomReport: (token: string, startDate: string, endDate: string) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('start_date', startDate);
+    queryParams.append('end_date', endDate);
+    return apiRequest<MonthlyReport>(
+      `/reports/custom?${queryParams.toString()}`,
+      { token }
+    );
+  },
 };
