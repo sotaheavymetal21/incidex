@@ -19,6 +19,7 @@ type User struct {
 	PasswordHash string     `gorm:"not null" json:"-"`
 	Name         string     `gorm:"not null" json:"name"`
 	Role         Role       `gorm:"not null;default:'viewer'" json:"role"`
+	IsActive     bool       `gorm:"default:true;not null" json:"is_active"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	DeletedAt    *time.Time `gorm:"index" json:"deleted_at,omitempty"`
@@ -31,4 +32,5 @@ type UserRepository interface {
 	FindAll(ctx context.Context) ([]*User, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id uint) error
+	ToggleActive(ctx context.Context, id uint, isActive bool) error
 }
