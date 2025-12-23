@@ -11,9 +11,11 @@ import (
 type UserUsecase interface {
 	GetByID(ctx context.Context, id uint) (*domain.User, error)
 	GetAllUsers(ctx context.Context) ([]*domain.User, error)
+	CreateUser(ctx context.Context, email, password, name string, role domain.Role) (*domain.User, error)
 	Update(ctx context.Context, id uint, name, email string, role domain.Role) (*domain.User, error)
 	UpdatePassword(ctx context.Context, id uint, oldPassword, newPassword string) error
 	Delete(ctx context.Context, id uint) error
+	ToggleActive(ctx context.Context, id uint, isActive bool) error
 }
 
 type userUsecase struct {
@@ -53,6 +55,43 @@ func (u *userUsecase) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
 		}
 	}
 	return activeUsers, nil
+}
+
+func (u *userUsecase) CreateUser(ctx context.Context, email, password, name string, role domain.Role) (*domain.User, error) {
+	// Validate password length
+	if len(password) < 6 {
+		return nil, errors.New("password must be at least 6 characters")
+	}
+
+	// Check if email already exists
+	existingUser, err := u.userRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if existingUser != nil {
+		return nil, errors.New("email already exists")
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create user
+	user := &domain.User{
+		Email:        email,
+		PasswordHash: string(hashedPassword),
+		Name:         name,
+		Role:         role,
+		IsActive:     true,
+	}
+
+	if err := u.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, role domain.Role) (*domain.User, error) {
@@ -132,4 +171,19 @@ func (u *userUsecase) Delete(ctx context.Context, id uint) error {
 	}
 
 	return u.userRepo.Delete(ctx, id)
+}
+
+func (u *userUsecase) ToggleActive(ctx context.Context, id uint, isActive bool) error {
+	user, err := u.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errors.New("user not found")
+	}
+	if user.DeletedAt != nil {
+		return errors.New("cannot toggle active status of deleted user")
+	}
+
+	return u.userRepo.ToggleActive(ctx, id, isActive)
 }
