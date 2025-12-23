@@ -71,9 +71,11 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			users := protected.Group("/users")
 			users.Use(middleware.RequireAdmin())
 			{
+				users.POST("", userHandler.Create)
 				users.GET("", userHandler.GetAll)
 				users.GET("/:id", userHandler.GetByID)
 				users.PUT("/:id", userHandler.Update)
+				users.PATCH("/:id/status", userHandler.ToggleActive)
 				users.PUT("/:id/password", userHandler.UpdatePassword)
 				users.DELETE("/:id", userHandler.Delete)
 			}
