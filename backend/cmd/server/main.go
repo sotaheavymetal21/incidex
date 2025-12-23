@@ -27,7 +27,7 @@ func main() {
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}, &domain.PostMortem{}, &domain.ActionItem{}); err != nil {
+	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}, &domain.PostMortem{}, &domain.ActionItem{}, &domain.AuditLog{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -107,7 +107,21 @@ func main() {
 	actionItemUsecase := usecase.NewActionItemUsecase(actionItemRepo, postMortemRepo)
 	actionItemHandler := handler.NewActionItemHandler(actionItemUsecase)
 
+	// Audit logs
+	auditLogRepo := persistence.NewAuditLogRepository(dbConn)
+	auditLogUsecase := usecase.NewAuditLogUsecase(auditLogRepo)
+	auditLogHandler := handler.NewAuditLogHandler(auditLogUsecase)
+	auditMiddleware := middleware.NewAuditMiddleware(auditLogRepo, userRepo)
+
+	// Reports
+	reportRepo := persistence.NewReportRepository(dbConn)
+	reportUsecase := usecase.NewReportUsecase(reportRepo)
+	reportHandler := handler.NewReportHandler(reportUsecase)
+
 	r := gin.Default()
+
+	// Audit log middleware (before CORS)
+	r.Use(auditMiddleware.Log())
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
@@ -128,7 +142,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, templateHandler, postMortemHandler, actionItemHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, templateHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
