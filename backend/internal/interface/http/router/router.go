@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, templateHandler *handler.IncidentTemplateHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, templateHandler *handler.IncidentTemplateHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler) {
 	api := r.Group("/api")
 	{
 		// Auth routes
@@ -34,40 +34,48 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			// Tag routes
 			tags := protected.Group("/tags")
 			{
-				tags.POST("", tagHandler.Create)
+				tags.POST("", middleware.RequireEditorOrAdmin(), tagHandler.Create)
 				tags.GET("", tagHandler.GetAll)
-				tags.PUT("/:id", tagHandler.Update)
-				tags.DELETE("/:id", tagHandler.Delete)
+				tags.PUT("/:id", middleware.RequireEditorOrAdmin(), tagHandler.Update)
+				tags.DELETE("/:id", middleware.RequireEditorOrAdmin(), tagHandler.Delete)
 			}
 
 			// Incident routes
 			incidents := protected.Group("/incidents")
 			{
-				incidents.POST("", incidentHandler.Create)
+				incidents.POST("", middleware.RequireEditorOrAdmin(), incidentHandler.Create)
 				incidents.GET("", incidentHandler.GetAll)
 				incidents.GET("/:id", incidentHandler.GetByID)
-				incidents.PUT("/:id", incidentHandler.Update)
-				incidents.DELETE("/:id", incidentHandler.Delete)
-				incidents.POST("/:id/summarize", incidentHandler.RegenerateSummary)
+				incidents.PUT("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Update)
+				incidents.DELETE("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Delete)
+				incidents.POST("/:id/summarize", middleware.RequireEditorOrAdmin(), incidentHandler.RegenerateSummary)
 
 				// Incident activity routes
-				incidents.POST("/:id/comments", activityHandler.AddComment)
-				incidents.POST("/:id/timeline", activityHandler.AddTimelineEvent)
+				incidents.POST("/:id/comments", middleware.RequireEditorOrAdmin(), activityHandler.AddComment)
+				incidents.POST("/:id/timeline", middleware.RequireEditorOrAdmin(), activityHandler.AddTimelineEvent)
 				incidents.GET("/:id/activities", activityHandler.GetActivities)
 
 				// Incident attachment routes
-				incidents.POST("/:id/attachments", attachmentHandler.Upload)
+				incidents.POST("/:id/attachments", middleware.RequireEditorOrAdmin(), attachmentHandler.Upload)
 				incidents.GET("/:id/attachments", attachmentHandler.GetByIncidentID)
 				incidents.GET("/:id/attachments/:attachmentId", attachmentHandler.Download)
-				incidents.DELETE("/:id/attachments/:attachmentId", attachmentHandler.Delete)
+				incidents.DELETE("/:id/attachments/:attachmentId", middleware.RequireEditorOrAdmin(), attachmentHandler.Delete)
 
 				// Post-mortem routes under incidents
 				incidents.GET("/:id/postmortem", postMortemHandler.GetByIncidentID)
-				incidents.POST("/:id/postmortem/ai-suggestion", postMortemHandler.GenerateAISuggestion)
+				incidents.POST("/:id/postmortem/ai-suggestion", middleware.RequireEditorOrAdmin(), postMortemHandler.GenerateAISuggestion)
 			}
 
-			// User routes
-			protected.GET("/users", userHandler.GetAll)
+			// User routes (admin only)
+			users := protected.Group("/users")
+			users.Use(middleware.RequireAdmin())
+			{
+				users.GET("", userHandler.GetAll)
+				users.GET("/:id", userHandler.GetByID)
+				users.PUT("/:id", userHandler.Update)
+				users.PUT("/:id/password", userHandler.UpdatePassword)
+				users.DELETE("/:id", userHandler.Delete)
+			}
 
 			// Stats routes
 			stats := protected.Group("/stats")
@@ -93,35 +101,50 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			// Template routes
 			templates := protected.Group("/templates")
 			{
-				templates.POST("", templateHandler.Create)
+				templates.POST("", middleware.RequireEditorOrAdmin(), templateHandler.Create)
 				templates.GET("", templateHandler.GetAll)
 				templates.GET("/:id", templateHandler.GetByID)
-				templates.PUT("/:id", templateHandler.Update)
-				templates.DELETE("/:id", templateHandler.Delete)
-				templates.POST("/create-incident", templateHandler.CreateIncidentFromTemplate)
+				templates.PUT("/:id", middleware.RequireEditorOrAdmin(), templateHandler.Update)
+				templates.DELETE("/:id", middleware.RequireEditorOrAdmin(), templateHandler.Delete)
+				templates.POST("/create-incident", middleware.RequireEditorOrAdmin(), templateHandler.CreateIncidentFromTemplate)
 			}
 
 			// Post-mortem routes
 			postMortems := protected.Group("/post-mortems")
 			{
-				postMortems.POST("", postMortemHandler.Create)
+				postMortems.POST("", middleware.RequireEditorOrAdmin(), postMortemHandler.Create)
 				postMortems.GET("", postMortemHandler.GetAll)
 				postMortems.GET("/:id", postMortemHandler.GetByID)
-				postMortems.PUT("/:id", postMortemHandler.Update)
-				postMortems.DELETE("/:id", postMortemHandler.Delete)
-				postMortems.POST("/:id/publish", postMortemHandler.Publish)
+				postMortems.PUT("/:id", middleware.RequireEditorOrAdmin(), postMortemHandler.Update)
+				postMortems.DELETE("/:id", middleware.RequireEditorOrAdmin(), postMortemHandler.Delete)
+				postMortems.POST("/:id/publish", middleware.RequireEditorOrAdmin(), postMortemHandler.Publish)
 				postMortems.GET("/:id/action-items", actionItemHandler.GetByPostMortemID)
 			}
 
 			// Action item routes
 			actionItems := protected.Group("/action-items")
 			{
-				actionItems.POST("", actionItemHandler.Create)
+				actionItems.POST("", middleware.RequireEditorOrAdmin(), actionItemHandler.Create)
 				actionItems.GET("", actionItemHandler.GetAll)
 				actionItems.GET("/:id", actionItemHandler.GetByID)
-				actionItems.PUT("/:id", actionItemHandler.Update)
-				actionItems.DELETE("/:id", actionItemHandler.Delete)
+				actionItems.PUT("/:id", middleware.RequireEditorOrAdmin(), actionItemHandler.Update)
+				actionItems.DELETE("/:id", middleware.RequireEditorOrAdmin(), actionItemHandler.Delete)
 			}
+
+		// Audit log routes (admin only)
+		auditLogs := protected.Group("/audit-logs")
+		auditLogs.Use(middleware.RequireAdmin())
+		{
+			auditLogs.GET("", auditLogHandler.GetAll)
+			auditLogs.GET("/:id", auditLogHandler.GetByID)
+		}
+
+		// Report routes
+		reports := protected.Group("/reports")
+		{
+			reports.GET("/monthly", reportHandler.GetMonthlyReport)
+			reports.GET("/custom", reportHandler.GetCustomReport)
 		}
 	}
+}
 }
