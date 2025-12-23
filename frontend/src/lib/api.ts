@@ -98,6 +98,7 @@ export const incidentApi = {
       if (params.search) queryParams.append('search', params.search);
       if (params.sort) queryParams.append('sort', params.sort);
       if (params.order) queryParams.append('order', params.order);
+      if (params.assigned_to_id) queryParams.append('assigned_to_id', params.assigned_to_id.toString());
     }
     const queryString = queryParams.toString();
     return apiRequest<IncidentListResponse>(`/incidents${queryString ? `?${queryString}` : ''}`, { token });
@@ -125,6 +126,12 @@ export const incidentApi = {
     apiRequest<{ summary: string; generated_at: string }>(`/incidents/${id}/summarize`, {
       method: 'POST',
       token
+    }),
+  assignIncident: (token: string, id: number, assigneeId: number | null) =>
+    apiRequest<Incident>(`/incidents/${id}/assign`, {
+      method: 'POST',
+      token,
+      body: { assignee_id: assigneeId },
     }),
 };
 
