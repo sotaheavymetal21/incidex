@@ -77,5 +77,6 @@ export interface IncidentFilters {
   tag_ids?: string;
   search?: string;
   sort?: string;
+  assigned_to_id?: number;
   order?: string;
 }
