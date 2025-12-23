@@ -34,6 +34,9 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)
 	}
+	if filters.AssignedToID != nil {
+		query = query.Where("assignee_id = ?", *filters.AssignedToID)
+	}
 	if len(filters.TagIDs) > 0 {
 		query = query.Joins("JOIN incident_tags ON incident_tags.incident_id = incidents.id").
 			Where("incident_tags.tag_id IN ?", filters.TagIDs).
