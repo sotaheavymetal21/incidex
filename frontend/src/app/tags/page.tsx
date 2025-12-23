@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { tagApi } from '@/lib/api';
 import { Tag } from '@/types/tag';
 import { useRouter } from 'next/navigation';
 
 export default function TagsPage() {
   const { token, loading: authLoading } = useAuth();
+  const permissions = usePermissions();
   const router = useRouter();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,12 +90,14 @@ export default function TagsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Tag Management</h1>
-        <button
-          onClick={openCreateModal}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Create Tag
-        </button>
+        {permissions.canManageTags && (
+          <button
+            onClick={openCreateModal}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Create Tag
+          </button>
+        )}
       </div>
 
       {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -122,8 +126,14 @@ export default function TagsPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => openEditModal(tag)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                  <button onClick={() => handleDelete(tag.id)} className="text-red-600 hover:text-red-900">Delete</button>
+                  {permissions.canManageTags ? (
+                    <>
+                      <button onClick={() => openEditModal(tag)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
+                      <button onClick={() => handleDelete(tag.id)} className="text-red-600 hover:text-red-900">Delete</button>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">閲覧のみ</span>
+                  )}
                 </td>
               </tr>
             ))}

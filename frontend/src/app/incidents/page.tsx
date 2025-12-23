@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { incidentApi, tagApi, exportApi } from '@/lib/api';
 import { Incident, Severity, Status, PaginationResult } from '@/types/incident';
 import { Tag } from '@/types/tag';
@@ -10,6 +11,7 @@ import SeverityGuide from '@/components/SeverityGuide';
 
 export default function IncidentsPage() {
   const { token, loading: authLoading } = useAuth();
+  const permissions = usePermissions();
   const router = useRouter();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -155,12 +157,14 @@ export default function IncidentsPage() {
               </svg>
               CSVエクスポート
             </button>
-            <button
-              onClick={() => router.push('/incidents/create')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              新規作成
-            </button>
+            {permissions.canCreateIncidents && (
+              <button
+                onClick={() => router.push('/incidents/create')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                新規作成
+              </button>
+            )}
           </div>
         </div>
 
