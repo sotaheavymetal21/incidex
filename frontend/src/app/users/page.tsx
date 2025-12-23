@@ -7,6 +7,7 @@ import { User, Role } from '@/types/user';
 import { useRouter } from 'next/navigation';
 import EditUserModal from './EditUserModal';
 import ChangePasswordModal from './ChangePasswordModal';
+import CreateUserModal from './CreateUserModal';
 
 export default function UsersPage() {
   const { token, loading: authLoading } = useAuth();
@@ -18,6 +19,7 @@ export default function UsersPage() {
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -48,6 +50,16 @@ export default function UsersPage() {
       fetchUsers();
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  const handleToggleActive = async (userId: number, isActive: boolean) => {
+    if (!token || !confirm(`ユーザーを${isActive ? '有効化' : '無効化'}しますか？`)) return;
+    try {
+      await userApi.toggleActive(token, userId, isActive);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || 'ステータス変更に失敗しました');
     }
   };
 
@@ -95,6 +107,12 @@ export default function UsersPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">ユーザー管理</h1>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          ユーザーを作成
+        </button>
       </div>
 
       {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -106,13 +124,14 @@ export default function UsersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名前</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">メールアドレス</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">権限</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成日</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.map((user) => (
-              <tr key={user.id}>
+              <tr key={user.id} className={!user.is_active ? 'opacity-50 bg-gray-50' : ''}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{user.name}</div>
                 </td>
@@ -124,10 +143,27 @@ export default function UsersPage() {
                     {getRoleLabel(user.role)}
                   </span>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {user.is_active ? (
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      有効
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                      無効
+                    </span>
+                  )}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {new Date(user.created_at).toLocaleDateString('ja-JP')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleToggleActive(user.id, !user.is_active)}
+                    className="text-yellow-600 hover:text-yellow-900 mr-4"
+                  >
+                    {user.is_active ? '無効化' : '有効化'}
+                  </button>
                   <button
                     onClick={() => openEditModal(user)}
                     className="text-indigo-600 hover:text-indigo-900 mr-4"
@@ -178,6 +214,16 @@ export default function UsersPage() {
           onSuccess={() => {
             setIsPasswordModalOpen(false);
             setSelectedUser(null);
+          }}
+        />
+      )}
+
+      {isCreateModalOpen && (
+        <CreateUserModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={() => {
+            setIsCreateModalOpen(false);
+            fetchUsers();
           }}
         />
       )}
