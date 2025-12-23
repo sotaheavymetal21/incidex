@@ -52,6 +52,10 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       PORT: ${PORT}
       APP_ENV: development
+      # Initial admin user (created automatically on first startup if no users exist)
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@example.com}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-admin123}
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-Admin User}
     ports:
       - "8080:8080"
     depends_on:
