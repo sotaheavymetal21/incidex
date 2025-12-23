@@ -44,6 +44,16 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   const response = await fetch(url, config);
 
   if (!response.ok) {
+    // 401エラー（認証エラー）の場合は自動的にログアウト処理
+    if (response.status === 401 && !endpoint.includes('/auth/')) {
+      // localStorageをクリア
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // ログインページにリダイレクト
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Request failed with status ${response.status}`);
   }

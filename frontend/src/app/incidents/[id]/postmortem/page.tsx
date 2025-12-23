@@ -308,7 +308,7 @@ export default function PostMortemPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Post-Mortem</h1>
               {incident && (
-                <p className="text-gray-600 mt-2">
+                <p className="text-gray-900 mt-2">
                   インシデント: {incident.title}
                 </p>
               )}
@@ -481,7 +481,7 @@ export default function PostMortemPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900">{item.title}</h3>
                     {item.description && (
-                      <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                      <p className="text-sm text-gray-900 mt-1">{item.description}</p>
                     )}
                     <div className="flex gap-2 mt-2 flex-wrap">
                       <span className={`px-2 py-1 text-xs rounded font-medium ${getPriorityColor(item.priority)}`}>
