@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"incidex/internal/domain"
 	"net/http"
 	"strings"
 
@@ -50,4 +51,41 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// RequireRole returns a middleware that checks if the user has one of the required roles
+func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleValue, exists := c.Get("role")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Role not found in context"})
+			return
+		}
+
+		userRole, ok := roleValue.(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid role format"})
+			return
+		}
+
+		// Check if user's role is in the allowed roles
+		for _, allowedRole := range allowedRoles {
+			if domain.Role(userRole) == allowedRole {
+				c.Next()
+				return
+			}
+		}
+
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+	}
+}
+
+// RequireAdmin is a shorthand for RequireRole(domain.RoleAdmin)
+func RequireAdmin() gin.HandlerFunc {
+	return RequireRole(domain.RoleAdmin)
+}
+
+// RequireEditorOrAdmin requires user to be either editor or admin
+func RequireEditorOrAdmin() gin.HandlerFunc {
+	return RequireRole(domain.RoleAdmin, domain.RoleEditor)
 }
