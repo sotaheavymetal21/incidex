@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"incidex/internal/config"
 	"incidex/internal/db"
 	"incidex/internal/domain"
@@ -18,6 +19,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -46,6 +49,10 @@ func main() {
 	// Dependency Injection
 	// Auth
 	userRepo := persistence.NewUserRepository(dbConn)
+
+	// Create initial admin user if configured and no users exist
+	createInitialAdminIfNeeded(dbConn, userRepo, cfg)
+
 	authUsecase := usecase.NewAuthUsecase(userRepo, cfg.JWTSecret, 24*time.Hour)
 	authHandler := handler.NewAuthHandler(authUsecase)
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
@@ -148,4 +155,53 @@ func main() {
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+// createInitialAdminIfNeeded creates an initial admin user if:
+// 1. INITIAL_ADMIN_* environment variables are set
+// 2. No users exist in the database
+func createInitialAdminIfNeeded(dbConn *gorm.DB, userRepo domain.UserRepository, cfg *config.Config) {
+	ctx := context.Background()
+
+	// Check if initial admin configuration is provided
+	if cfg.InitialAdminEmail == "" || cfg.InitialAdminPassword == "" || cfg.InitialAdminName == "" {
+		log.Println("INFO: Initial admin user not configured (INITIAL_ADMIN_* environment variables not set)")
+		return
+	}
+
+	// Check if any users already exist
+	var userCount int64
+	if err := dbConn.Model(&domain.User{}).Count(&userCount).Error; err != nil {
+		log.Printf("WARNING: Failed to count users: %v", err)
+		return
+	}
+
+	if userCount > 0 {
+		log.Printf("INFO: Users already exist (%d users found), skipping initial admin creation", userCount)
+		return
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(cfg.InitialAdminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("ERROR: Failed to hash initial admin password: %v", err)
+		return
+	}
+
+	// Create initial admin user
+	adminUser := &domain.User{
+		Email:        cfg.InitialAdminEmail,
+		PasswordHash: string(hashedPassword),
+		Name:         cfg.InitialAdminName,
+		Role:         domain.RoleAdmin,
+		IsActive:     true,
+	}
+
+	if err := userRepo.Create(ctx, adminUser); err != nil {
+		log.Printf("ERROR: Failed to create initial admin user: %v", err)
+		return
+	}
+
+	log.Printf("SUCCESS: Initial admin user created successfully (email: %s, name: %s)", adminUser.Email, adminUser.Name)
+	log.Println("IMPORTANT: Please change the admin password immediately after first login!")
 }
