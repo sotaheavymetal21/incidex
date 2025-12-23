@@ -16,7 +16,7 @@ import { NotificationSetting } from '../types/notification';
 import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
 import { PostMortem, CreatePostMortemRequest, UpdatePostMortemRequest } from '../types/postmortem';
 import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '../types/actionitem';
-import { User, UpdateUserRequest, UpdatePasswordRequest } from '../types/user';
+import { User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest } from '../types/user';
 import { AuditLog, AuditLogFilters, AuditLogResponse } from '../types/auditLog';
 import { MonthlyReport } from '../types/report';
 
@@ -138,11 +138,23 @@ export const incidentApi = {
 export const userApi = {
   getAll: (token: string) => apiRequest<User[]>('/users', { token }),
   getById: (token: string, id: number) => apiRequest<User>(`/users/${id}`, { token }),
+  create: (token: string, data: CreateUserRequest) =>
+    apiRequest<User>('/users', {
+      method: 'POST',
+      token,
+      body: data,
+    }),
   update: (token: string, id: number, data: UpdateUserRequest) =>
     apiRequest<User>(`/users/${id}`, {
       method: 'PUT',
       token,
       body: data,
+    }),
+  toggleActive: (token: string, id: number, isActive: boolean) =>
+    apiRequest<{ message: string }>(`/users/${id}/status`, {
+      method: 'PATCH',
+      token,
+      body: { is_active: isActive },
     }),
   updatePassword: (token: string, id: number, data: UpdatePasswordRequest) =>
     apiRequest<{ message: string }>(`/users/${id}/password`, {
