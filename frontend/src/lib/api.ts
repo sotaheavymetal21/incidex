@@ -9,7 +9,7 @@ type RequestOptions = {
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
 import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User as IncidentUser } from '../types/incident';
-import { DashboardStats, TrendPeriod, SLAMetrics } from '../types/stats';
+import { DashboardStats, TrendPeriod, SLAMetrics, TagStats } from '../types/stats';
 import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '../types/activity';
 import { Attachment } from '../types/attachment';
 import { NotificationSetting } from '../types/notification';
@@ -185,6 +185,9 @@ export const statsApi = {
 
   getSLAMetrics: (token: string) =>
     apiRequest<SLAMetrics>('/stats/sla', { token }),
+
+  getTagStats: (token: string) =>
+    apiRequest<{ tag_stats: TagStats[] }>('/stats/tags', { token }),
 };
 
 export const exportApi = {
