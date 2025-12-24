@@ -24,3 +24,11 @@ export interface SLAMetrics {
   median_mttr: number;
   currently_overdue: number;
 }
+
+export interface TagStats {
+  tag_id: number;
+  tag_name: string;
+  tag_color: string;
+  count: number;
+  percentage: number;
+}
