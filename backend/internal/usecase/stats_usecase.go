@@ -23,6 +23,14 @@ type DashboardStats struct {
 	TrendData         []TrendDataPoint           `json:"trend_data"`
 }
 
+type TagStats struct {
+	TagID      uint    `json:"tag_id"`
+	TagName    string  `json:"tag_name"`
+	TagColor   string  `json:"tag_color"`
+	Count      int64   `json:"count"`
+	Percentage float64 `json:"percentage"`
+}
+
 type TrendDataPoint struct {
 	Date  string `json:"date"`
 	Count int64  `json:"count"`
@@ -173,4 +181,69 @@ func (u *StatsUsecase) generateTrendData(period string) ([]TrendDataPoint, error
 // GetSLAMetrics returns SLA performance metrics
 func (u *StatsUsecase) GetSLAMetrics() (*domain.SLAMetrics, error) {
 	return u.incidentRepo.GetSLAMetrics()
+}
+
+// GetTagStats returns incident statistics by tag
+func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
+	// Get all incidents with tags preloaded
+	allIncidents, err := u.incidentRepo.GetAllIncidents()
+	if err != nil {
+		return nil, err
+	}
+
+	// Count incidents by tag
+	tagCountMap := make(map[uint]struct {
+		name  string
+		color string
+		count int64
+	})
+
+	totalIncidents := int64(len(allIncidents))
+
+	for _, incident := range allIncidents {
+		for _, tag := range incident.Tags {
+			if entry, exists := tagCountMap[tag.ID]; exists {
+				entry.count++
+				tagCountMap[tag.ID] = entry
+			} else {
+				tagCountMap[tag.ID] = struct {
+					name  string
+					color string
+					count int64
+				}{
+					name:  tag.Name,
+					color: tag.Color,
+					count: 1,
+				}
+			}
+		}
+	}
+
+	// Convert map to slice
+	tagStats := make([]TagStats, 0, len(tagCountMap))
+	for tagID, entry := range tagCountMap {
+		percentage := 0.0
+		if totalIncidents > 0 {
+			percentage = float64(entry.count) / float64(totalIncidents) * 100
+		}
+
+		tagStats = append(tagStats, TagStats{
+			TagID:      tagID,
+			TagName:    entry.name,
+			TagColor:   entry.color,
+			Count:      entry.count,
+			Percentage: percentage,
+		})
+	}
+
+	// Sort by count (descending)
+	for i := 0; i < len(tagStats); i++ {
+		for j := i + 1; j < len(tagStats); j++ {
+			if tagStats[j].Count > tagStats[i].Count {
+				tagStats[i], tagStats[j] = tagStats[j], tagStats[i]
+			}
+		}
+	}
+
+	return tagStats, nil
 }

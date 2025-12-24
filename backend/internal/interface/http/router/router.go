@@ -85,6 +85,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			{
 				stats.GET("/dashboard", statsHandler.GetDashboardStats)
 				stats.GET("/sla", statsHandler.GetSLAMetrics)
+			stats.GET("/tags", statsHandler.GetTagStats)
 			}
 
 			// Export routes

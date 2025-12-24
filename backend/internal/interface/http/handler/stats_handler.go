@@ -59,3 +59,23 @@ func (h *StatsHandler) GetSLAMetrics(c *gin.Context) {
 
 	c.JSON(http.StatusOK, metrics)
 }
+
+// GetTagStats godoc
+// @Summary Get tag statistics
+// @Description Retrieve incident count statistics by tag
+// @Tags stats
+// @Accept json
+// @Produce json
+// @Success 200 {object} []usecase.TagStats
+// @Failure 500 {object} map[string]string
+// @Router /api/stats/tags [get]
+// @Security BearerAuth
+func (h *StatsHandler) GetTagStats(c *gin.Context) {
+	tagStats, err := h.statsUsecase.GetTagStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tag_stats": tagStats})
+}
