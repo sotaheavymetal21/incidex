@@ -40,6 +40,11 @@ go.work.sum
 .settings.local.json
 *.local.json
 
+# Backup files
+*.bak
+*.backup
+*~
+
 # Claude AI / Cursor IDE settings
 .claude/
 .cursor/
