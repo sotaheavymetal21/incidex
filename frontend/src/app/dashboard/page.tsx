@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { statsApi } from '@/lib/api';
-import { DashboardStats, TrendPeriod } from '@/types/stats';
+import { DashboardStats, TrendPeriod, TagStats } from '@/types/stats';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const SEVERITY_COLORS = {
@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, token } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [tagStats, setTagStats] = useState<TagStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [period, setPeriod] = useState<TrendPeriod>('daily');
@@ -52,8 +53,12 @@ export default function DashboardPage() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const data = await statsApi.getDashboardStats(token, period);
-        setStats(data);
+        const [dashboardData, tagStatsData] = await Promise.all([
+          statsApi.getDashboardStats(token, period),
+          statsApi.getTagStats(token),
+        ]);
+        setStats(dashboardData);
+        setTagStats(tagStatsData.tag_stats);
         setError('');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
@@ -268,6 +273,41 @@ export default function DashboardPage() {
             </LineChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Tag Statistics */}
+        {tagStats.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">タグ別インシデント統計</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tagStats.map((tag) => (
+                <div key={tag.tag_id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      <span
+                        className="w-4 h-4 rounded-full mr-2"
+                        style={{ backgroundColor: tag.tag_color }}
+                      />
+                      <span className="font-medium text-gray-900">{tag.tag_name}</span>
+                    </div>
+                    <span className="text-2xl font-bold text-gray-900">{tag.count}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full"
+                      style={{
+                        backgroundColor: tag.tag_color,
+                        width: `${tag.percentage}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500 text-right">
+                    {tag.percentage.toFixed(1)}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recent Incidents */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
