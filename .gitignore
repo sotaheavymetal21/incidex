@@ -51,3 +51,8 @@ go.work.sum
 CLAUDE.md
 .coderabbit.yaml
 .coderabbit.yml
+
+# Documentation files (internal use only)
+docs/機能分析と実装計画書.md
+docs/実装完了レポート.md
+docs/実装優先順位クイックガイド.md
