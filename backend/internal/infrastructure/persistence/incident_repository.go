@@ -43,8 +43,28 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 			Distinct()
 	}
 	if filters.Search != "" {
-		searchPattern := "%" + strings.ToLower(filters.Search) + "%"
-		query = query.Where("LOWER(title) LIKE ? OR LOWER(description) LIKE ?", searchPattern, searchPattern)
+		// Try full-text search first (if search_vector column exists)
+		// Format search query for tsquery
+		searchTerms := strings.Fields(filters.Search)
+		if len(searchTerms) > 0 {
+			// Build tsquery from search terms
+			tsquery := strings.Join(searchTerms, " & ")
+
+			// Try full-text search with search_vector
+			var testCount int64
+			testQuery := r.db.WithContext(ctx).Model(&domain.Incident{}).
+				Where("search_vector @@ to_tsquery('simple', ?)", tsquery)
+
+			if err := testQuery.Count(&testCount).Error; err == nil {
+				// Full-text search available, use it
+				query = query.Where("search_vector @@ to_tsquery('simple', ?)", tsquery)
+			} else {
+				// Fall back to LIKE search
+				searchPattern := "%" + strings.ToLower(filters.Search) + "%"
+				query = query.Where("LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(summary) LIKE ?",
+					searchPattern, searchPattern, searchPattern)
+			}
+		}
 	}
 
 	// Count total records

@@ -27,9 +27,10 @@ type incidentUsecase struct {
 	activityRepo        domain.IncidentActivityRepository
 	notificationService *notification.NotificationService
 	aiService           *ai.OpenAIService
+	cacheRepo           domain.CacheRepository
 }
 
-func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository, notificationService *notification.NotificationService, aiService *ai.OpenAIService) IncidentUsecase {
+func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository, notificationService *notification.NotificationService, aiService *ai.OpenAIService, cacheRepo domain.CacheRepository) IncidentUsecase {
 	return &incidentUsecase{
 		incidentRepo:        incidentRepo,
 		tagRepo:             tagRepo,
@@ -37,6 +38,7 @@ func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.T
 		activityRepo:        activityRepo,
 		notificationService: notificationService,
 		aiService:           aiService,
+		cacheRepo:           cacheRepo,
 	}
 }
 
@@ -364,6 +366,13 @@ func (u *incidentUsecase) RegenerateSummary(ctx context.Context, id uint) (strin
 	incident.Summary = summary
 	if err := u.incidentRepo.Update(ctx, incident); err != nil {
 		return "", err
+	}
+
+	// Cache the summary (TTL = 0 means no expiration)
+	cacheKey := fmt.Sprintf("incident:summary:%d", id)
+	if err := u.cacheRepo.Set(ctx, cacheKey, summary, 0); err != nil {
+		// Log error but don't fail the request if caching fails
+		fmt.Printf("Warning: Failed to cache summary for incident %d: %v\n", id, err)
 	}
 
 	return summary, nil
