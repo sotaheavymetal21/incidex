@@ -135,6 +135,32 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "password updated successfully"})
 }
 
+type AdminResetPasswordRequest struct {
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
+func (h *UserHandler) AdminResetPassword(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		return
+	}
+
+	var req AdminResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.userUsecase.AdminResetPassword(c.Request.Context(), uint(id), req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password reset successfully"})
+}
+
 func (h *UserHandler) Delete(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -169,7 +195,19 @@ func (h *UserHandler) ToggleActive(c *gin.Context) {
 		return
 	}
 
-	if err := h.userUsecase.ToggleActive(c.Request.Context(), uint(id), req.IsActive); err != nil {
+	// Get current user ID from context
+	currentUserIDValue, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user ID not found in context"})
+		return
+	}
+	currentUserID, ok := currentUserIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format in context"})
+		return
+	}
+
+	if err := h.userUsecase.ToggleActive(c.Request.Context(), currentUserID, uint(id), req.IsActive); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

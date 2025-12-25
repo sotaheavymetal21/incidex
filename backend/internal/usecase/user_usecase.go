@@ -14,8 +14,9 @@ type UserUsecase interface {
 	CreateUser(ctx context.Context, email, password, name string, role domain.Role) (*domain.User, error)
 	Update(ctx context.Context, id uint, name, email string, role domain.Role) (*domain.User, error)
 	UpdatePassword(ctx context.Context, id uint, oldPassword, newPassword string) error
+	AdminResetPassword(ctx context.Context, id uint, newPassword string) error
 	Delete(ctx context.Context, id uint) error
-	ToggleActive(ctx context.Context, id uint, isActive bool) error
+	ToggleActive(ctx context.Context, currentUserID uint, id uint, isActive bool) error
 }
 
 type userUsecase struct {
@@ -158,6 +159,34 @@ func (u *userUsecase) UpdatePassword(ctx context.Context, id uint, oldPassword, 
 	return u.userRepo.Update(ctx, user)
 }
 
+func (u *userUsecase) AdminResetPassword(ctx context.Context, id uint, newPassword string) error {
+	// Validate password length
+	if len(newPassword) < 6 {
+		return errors.New("password must be at least 6 characters")
+	}
+
+	user, err := u.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return errors.New("user not found")
+	}
+	if user.DeletedAt != nil {
+		return errors.New("cannot reset password for deleted user")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(hashedPassword)
+
+	return u.userRepo.Update(ctx, user)
+}
+
 func (u *userUsecase) Delete(ctx context.Context, id uint) error {
 	user, err := u.userRepo.FindByID(ctx, id)
 	if err != nil {
@@ -173,7 +202,12 @@ func (u *userUsecase) Delete(ctx context.Context, id uint) error {
 	return u.userRepo.Delete(ctx, id)
 }
 
-func (u *userUsecase) ToggleActive(ctx context.Context, id uint, isActive bool) error {
+func (u *userUsecase) ToggleActive(ctx context.Context, currentUserID uint, id uint, isActive bool) error {
+	// Prevent users from deactivating themselves
+	if currentUserID == id && !isActive {
+		return errors.New("cannot deactivate your own account")
+	}
+
 	user, err := u.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return err
@@ -183,6 +217,23 @@ func (u *userUsecase) ToggleActive(ctx context.Context, id uint, isActive bool) 
 	}
 	if user.DeletedAt != nil {
 		return errors.New("cannot toggle active status of deleted user")
+	}
+
+	// Prevent deactivating the last active admin
+	if !isActive && user.Role == domain.RoleAdmin && user.IsActive {
+		activeAdmins, err := u.userRepo.FindAll(ctx)
+		if err != nil {
+			return err
+		}
+		activeAdminCount := 0
+		for _, admin := range activeAdmins {
+			if admin.Role == domain.RoleAdmin && admin.IsActive && admin.DeletedAt == nil {
+				activeAdminCount++
+			}
+		}
+		if activeAdminCount <= 1 {
+			return errors.New("cannot deactivate the last active admin user")
+		}
 	}
 
 	return u.userRepo.ToggleActive(ctx, id, isActive)
