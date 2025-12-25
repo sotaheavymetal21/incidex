@@ -12,7 +12,7 @@ interface ChangePasswordModalProps {
 }
 
 export default function ChangePasswordModal({ user, onClose, onSuccess }: ChangePasswordModalProps) {
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   const [formData, setFormData] = useState<UpdatePasswordRequest>({
     old_password: '',
     new_password: '',
@@ -20,6 +20,9 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Check if admin is resetting another user's password
+  const isAdminReset = currentUser?.role === 'admin' && currentUser?.id !== user.id;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +43,15 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
     try {
       setLoading(true);
       setError('');
-      await userApi.updatePassword(token, user.id, formData);
+
+      if (isAdminReset) {
+        // Admin resetting another user's password - no old password needed
+        await userApi.adminResetPassword(token, user.id, formData.new_password);
+      } else {
+        // User changing their own password - old password required
+        await userApi.updatePassword(token, user.id, formData);
+      }
+
       alert('パスワードが正常に変更されました');
       onSuccess();
     } catch (err: any) {
@@ -65,19 +76,28 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              現在のパスワード
-            </label>
-            <input
-              type="password"
-              value={formData.old_password}
-              onChange={(e) => setFormData({ ...formData, old_password: e.target.value })}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-              autoComplete="current-password"
-            />
-          </div>
+          {!isAdminReset && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                現在のパスワード
+              </label>
+              <input
+                type="password"
+                value={formData.old_password}
+                onChange={(e) => setFormData({ ...formData, old_password: e.target.value })}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+          )}
+          {isAdminReset && (
+            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded p-3">
+              <p className="text-sm text-yellow-800">
+                管理者として他のユーザーのパスワードをリセットします。現在のパスワードは不要です。
+              </p>
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
