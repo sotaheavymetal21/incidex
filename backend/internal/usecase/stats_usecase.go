@@ -1,6 +1,9 @@
 package usecase
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"incidex/internal/domain"
 	"time"
 )
@@ -39,6 +42,20 @@ type TrendDataPoint struct {
 }
 
 func (u *StatsUsecase) GetDashboardStats(period string) (*DashboardStats, error) {
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("stats:dashboard:%s", period)
+
+	// Try to get from cache
+	if cachedData, err := u.cacheRepo.Get(ctx, cacheKey); err == nil {
+		var stats DashboardStats
+		if err := json.Unmarshal([]byte(cachedData), &stats); err == nil {
+			fmt.Printf("Cache hit for dashboard stats (period: %s)\n", period)
+			return &stats, nil
+		}
+	}
+
+	fmt.Printf("Cache miss for dashboard stats (period: %s), computing...\n", period)
+
 	// 総件数
 	var totalCount int64
 	if err := u.incidentRepo.Count(&totalCount); err != nil {
@@ -89,13 +106,22 @@ func (u *StatsUsecase) GetDashboardStats(period string) (*DashboardStats, error)
 		return nil, err
 	}
 
-	return &DashboardStats{
+	stats := &DashboardStats{
 		TotalIncidents:  totalCount,
 		BySeverity:      bySeverity,
 		ByStatus:        byStatus,
 		RecentIncidents: recentIncidents,
 		TrendData:       trendData,
-	}, nil
+	}
+
+	// Cache the result for 5 minutes
+	if statsJSON, err := json.Marshal(stats); err == nil {
+		if err := u.cacheRepo.Set(ctx, cacheKey, string(statsJSON), 5*time.Minute); err != nil {
+			fmt.Printf("Warning: Failed to cache dashboard stats: %v\n", err)
+		}
+	}
+
+	return stats, nil
 }
 
 func (u *StatsUsecase) generateTrendData(period string) ([]TrendDataPoint, error) {
@@ -182,11 +208,52 @@ func (u *StatsUsecase) generateTrendData(period string) ([]TrendDataPoint, error
 
 // GetSLAMetrics returns SLA performance metrics
 func (u *StatsUsecase) GetSLAMetrics() (*domain.SLAMetrics, error) {
-	return u.incidentRepo.GetSLAMetrics()
+	ctx := context.Background()
+	cacheKey := "stats:sla"
+
+	// Try to get from cache
+	if cachedData, err := u.cacheRepo.Get(ctx, cacheKey); err == nil {
+		var metrics domain.SLAMetrics
+		if err := json.Unmarshal([]byte(cachedData), &metrics); err == nil {
+			fmt.Println("Cache hit for SLA metrics")
+			return &metrics, nil
+		}
+	}
+
+	fmt.Println("Cache miss for SLA metrics, computing...")
+
+	// Get fresh data
+	metrics, err := u.incidentRepo.GetSLAMetrics()
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the result for 5 minutes
+	if metricsJSON, err := json.Marshal(metrics); err == nil {
+		if err := u.cacheRepo.Set(ctx, cacheKey, string(metricsJSON), 5*time.Minute); err != nil {
+			fmt.Printf("Warning: Failed to cache SLA metrics: %v\n", err)
+		}
+	}
+
+	return metrics, nil
 }
 
 // GetTagStats returns incident statistics by tag
 func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
+	ctx := context.Background()
+	cacheKey := "stats:tags"
+
+	// Try to get from cache
+	if cachedData, err := u.cacheRepo.Get(ctx, cacheKey); err == nil {
+		var stats []TagStats
+		if err := json.Unmarshal([]byte(cachedData), &stats); err == nil {
+			fmt.Println("Cache hit for tag stats")
+			return stats, nil
+		}
+	}
+
+	fmt.Println("Cache miss for tag stats, computing...")
+
 	// Get all incidents with tags preloaded
 	allIncidents, err := u.incidentRepo.GetAllIncidents()
 	if err != nil {
@@ -244,6 +311,13 @@ func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
 			if tagStats[j].Count > tagStats[i].Count {
 				tagStats[i], tagStats[j] = tagStats[j], tagStats[i]
 			}
+		}
+	}
+
+	// Cache the result for 10 minutes
+	if statsJSON, err := json.Marshal(tagStats); err == nil {
+		if err := u.cacheRepo.Set(ctx, cacheKey, string(statsJSON), 10*time.Minute); err != nil {
+			fmt.Printf("Warning: Failed to cache tag stats: %v\n", err)
 		}
 	}
 
