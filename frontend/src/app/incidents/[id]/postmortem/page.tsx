@@ -165,7 +165,7 @@ export default function PostMortemPage() {
       return;
     }
 
-    if (!confirm('Post-Mortemを公開しますか？公開後は編集できません。')) {
+    if (!confirm('Post-Mortemを公開しますか？')) {
       return;
     }
 
@@ -176,6 +176,27 @@ export default function PostMortemPage() {
       alert('Post-Mortemを公開しました');
     } catch (err: any) {
       alert('公開に失敗しました: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!postMortem) {
+      return;
+    }
+
+    if (!confirm('Post-Mortemをドラフトに戻しますか？再度編集が可能になります。')) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const unpublished = await postMortemApi.unpublish(token!, postMortem.id);
+      setPostMortem(unpublished);
+      alert('Post-Mortemをドラフトに戻しました');
+    } catch (err: any) {
+      alert('ドラフトに戻すのに失敗しました: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -282,12 +303,13 @@ export default function PostMortemPage() {
   };
 
   const isEditable = !postMortem || postMortem.status === 'draft';
+  const canEditActionItems = !!postMortem; // アクションアイテムは公開後も編集可能
 
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg text-gray-600">読み込み中...</div>
+          <div className="text-lg text-gray-900">読み込み中...</div>
         </div>
       </div>
     );
@@ -451,7 +473,7 @@ export default function PostMortemPage() {
             <h2 className="text-xl font-semibold text-gray-900">
               Action Items (アクションアイテム)
             </h2>
-            {postMortem && isEditable && (
+            {canEditActionItems && (
               <button
                 onClick={() => {
                   setShowActionItemForm(true);
@@ -502,18 +524,24 @@ export default function PostMortemPage() {
                       )}
                     </div>
                   </div>
-                  {isEditable && (
+                  {canEditActionItems && (
                     <div className="flex gap-2 ml-4">
                       <button
                         onClick={() => handleEditActionItem(item)}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                         編集
                       </button>
                       <button
                         onClick={() => handleDeleteActionItem(item.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded transition-colors"
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                         削除
                       </button>
                     </div>
@@ -523,8 +551,10 @@ export default function PostMortemPage() {
             ))}
 
             {actionItems.length === 0 && (
-              <p className="text-gray-500 text-center py-8">
-                アクションアイテムはまだありません
+              <p className="text-gray-700 text-center py-8">
+                {postMortem
+                  ? 'アクションアイテムはまだありません。右上の「+ 追加」ボタンから追加できます。'
+                  : 'アクションアイテムを追加するには、まずPost-Mortemを保存してください。'}
               </p>
             )}
           </div>
@@ -707,6 +737,15 @@ export default function PostMortemPage() {
                 </button>
               )}
             </>
+          )}
+          {postMortem && postMortem.status === 'published' && (
+            <button
+              onClick={handleUnpublish}
+              disabled={saving}
+              className="px-6 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:bg-gray-400"
+            >
+              ドラフトに戻す
+            </button>
           )}
         </div>
       </div>
