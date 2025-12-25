@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { statsApi } from '@/lib/api';
 import { DashboardStats, TrendPeriod, TagStats } from '@/types/stats';
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const SEVERITY_COLORS = {
   critical: '#dc2626',
@@ -104,7 +104,43 @@ export default function DashboardPage() {
     name: STATUS_LABELS[key] || key,
     value,
     color: STATUS_COLORS[key as keyof typeof STATUS_COLORS],
+    key, // Keep the original key for filtering
   }));
+
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-900">{payload[0].name}</p>
+          <p className="text-sm text-gray-600">
+            件数: <span className="font-bold">{payload[0].value}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">クリックで詳細を表示</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Handle pie chart click - navigate to incidents page with filter
+  const handleSeverityClick = (data: any) => {
+    const severityKey = Object.keys(SEVERITY_LABELS).find(
+      key => SEVERITY_LABELS[key] === data.name
+    );
+    if (severityKey) {
+      router.push(`/incidents?severity=${severityKey}`);
+    }
+  };
+
+  const handleStatusClick = (data: any) => {
+    const statusKey = Object.keys(STATUS_LABELS).find(
+      key => STATUS_LABELS[key] === data.name
+    );
+    if (statusKey) {
+      router.push(`/incidents?status=${statusKey}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -117,11 +153,15 @@ export default function DashboardPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+            onClick={() => router.push('/incidents')}
+            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+          >
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">総インシデント数</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total_incidents}</p>
+                <p className="text-xs text-gray-500 mt-1">クリックで一覧表示</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,11 +171,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+            onClick={() => router.push('/incidents?severity=critical')}
+            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+          >
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Critical</p>
                 <p className="text-3xl font-bold text-red-600 mt-2">{stats.by_severity.critical || 0}</p>
+                <p className="text-xs text-gray-500 mt-1">クリックで一覧表示</p>
               </div>
               <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,11 +189,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+            onClick={() => router.push('/incidents?status=open')}
+            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+          >
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Open（未対応）</p>
                 <p className="text-3xl font-bold text-orange-600 mt-2">{stats.by_status.open || 0}</p>
+                <p className="text-xs text-gray-500 mt-1">クリックで一覧表示</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,11 +207,15 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div
+            onClick={() => router.push('/incidents?status=resolved')}
+            className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+          >
             <div className="flex items-center">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Resolved（解決済み）</p>
                 <p className="text-3xl font-bold text-green-600 mt-2">{stats.by_status.resolved || 0}</p>
+                <p className="text-xs text-gray-500 mt-1">クリックで一覧表示</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,9 +228,10 @@ export default function DashboardPage() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Severity Distribution */}
+          {/* Severity Distribution - Pie Chart */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">重要度別分布</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">重要度別分布（円グラフ）</h2>
+            <p className="text-sm text-gray-500 mb-4">クリックして該当インシデントを表示</p>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -186,23 +239,32 @@ export default function DashboardPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name.split('（')[0]}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  onClick={handleSeverityClick}
+                  style={{ cursor: 'pointer' }}
+                  animationBegin={0}
+                  animationDuration={800}
                 >
                   {severityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color}
+                      className="hover:opacity-80 transition-opacity"
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Status Distribution */}
+          {/* Status Distribution - Pie Chart */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">ステータス別分布</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">ステータス別分布（円グラフ）</h2>
+            <p className="text-sm text-gray-500 mb-4">クリックして該当インシデントを表示</p>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -210,17 +272,90 @@ export default function DashboardPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name.split('（')[0]}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
+                  onClick={handleStatusClick}
+                  style={{ cursor: 'pointer' }}
+                  animationBegin={0}
+                  animationDuration={800}
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color}
+                      className="hover:opacity-80 transition-opacity"
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Bar Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Severity Distribution - Bar Chart */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">重要度別件数（棒グラフ）</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={severityData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12 }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="value"
+                  fill="#8884d8"
+                  onClick={handleSeverityClick}
+                  style={{ cursor: 'pointer' }}
+                  animationBegin={0}
+                  animationDuration={800}
+                >
+                  {severityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Status Distribution - Bar Chart */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">ステータス別件数（棒グラフ）</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={statusData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 12 }}
+                  angle={-15}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar
+                  dataKey="value"
+                  fill="#8884d8"
+                  onClick={handleStatusClick}
+                  style={{ cursor: 'pointer' }}
+                  animationBegin={0}
+                  animationDuration={800}
                 >
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -264,12 +399,43 @@ export default function DashboardPage() {
           </div>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={stats.trend_data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} name="インシデント数" />
+              <defs>
+                <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12 }}
+                stroke="#6b7280"
+              />
+              <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                }}
+                labelStyle={{ fontWeight: 'bold', color: '#111827' }}
+              />
+              <Legend
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="line"
+              />
+              <Line
+                type="monotone"
+                dataKey="count"
+                stroke="#3b82f6"
+                strokeWidth={3}
+                name="インシデント数"
+                dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, fill: '#2563eb' }}
+                animationBegin={0}
+                animationDuration={1000}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
