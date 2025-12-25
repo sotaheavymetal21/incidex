@@ -124,6 +124,9 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		}
 	}
 
+	// Invalidate statistics cache
+	u.invalidateStatsCache(ctx)
+
 	// Reload to get all relations
 	return u.incidentRepo.FindByID(ctx, incident.ID)
 }
@@ -473,5 +476,21 @@ func isValidStatus(status domain.Status) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// invalidateStatsCache invalidates all statistics cache keys
+func (u *incidentUsecase) invalidateStatsCache(ctx context.Context) {
+	// Invalidate all dashboard stats caches
+	patterns := []string{
+		"stats:dashboard:*",
+		"stats:sla",
+		"stats:tags",
+	}
+
+	for _, pattern := range patterns {
+		if err := u.cacheRepo.DeleteByPattern(ctx, pattern); err != nil {
+			fmt.Printf("Warning: Failed to invalidate cache pattern %s: %v\n", pattern, err)
+		}
 	}
 }
