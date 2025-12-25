@@ -77,6 +77,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				users.PUT("/:id", userHandler.Update)
 				users.PATCH("/:id/status", userHandler.ToggleActive)
 				users.PUT("/:id/password", userHandler.UpdatePassword)
+				users.POST("/:id/admin-reset-password", userHandler.AdminResetPassword)
 				users.DELETE("/:id", userHandler.Delete)
 			}
 
@@ -122,6 +123,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				postMortems.PUT("/:id", middleware.RequireEditorOrAdmin(), postMortemHandler.Update)
 				postMortems.DELETE("/:id", middleware.RequireEditorOrAdmin(), postMortemHandler.Delete)
 				postMortems.POST("/:id/publish", middleware.RequireEditorOrAdmin(), postMortemHandler.Publish)
+				postMortems.POST("/:id/unpublish", middleware.RequireEditorOrAdmin(), postMortemHandler.Unpublish)
 				postMortems.GET("/:id/action-items", actionItemHandler.GetByPostMortemID)
 			}
 

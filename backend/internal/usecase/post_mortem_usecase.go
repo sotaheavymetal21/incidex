@@ -16,6 +16,7 @@ type PostMortemUsecase interface {
 	GetPostMortemByIncidentID(ctx context.Context, incidentID uint) (*domain.PostMortem, error)
 	UpdatePostMortem(ctx context.Context, userID uint, userRole domain.Role, id uint, rootCause, impactAnalysis, whatWentWell, whatWentWrong, lessonsLearned string, fiveWhys *domain.FiveWhysAnalysis) (*domain.PostMortem, error)
 	PublishPostMortem(ctx context.Context, userID uint, userRole domain.Role, id uint) (*domain.PostMortem, error)
+	UnpublishPostMortem(ctx context.Context, userID uint, userRole domain.Role, id uint) (*domain.PostMortem, error)
 	DeletePostMortem(ctx context.Context, userRole domain.Role, id uint) error
 	GetAllPostMortems(ctx context.Context, filters domain.PostMortemFilters, pagination domain.Pagination) ([]*domain.PostMortem, *domain.PaginationResult, error)
 	GenerateAIRootCauseSuggestion(ctx context.Context, incidentID uint) (string, error)
@@ -199,6 +200,40 @@ func (u *postMortemUsecase) PublishPostMortem(
 	now := time.Now()
 	pm.Status = domain.PMStatusPublished
 	pm.PublishedAt = &now
+
+	if err := u.postMortemRepo.Update(ctx, pm); err != nil {
+		return nil, err
+	}
+
+	// Reload with relations
+	return u.postMortemRepo.FindByID(ctx, id)
+}
+
+func (u *postMortemUsecase) UnpublishPostMortem(
+	ctx context.Context,
+	userID uint,
+	userRole domain.Role,
+	id uint,
+) (*domain.PostMortem, error) {
+	// Get existing post-mortem
+	pm, err := u.postMortemRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if already draft
+	if pm.Status == domain.PMStatusDraft {
+		return nil, errors.New("post-mortem is already in draft status")
+	}
+
+	// Check permissions (only author or admin can unpublish)
+	if userRole == domain.RoleEditor && pm.AuthorID != userID {
+		return nil, errors.New("you can only unpublish your own post-mortems")
+	}
+
+	// Update status back to draft
+	pm.Status = domain.PMStatusDraft
+	pm.PublishedAt = nil
 
 	if err := u.postMortemRepo.Update(ctx, pm); err != nil {
 		return nil, err

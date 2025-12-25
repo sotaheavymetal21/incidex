@@ -345,6 +345,66 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 	c.JSON(http.StatusOK, pm)
 }
 
+// Unpublish godoc
+// @Summary Unpublish a post-mortem
+// @Description Unpublish a post-mortem (revert to draft status for editing)
+// @Tags post-mortems
+// @Accept json
+// @Produce json
+// @Param id path int true "Post-mortem ID"
+// @Success 200 {object} domain.PostMortem
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/post-mortems/{id}/unpublish [post]
+// @Security BearerAuth
+func (h *PostMortemHandler) Unpublish(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
+		return
+	}
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDFloat, ok := userID.(float64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+		return
+	}
+
+	userRole, exists := c.Get("role")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+		return
+	}
+
+	userRoleStr, ok := userRole.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+		return
+	}
+
+	pm, err := h.postMortemUsecase.UnpublishPostMortem(
+		c.Request.Context(),
+		uint(userIDFloat),
+		domain.Role(userRoleStr),
+		uint(id),
+	)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, pm)
+}
+
 // Delete godoc
 // @Summary Delete a post-mortem
 // @Description Delete a post-mortem (admin only)
