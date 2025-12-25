@@ -172,6 +172,12 @@ export const userApi = {
       token,
       body: data,
     }),
+  adminResetPassword: (token: string, id: number, newPassword: string) =>
+    apiRequest<{ message: string }>(`/users/${id}/admin-reset-password`, {
+      method: 'POST',
+      token,
+      body: { new_password: newPassword },
+    }),
   delete: (token: string, id: number) =>
     apiRequest<{ message: string }>(`/users/${id}`, {
       method: 'DELETE',
@@ -394,6 +400,12 @@ export const postMortemApi = {
 
   publish: (token: string, id: number) =>
     apiRequest<PostMortem>(`/post-mortems/${id}/publish`, {
+      method: 'POST',
+      token,
+    }),
+
+  unpublish: (token: string, id: number) =>
+    apiRequest<PostMortem>(`/post-mortems/${id}/unpublish`, {
       method: 'POST',
       token,
     }),
