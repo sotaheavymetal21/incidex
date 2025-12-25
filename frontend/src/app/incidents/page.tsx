@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { incidentApi, tagApi, exportApi } from '@/lib/api';
@@ -9,10 +9,25 @@ import { Incident, Severity, Status, PaginationResult } from '@/types/incident';
 import { Tag } from '@/types/tag';
 import SeverityGuide from '@/components/SeverityGuide';
 
-export default function IncidentsPage() {
-  const { token, loading: authLoading } = useAuth();
+const SEVERITY_LABELS: Record<Severity, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+const STATUS_LABELS: Record<Status, string> = {
+  open: 'Open',
+  investigating: 'Investigating',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+function IncidentsPageContent() {
+  const { token, loading: authLoading, user } = useAuth();
   const permissions = usePermissions();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +44,20 @@ export default function IncidentsPage() {
   const [severity, setSeverity] = useState<Severity | ''>('');
   const [status, setStatus] = useState<Status | ''>('');
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [showSidebar, setShowSidebar] = useState(true);
+
+  // Load filters from URL params
+  useEffect(() => {
+    const paramSeverity = searchParams.get('severity') as Severity | null;
+    const paramStatus = searchParams.get('status') as Status | null;
+    const paramTags = searchParams.get('tags');
+    const paramSearch = searchParams.get('search');
+
+    if (paramSeverity) setSeverity(paramSeverity);
+    if (paramStatus) setStatus(paramStatus);
+    if (paramTags) setSelectedTagIds(paramTags.split(',').map(Number));
+    if (paramSearch) setSearch(paramSearch);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -80,14 +109,58 @@ export default function IncidentsPage() {
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    setPagination({ ...pagination, page: 1 }); // Reset to first page
+    setPagination({ ...pagination, page: 1 });
   };
 
   const handleTagToggle = (tagId: number) => {
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
-    setPagination({ ...pagination, page: 1 }); // Reset to first page
+    setPagination({ ...pagination, page: 1 });
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setSeverity('');
+    setStatus('');
+    setSelectedTagIds([]);
+    setPagination({ ...pagination, page: 1 });
+  };
+
+  const clearFilter = (filterType: 'search' | 'severity' | 'status' | 'tag', value?: number) => {
+    switch (filterType) {
+      case 'search':
+        setSearch('');
+        break;
+      case 'severity':
+        setSeverity('');
+        break;
+      case 'status':
+        setStatus('');
+        break;
+      case 'tag':
+        if (value !== undefined) {
+          setSelectedTagIds((prev) => prev.filter((id) => id !== value));
+        }
+        break;
+    }
+    setPagination({ ...pagination, page: 1 });
+  };
+
+  const applyPreset = (preset: 'unresolved' | 'my-assigned' | 'critical') => {
+    clearFilters();
+    switch (preset) {
+      case 'unresolved':
+        setStatus('open');
+        break;
+      case 'my-assigned':
+        // Note: This requires API support for assignee filter
+        // For now, we'll just use the user state
+        break;
+      case 'critical':
+        setSeverity('critical');
+        break;
+    }
   };
 
   const getSeverityColor = (severity: Severity) => {
@@ -119,7 +192,6 @@ export default function IncidentsPage() {
         tag_ids: selectedTagIds.length > 0 ? selectedTagIds.join(',') : undefined,
       });
 
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -134,6 +206,8 @@ export default function IncidentsPage() {
     }
   };
 
+  const hasActiveFilters = search || severity || status || selectedTagIds.length > 0;
+
   if (authLoading || !token) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -145,6 +219,7 @@ export default function IncidentsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">インシデント一覧</h1>
           <div className="flex space-x-3">
@@ -171,234 +246,357 @@ export default function IncidentsPage() {
         {/* Severity Guide */}
         <SeverityGuide />
 
-        {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search
-              </label>
-              <input
-                type="text"
-                value={search}
-                onChange={handleSearchChange}
-                placeholder="Search title or description..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-              />
-            </div>
-
-            {/* Severity Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Severity
-              </label>
-              <select
-                value={severity}
-                onChange={(e) => {
-                  setSeverity(e.target.value as Severity | '');
-                  setPagination({ ...pagination, page: 1 });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              >
-                <option value="">All</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value as Status | '');
-                  setPagination({ ...pagination, page: 1 });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-              >
-                <option value="">All</option>
-                <option value="open">Open</option>
-                <option value="investigating">Investigating</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-
-            {/* Tag Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tags
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
+        <div className="flex gap-6">
+          {/* Sidebar Filter Panel */}
+          {showSidebar && (
+            <div className="w-64 flex-shrink-0">
+              <div className="bg-white rounded-lg shadow p-4 sticky top-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">フィルター</h2>
                   <button
-                    key={tag.id}
-                    onClick={() => handleTagToggle(tag.id)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
-                      selectedTagIds.includes(tag.id)
-                        ? 'bg-blue-100 border-blue-500 text-blue-800'
-                        : 'bg-white border-gray-300 text-gray-700'
-                    }`}
-                    style={
-                      selectedTagIds.includes(tag.id)
-                        ? { borderColor: tag.color }
-                        : undefined
-                    }
+                    onClick={() => setShowSidebar(false)}
+                    className="text-gray-400 hover:text-gray-600 lg:hidden"
                   >
-                    {tag.name}
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
-                ))}
+                </div>
+
+                {/* Filter Presets */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">クイックフィルター</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => applyPreset('unresolved')}
+                      className="w-full px-3 py-2 text-sm text-left bg-gray-50 hover:bg-gray-100 rounded-md text-gray-700"
+                    >
+                      未解決のインシデント
+                    </button>
+                    <button
+                      onClick={() => applyPreset('critical')}
+                      className="w-full px-3 py-2 text-sm text-left bg-gray-50 hover:bg-gray-100 rounded-md text-gray-700"
+                    >
+                      Critical のみ
+                    </button>
+                    <button
+                      onClick={clearFilters}
+                      className="w-full px-3 py-2 text-sm text-left bg-gray-50 hover:bg-gray-100 rounded-md text-gray-700"
+                    >
+                      すべてクリア
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    検索
+                  </label>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={handleSearchChange}
+                    placeholder="タイトル、説明を検索..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  />
+                </div>
+
+                {/* Severity Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    深刻度
+                  </label>
+                  <div className="space-y-2">
+                    {(Object.keys(SEVERITY_LABELS) as Severity[]).map((sev) => (
+                      <label key={sev} className="flex items-center">
+                        <input
+                          type="radio"
+                          name="severity"
+                          checked={severity === sev}
+                          onChange={() => {
+                            setSeverity(sev);
+                            setPagination({ ...pagination, page: 1 });
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{SEVERITY_LABELS[sev]}</span>
+                      </label>
+                    ))}
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="severity"
+                        checked={severity === ''}
+                        onChange={() => {
+                          setSeverity('');
+                          setPagination({ ...pagination, page: 1 });
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">すべて</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ステータス
+                  </label>
+                  <div className="space-y-2">
+                    {(Object.keys(STATUS_LABELS) as Status[]).map((st) => (
+                      <label key={st} className="flex items-center">
+                        <input
+                          type="radio"
+                          name="status"
+                          checked={status === st}
+                          onChange={() => {
+                            setStatus(st);
+                            setPagination({ ...pagination, page: 1 });
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{STATUS_LABELS[st]}</span>
+                      </label>
+                    ))}
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="status"
+                        checked={status === ''}
+                        onChange={() => {
+                          setStatus('');
+                          setPagination({ ...pagination, page: 1 });
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">すべて</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Tag Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    タグ
+                  </label>
+                  <div className="space-y-2">
+                    {tags.map((tag) => (
+                      <label key={tag.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTagIds.includes(tag.id)}
+                          onChange={() => handleTagToggle(tag.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">{tag.name}</span>
+                        <span
+                          className="ml-auto w-3 h-3 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        ></span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Toggle Sidebar Button (Mobile) */}
+            {!showSidebar && (
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="mb-4 px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                フィルターを表示
+              </button>
+            )}
 
-        {/* Incidents Table */}
-        {loading ? (
-          <div className="text-center py-8 text-gray-600">Loading incidents...</div>
-        ) : incidents.length === 0 ? (
-          <div className="text-center py-8 text-gray-600">
-            No incidents found. Create your first incident!
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Severity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Detected At
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assignee
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tags
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {incidents.map((incident) => (
-                  <tr
-                    key={incident.id}
-                    onClick={() => router.push(`/incidents/${incident.id}`)}
-                    className="hover:bg-gray-50 cursor-pointer"
+            {/* Filter Chips */}
+            {hasActiveFilters && (
+              <div className="mb-4 bg-white p-4 rounded-lg shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">適用中のフィルター:</h3>
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-blue-600 hover:text-blue-800"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {incident.title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getSeverityColor(
-                          incident.severity
-                        )}`}
-                      >
-                        {incident.severity.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(
-                          incident.status
-                        )}`}
-                      >
-                        {incident.status.charAt(0).toUpperCase() +
-                          incident.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(incident.detected_at).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {incident.assignee?.name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-wrap gap-1">
-                        {incident.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag.id}
-                            className="px-2 py-1 text-xs rounded-full text-white"
-                            style={{ backgroundColor: tag.color }}
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                        {incident.tags.length > 3 && (
-                          <span className="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-700">
-                            +{incident.tags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Pagination */}
-            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() =>
-                    setPagination({ ...pagination, page: Math.max(pagination.page - 1, 1) })
-                  }
-                  disabled={pagination.page === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() =>
-                    setPagination({
-                      ...pagination,
-                      page: Math.min(pagination.page + 1, pagination.total_pages),
-                    })
-                  }
-                  disabled={pagination.page === pagination.total_pages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing page <span className="font-medium">{pagination.page}</span> of{' '}
-                    <span className="font-medium">{pagination.total_pages}</span> (
-                    <span className="font-medium">{pagination.total}</span> total)
-                  </p>
+                    すべてクリア
+                  </button>
                 </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                <div className="flex flex-wrap gap-2">
+                  {search && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                      検索: {search}
+                      <button
+                        onClick={() => clearFilter('search')}
+                        className="ml-2 text-blue-600 hover:text-blue-900"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  )}
+                  {severity && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
+                      深刻度: {SEVERITY_LABELS[severity]}
+                      <button
+                        onClick={() => clearFilter('severity')}
+                        className="ml-2 text-orange-600 hover:text-orange-900"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  )}
+                  {status && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                      ステータス: {STATUS_LABELS[status]}
+                      <button
+                        onClick={() => clearFilter('status')}
+                        className="ml-2 text-green-600 hover:text-green-900"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  )}
+                  {selectedTagIds.map((tagId) => {
+                    const tag = tags.find((t) => t.id === tagId);
+                    return tag ? (
+                      <span
+                        key={tagId}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm text-white"
+                        style={{ backgroundColor: tag.color }}
+                      >
+                        {tag.name}
+                        <button
+                          onClick={() => clearFilter('tag', tagId)}
+                          className="ml-2 text-white hover:text-gray-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
+              </div>
+            )}
+
+            {/* Incidents Table */}
+            {loading ? (
+              <div className="text-center py-8 text-gray-600">Loading incidents...</div>
+            ) : incidents.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                インシデントが見つかりませんでした。フィルターを変更するか、新しいインシデントを作成してください。
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Title
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Detected At
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Assignee
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tags
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {incidents.map((incident) => (
+                      <tr
+                        key={incident.id}
+                        onClick={() => router.push(`/incidents/${incident.id}`)}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {incident.title}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getSeverityColor(
+                              incident.severity
+                            )}`}
+                          >
+                            {incident.severity.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(
+                              incident.status
+                            )}`}
+                          >
+                            {incident.status.charAt(0).toUpperCase() +
+                              incident.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(incident.detected_at).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {incident.assignee?.name || '-'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {incident.tags.map((tag) => (
+                              <span
+                                key={tag.id}
+                                className="px-2 py-1 text-xs rounded-full text-white whitespace-nowrap"
+                                style={{ backgroundColor: tag.color }}
+                              >
+                                {tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination */}
+                <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                  <div className="flex-1 flex justify-between sm:hidden">
                     <button
                       onClick={() =>
                         setPagination({ ...pagination, page: Math.max(pagination.page - 1, 1) })
                       }
                       disabled={pagination.page === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
                       Previous
                     </button>
@@ -410,17 +608,59 @@ export default function IncidentsPage() {
                         })
                       }
                       disabled={pagination.page === pagination.total_pages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
                       Next
                     </button>
-                  </nav>
+                  </div>
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing page <span className="font-medium">{pagination.page}</span> of{' '}
+                        <span className="font-medium">{pagination.total_pages}</span> (
+                        <span className="font-medium">{pagination.total}</span> total)
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <button
+                          onClick={() =>
+                            setPagination({ ...pagination, page: Math.max(pagination.page - 1, 1) })
+                          }
+                          disabled={pagination.page === 1}
+                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() =>
+                            setPagination({
+                              ...pagination,
+                              page: Math.min(pagination.page + 1, pagination.total_pages),
+                            })
+                          }
+                          disabled={pagination.page === pagination.total_pages}
+                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function IncidentsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>}>
+      <IncidentsPageContent />
+    </Suspense>
   );
 }
