@@ -34,7 +34,7 @@ func Load() *Config {
 	cfg := &Config{
 		Port:                 getEnv("PORT", "8080"),
 		DatabaseURL:          getEnv("DATABASE_URL", defaultDatabaseURL),
-		RedisURL:             getEnv("REDIS_URL", "localhost:6379"),
+		RedisURL:             getEnv("REDIS_URL", "redis://localhost:6379/0"),
 		MinioEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
 		MinioAccessKey:       getEnv("MINIO_ACCESS_KEY", defaultMinioAccessKey),
 		MinioSecretKey:       getEnv("MINIO_SECRET_KEY", defaultMinioSecretKey),
