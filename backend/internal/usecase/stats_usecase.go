@@ -7,11 +7,13 @@ import (
 
 type StatsUsecase struct {
 	incidentRepo domain.IncidentRepository
+	cacheRepo    domain.CacheRepository
 }
 
-func NewStatsUsecase(incidentRepo domain.IncidentRepository) *StatsUsecase {
+func NewStatsUsecase(incidentRepo domain.IncidentRepository, cacheRepo domain.CacheRepository) *StatsUsecase {
 	return &StatsUsecase{
 		incidentRepo: incidentRepo,
+		cacheRepo:    cacheRepo,
 	}
 }
 
