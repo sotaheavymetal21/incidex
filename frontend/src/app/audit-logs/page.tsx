@@ -133,9 +133,17 @@ export default function AuditLogsPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">監査ログ</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          システム内のすべてのアクションが記録されています
-        </p>
+        <div className="mt-2 text-sm text-gray-900">
+          <p className="mb-2">
+            システム内のすべてのアクションが自動的に記録されています。監査ログは、セキュリティ分析、コンプライアンス遵守、トラブルシューティングに役立ちます。
+          </p>
+          <ul className="list-disc list-inside text-gray-700 space-y-1">
+            <li>ユーザーのログイン・ログアウト履歴</li>
+            <li>インシデント、ユーザー、タグなどのリソースの作成・更新・削除</li>
+            <li>各操作のIPアドレスと実行時刻</li>
+            <li>APIリクエストのステータスコード（成功/失敗）</li>
+          </ul>
+        </div>
       </div>
 
       {/* Filters */}
@@ -185,7 +193,7 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-4 text-sm text-gray-600">
+      <div className="mb-4 text-sm text-gray-900">
         全 {total} 件中 {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, total)} 件を表示
       </div>
 
@@ -199,7 +207,7 @@ export default function AuditLogsPage() {
       {/* Loading */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">読み込み中...</div>
+          <div className="text-gray-900">読み込み中...</div>
         </div>
       ) : (
         <>
@@ -238,7 +246,7 @@ export default function AuditLogsPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-700">
                         監査ログがありません
                       </td>
                     </tr>
@@ -252,7 +260,7 @@ export default function AuditLogsPage() {
                           <div className="text-sm font-medium text-gray-900">
                             {log.user_name || '不明'}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-700">
                             {log.user_email || '-'}
                           </div>
                         </td>
@@ -280,7 +288,7 @@ export default function AuditLogsPage() {
                             {log.status_code}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           {log.ip_address}
                         </td>
                       </tr>
