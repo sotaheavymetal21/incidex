@@ -9,6 +9,7 @@ import { IncidentActivity } from '@/types/activity';
 import { Attachment } from '@/types/attachment';
 import { User } from '@/types/user';
 import Timeline from '@/components/Timeline';
+import Tabs, { Tab } from '@/components/Tabs';
 import { usePermissions } from '@/hooks/usePermissions';
 
 export default function IncidentDetailPage() {
@@ -36,6 +37,8 @@ export default function IncidentDetailPage() {
   const [submittingTimelineEvent, setSubmittingTimelineEvent] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [assigningUser, setAssigningUser] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -103,6 +106,43 @@ export default function IncidentDetailPage() {
       setLoadingAttachments(false);
     }
   };
+
+  // Fetch image blob URLs for attachments
+  useEffect(() => {
+    if (token && attachments.length > 0) {
+      const fetchImageUrls = async () => {
+        const urls: Record<number, string> = {};
+        for (const attachment of attachments) {
+          if (isImageFile(attachment.file_name)) {
+            try {
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+              const response = await fetch(
+                `${apiUrl}/incidents/${id}/attachments/${attachment.id}/download`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                }
+              );
+              if (response.ok) {
+                const blob = await response.blob();
+                urls[attachment.id] = URL.createObjectURL(blob);
+              }
+            } catch (err) {
+              console.error(`Failed to fetch image ${attachment.id}:`, err);
+            }
+          }
+        }
+        setImageUrls(urls);
+      };
+      fetchImageUrls();
+
+      // Clean up object URLs on unmount
+      return () => {
+        Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+      };
+    }
+  }, [token, attachments, id]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -268,6 +308,17 @@ export default function IncidentDetailPage() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const isImageFile = (fileName: string): boolean => {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+    return imageExtensions.includes(extension);
+  };
+
+  const getImageUrl = (attachmentId: number, fileName: string): string => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+    return `${apiUrl}/incidents/${id}/attachments/${attachmentId}/download`;
+  };
+
   if (authLoading || !token) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -353,314 +404,411 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* Metadata Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">メタデータ</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">検出日時</p>
-              <p className="mt-1 text-sm text-gray-900">
-                {new Date(incident.detected_at).toLocaleString('ja-JP')}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">解決日時</p>
-              <p className="mt-1 text-sm text-gray-900">
-                {incident.resolved_at
-                  ? new Date(incident.resolved_at).toLocaleString('ja-JP')
-                  : '未解決'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">影響範囲</p>
-              <p className="mt-1 text-sm text-gray-900">{incident.impact_scope || '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">担当者</p>
-              {permissions.canEdit ? (
-                <select
-                  value={incident.assignee_id || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    handleAssignIncident(value === '' ? null : parseInt(value));
-                  }}
-                  disabled={assigningUser}
-                  className="mt-1 text-sm text-gray-900 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="">未割り当て</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="mt-1 text-sm text-gray-900">
-                  {incident.assignee
-                    ? `${incident.assignee.name} (${incident.assignee.email})`
-                    : '未割り当て'}
-                </p>
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">作成者</p>
-              <p className="mt-1 text-sm text-gray-900">
-                {incident.creator.name} ({incident.creator.email})
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">作成日時</p>
-              <p className="mt-1 text-sm text-gray-900">
-                {new Date(incident.created_at).toLocaleString('ja-JP')}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Description Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{incident.description}</p>
-        </div>
-
-        {/* Summary Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">AI Summary</h2>
-            {canEdit() && (
-              <button
-                onClick={handleRegenerateSummary}
-                disabled={regeneratingSummary}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {regeneratingSummary ? '再生成中...' : '要約を再生成'}
-              </button>
-            )}
-          </div>
-          {incident.summary ? (
-            <p className="text-sm text-gray-700">{incident.summary}</p>
-          ) : (
-            <div>
-              <p className="text-sm text-gray-500 italic mb-2">
-                AI要約がまだ生成されていません
-              </p>
-              {canEdit() && (
-                <button
-                  onClick={handleRegenerateSummary}
-                  disabled={regeneratingSummary}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {regeneratingSummary ? '生成中...' : '要約を生成'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Tags Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Tags</h2>
-          {incident.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {incident.tags.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="px-3 py-1 rounded-full text-white text-sm"
-                  style={{ backgroundColor: tag.color }}
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No tags assigned</p>
-          )}
-        </div>
-
-        {/* Attachments Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">添付ファイル</h2>
-
-          {/* Upload Form */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              ファイルをアップロード
-            </label>
-            <input
-              type="file"
-              onChange={handleFileUpload}
-              disabled={uploadingFile}
-              className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              対応ファイル: 画像 (jpg, png, gif), PDF, テキスト, アーカイブ (zip, tar, gz) - 最大 50MB
-            </p>
-          </div>
-
-          {/* Attachments List */}
-          {loadingAttachments ? (
-            <div className="text-center py-4 text-gray-500">読み込み中...</div>
-          ) : attachments.length === 0 ? (
-            <p className="text-sm text-gray-500">添付ファイルはありません</p>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {attachments.map((attachment) => (
-                <div key={attachment.id} className="py-3 flex items-center justify-between">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <svg className="w-8 h-8 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-                    </svg>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {attachment.file_name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatFileSize(attachment.file_size)} • {attachment.user?.name} • {new Date(attachment.created_at).toLocaleString('ja-JP')}
-                      </p>
+        {/* Tabs Section */}
+        <Tabs
+          tabs={[
+            {
+              id: 'overview',
+              label: '概要',
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              ),
+              content: (
+                <div className="space-y-6">
+                  {/* Metadata Section */}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">メタデータ</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">検出日時</p>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {new Date(incident.detected_at).toLocaleString('ja-JP')}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">解決日時</p>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {incident.resolved_at
+                            ? new Date(incident.resolved_at).toLocaleString('ja-JP')
+                            : '未解決'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">影響範囲</p>
+                        <p className="mt-1 text-sm text-gray-900">{incident.impact_scope || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">担当者</p>
+                        {permissions.canEdit ? (
+                          <select
+                            value={incident.assignee_id || ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              handleAssignIncident(value === '' ? null : parseInt(value));
+                            }}
+                            disabled={assigningUser}
+                            className="mt-1 text-sm text-gray-900 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <option value="">未割り当て</option>
+                            {users.map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {user.name} ({user.email})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="mt-1 text-sm text-gray-900">
+                            {incident.assignee
+                              ? `${incident.assignee.name} (${incident.assignee.email})`
+                              : '未割り当て'}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">作成者</p>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {incident.creator.name} ({incident.creator.email})
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">作成日時</p>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {new Date(incident.created_at).toLocaleString('ja-JP')}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <button
-                      onClick={() => handleFileDownload(attachment.id, attachment.file_name)}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                    >
-                      ダウンロード
-                    </button>
-                    {(user?.role === 'admin' || user?.id === attachment.user_id) && (
-                      <button
-                        onClick={() => handleFileDelete(attachment.id)}
-                        className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
-                      >
-                        削除
-                      </button>
+
+                  {/* Description Section */}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">説明</h2>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{incident.description}</p>
+                  </div>
+
+                  {/* Summary Section */}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg font-semibold text-gray-900">AI要約</h2>
+                      {canEdit() && (
+                        <button
+                          onClick={handleRegenerateSummary}
+                          disabled={regeneratingSummary}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {regeneratingSummary ? '再生成中...' : '要約を再生成'}
+                        </button>
+                      )}
+                    </div>
+                    {incident.summary ? (
+                      <p className="text-sm text-gray-700">{incident.summary}</p>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-gray-500 italic mb-2">
+                          AI要約がまだ生成されていません
+                        </p>
+                        {canEdit() && (
+                          <button
+                            onClick={handleRegenerateSummary}
+                            disabled={regeneratingSummary}
+                            className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {regeneratingSummary ? '生成中...' : '要約を生成'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tags Section */}
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">タグ</h2>
+                    {incident.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {incident.tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="px-3 py-1 rounded-full text-white text-sm"
+                            style={{ backgroundColor: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">タグが設定されていません</p>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              ),
+            },
+            {
+              id: 'attachments',
+              label: '添付ファイル',
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              ),
+              content: (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">添付ファイル</h2>
 
-        {/* Timeline Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">タイムライン</h2>
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setShowTimelineEventForm(!showTimelineEventForm);
-                  if (!showTimelineEventForm) {
-                    // Set default event time to current time
-                    const now = new Date();
-                    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-                      .toISOString()
-                      .slice(0, 16);
-                    setTimelineEventTime(localDateTime);
-                  }
-                }}
-                className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                {showTimelineEventForm ? 'キャンセル' : 'イベントを追加'}
-              </button>
-            )}
-          </div>
+                  {/* Upload Form */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ファイルをアップロード
+                    </label>
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      disabled={uploadingFile}
+                      className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      対応ファイル: 画像 (jpg, png, gif), PDF, テキスト, アーカイブ (zip, tar, gz) - 最大 50MB
+                    </p>
+                  </div>
 
-          {/* Timeline Event Form */}
-          {showTimelineEventForm && canEdit() && (
-            <form onSubmit={handleAddTimelineEvent} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="mb-4">
-                <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 mb-1">
-                  イベントタイプ
-                </label>
-                <select
-                  id="event_type"
-                  value={timelineEventType}
-                  onChange={(e) => setTimelineEventType(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                >
-                  <option value="detected">検知</option>
-                  <option value="investigation_started">調査開始</option>
-                  <option value="root_cause_identified">原因特定</option>
-                  <option value="mitigation">緩和</option>
-                  <option value="timeline_resolved">解決</option>
-                  <option value="other">その他</option>
-                </select>
-              </div>
-              <div className="mb-4">
-                <label htmlFor="event_time" className="block text-sm font-medium text-gray-700 mb-1">
-                  イベント時刻
-                </label>
-                <input
-                  type="datetime-local"
-                  id="event_time"
-                  value={timelineEventTime}
-                  onChange={(e) => setTimelineEventTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="event_description" className="block text-sm font-medium text-gray-700 mb-1">
-                  説明
-                </label>
-                <textarea
-                  id="event_description"
-                  rows={3}
-                  value={timelineEventDescription}
-                  onChange={(e) => setTimelineEventDescription(e.target.value)}
-                  placeholder="イベントの説明を入力してください..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  disabled={submittingTimelineEvent}
-                  required
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={submittingTimelineEvent || !timelineEventDescription.trim()}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submittingTimelineEvent ? '追加中...' : 'イベントを追加'}
-                </button>
-              </div>
-            </form>
-          )}
+                  {/* Attachments List */}
+                  {loadingAttachments ? (
+                    <div className="text-center py-4 text-gray-500">読み込み中...</div>
+                  ) : attachments.length === 0 ? (
+                    <p className="text-sm text-gray-500">添付ファイルはありません</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {attachments.map((attachment) => {
+                        const isImage = isImageFile(attachment.file_name);
+                        const imageUrl = imageUrls[attachment.id];
 
-          {/* Comment Form */}
-          <form onSubmit={handleAddComment} className="mb-6">
-            <div className="mb-2">
-              <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-                コメントを追加
-              </label>
-              <textarea
-                id="comment"
-                rows={3}
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="コメントを入力してください..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                disabled={submittingComment}
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={submittingComment || !newComment.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submittingComment ? '送信中...' : 'コメントを投稿'}
-              </button>
-            </div>
-          </form>
+                        return (
+                          <div key={attachment.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                            {isImage && imageUrl ? (
+                              <div
+                                className="mb-3 cursor-pointer group relative"
+                                onClick={() => setLightboxImage(imageUrl)}
+                              >
+                                <img
+                                  src={imageUrl}
+                                  alt={attachment.file_name}
+                                  className="w-full h-48 object-cover rounded-md group-hover:opacity-90 transition-opacity"
+                                  onError={(e) => {
+                                    console.error('Image load error:', attachment.file_name);
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded-md">
+                                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            ) : isImage ? (
+                              <div className="mb-3 flex items-center justify-center h-48 bg-gray-100 rounded-md">
+                                <div className="text-center">
+                                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  <p className="text-xs text-gray-500">読み込み中...</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mb-3 flex items-center justify-center h-48 bg-gray-100 rounded-md">
+                                <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                                {attachment.file_name}
+                              </p>
+                              <p className="text-xs text-gray-500 mb-3">
+                                {formatFileSize(attachment.file_size)} • {attachment.user?.name}
+                              </p>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => handleFileDownload(attachment.id, attachment.file_name)}
+                                  className="flex-1 px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                >
+                                  ダウンロード
+                                </button>
+                                {(user?.role === 'admin' || user?.id === attachment.user_id) && (
+                                  <button
+                                    onClick={() => handleFileDelete(attachment.id)}
+                                    className="px-3 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700"
+                                  >
+                                    削除
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              id: 'timeline',
+              label: 'タイムライン & コメント',
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              content: (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">タイムライン</h2>
+                    {canEdit() && (
+                      <button
+                        onClick={() => {
+                          setShowTimelineEventForm(!showTimelineEventForm);
+                          if (!showTimelineEventForm) {
+                            const now = new Date();
+                            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                              .toISOString()
+                              .slice(0, 16);
+                            setTimelineEventTime(localDateTime);
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+                      >
+                        {showTimelineEventForm ? 'キャンセル' : 'イベントを追加'}
+                      </button>
+                    )}
+                  </div>
 
-          {/* Timeline */}
-          {loadingActivities ? (
-            <div className="text-center py-4 text-gray-500">読み込み中...</div>
-          ) : (
-            <Timeline activities={activities} />
-          )}
-        </div>
+                  {/* Timeline Event Form */}
+                  {showTimelineEventForm && canEdit() && (
+                    <form onSubmit={handleAddTimelineEvent} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="mb-4">
+                        <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 mb-1">
+                          イベントタイプ
+                        </label>
+                        <select
+                          id="event_type"
+                          value={timelineEventType}
+                          onChange={(e) => setTimelineEventType(e.target.value as any)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        >
+                          <option value="detected">検知</option>
+                          <option value="investigation_started">調査開始</option>
+                          <option value="root_cause_identified">原因特定</option>
+                          <option value="mitigation">緩和</option>
+                          <option value="timeline_resolved">解決</option>
+                          <option value="other">その他</option>
+                        </select>
+                      </div>
+                      <div className="mb-4">
+                        <label htmlFor="event_time" className="block text-sm font-medium text-gray-700 mb-1">
+                          イベント時刻
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id="event_time"
+                          value={timelineEventTime}
+                          onChange={(e) => setTimelineEventTime(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                          required
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <label htmlFor="event_description" className="block text-sm font-medium text-gray-700 mb-1">
+                          説明
+                        </label>
+                        <textarea
+                          id="event_description"
+                          rows={3}
+                          value={timelineEventDescription}
+                          onChange={(e) => setTimelineEventDescription(e.target.value)}
+                          placeholder="イベントの説明を入力してください..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                          disabled={submittingTimelineEvent}
+                          required
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={submittingTimelineEvent || !timelineEventDescription.trim()}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {submittingTimelineEvent ? '追加中...' : 'イベントを追加'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Comment Form */}
+                  <form onSubmit={handleAddComment} className="mb-6">
+                    <div className="mb-2">
+                      <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
+                        コメントを追加
+                      </label>
+                      <textarea
+                        id="comment"
+                        rows={3}
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="コメントを入力してください..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                        disabled={submittingComment}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={submittingComment || !newComment.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {submittingComment ? '送信中...' : 'コメントを投稿'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Timeline */}
+                  {loadingActivities ? (
+                    <div className="text-center py-4 text-gray-500">読み込み中...</div>
+                  ) : (
+                    <Timeline activities={activities} />
+                  )}
+                </div>
+              ),
+            },
+          ]}
+          defaultTab="overview"
+        />
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-screen p-4">
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Preview"
+              className="max-w-full max-h-screen object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
