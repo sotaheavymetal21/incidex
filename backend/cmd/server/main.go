@@ -6,6 +6,7 @@ import (
 	"incidex/internal/db"
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/ai"
+	"incidex/internal/infrastructure/cache"
 	"incidex/internal/infrastructure/notification"
 	"incidex/internal/infrastructure/persistence"
 	"incidex/internal/infrastructure/storage"
@@ -46,6 +47,10 @@ func main() {
 		log.Fatalf("Failed to initialize MinIO storage: %v", err)
 	}
 
+	// Initialize Redis Cache
+	redisClient := db.ConnectRedis(cfg.RedisURL)
+	cacheRepo := cache.NewRedisCache(redisClient)
+
 	// Dependency Injection
 	// Auth
 	userRepo := persistence.NewUserRepository(dbConn)
@@ -76,7 +81,7 @@ func main() {
 
 	// Incidents
 	incidentRepo := persistence.NewIncidentRepository(dbConn)
-	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, notificationService, aiService)
+	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, notificationService, aiService, cacheRepo)
 	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
 
 	// Users
@@ -84,7 +89,7 @@ func main() {
 	userHandler := handler.NewUserHandler(userUsecase)
 
 	// Stats
-	statsUsecase := usecase.NewStatsUsecase(incidentRepo)
+	statsUsecase := usecase.NewStatsUsecase(incidentRepo, cacheRepo)
 	statsHandler := handler.NewStatsHandler(statsUsecase)
 
 	// Activity handler
