@@ -21,11 +21,16 @@ export default function TagsPage() {
   const [formData, setFormData] = useState({ name: '', color: '#10b981' });
 
   useEffect(() => {
-    if (!authLoading && !token) {
-      router.push('/login');
-    } else if (token) {
-      fetchTags();
+    if (authLoading) {
+      return; // 認証状態の読み込み中は何もしない
     }
+
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    fetchTags();
   }, [token, authLoading, router]);
 
   const fetchTags = async () => {
@@ -89,20 +94,43 @@ export default function TagsPage() {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
       <div className="container mx-auto max-w-5xl">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-8 animate-slideDown">
           <div>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>Tag Management</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--secondary)' }}>インシデントの分類用タグを管理</p>
+            <h1
+              className="text-4xl font-bold mb-2"
+              style={{
+                color: 'var(--foreground)',
+                fontFamily: 'var(--font-display)',
+                background: 'linear-gradient(135deg, var(--foreground) 0%, var(--primary) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              タグ管理
+            </h1>
+            <p className="text-base font-medium" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+              インシデントの分類用タグを管理
+            </p>
           </div>
           {permissions.canManageTags && (
             <button
               onClick={openCreateModal}
-              className="px-4 py-2.5 text-white rounded-lg shadow-lg transition-all font-medium"
-              style={{ background: 'var(--primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
+              className="px-5 py-2.5 text-white rounded-xl font-bold transition-all duration-200"
+              style={{
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: '0 4px 12px var(--primary-glow)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+              }}
             >
-              Create Tag
+              タグを作成
             </button>
           )}
         </div>
@@ -177,9 +205,24 @@ export default function TagsPage() {
         </div>
 
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 overflow-y-auto h-full w-full flex items-center justify-center z-50 backdrop-blur-sm">
-            <div className="p-8 rounded-xl shadow-2xl w-96 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>{editingTag ? 'Edit Tag' : 'Create Tag'}</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-40 overflow-y-auto h-full w-full flex items-center justify-center z-50 backdrop-blur-sm animate-fadeIn">
+            <div
+              className="p-8 rounded-2xl w-96 border-2 animate-scaleIn"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--primary)',
+                boxShadow: '0 0 40px var(--primary-glow), 0 20px 40px rgba(0,0,0,0.2)'
+              }}
+            >
+              <h2
+                className="text-2xl font-bold mb-6"
+                style={{
+                  color: 'var(--foreground)',
+                  fontFamily: 'var(--font-display)'
+                }}
+              >
+                {editingTag ? 'タグを編集' : 'タグを作成'}
+              </h2>
               <form onSubmit={handleSubmit}>
                 <div className="mb-5">
                   <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Name</label>
@@ -219,27 +262,44 @@ export default function TagsPage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-4 py-2.5 border-2 rounded-lg transition-all font-medium"
-                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--surface)' }}
+                    className="flex-1 px-4 py-2.5 border-2 rounded-xl transition-all duration-200 font-semibold"
+                    style={{
+                      borderColor: 'var(--border)',
+                      color: 'var(--foreground)',
+                      background: 'var(--surface)',
+                      fontFamily: 'var(--font-body)'
+                    }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'var(--secondary-light)';
-                      e.currentTarget.style.borderColor = 'var(--secondary)';
+                      e.currentTarget.style.background = 'var(--gray-100)';
+                      e.currentTarget.style.borderColor = 'var(--foreground-secondary)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'var(--surface)';
                       e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    Cancel
+                    キャンセル
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2.5 text-white rounded-lg shadow-lg transition-all font-medium"
-                    style={{ background: 'var(--primary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
+                    className="flex-1 px-4 py-2.5 text-white rounded-xl transition-all duration-200 font-bold"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                      fontFamily: 'var(--font-body)',
+                      boxShadow: '0 4px 12px var(--primary-glow)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                    }}
                   >
-                    Save
+                    保存
                   </button>
                 </div>
               </form>
