@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="antialiased bg-gray-50">
+      <body className="antialiased" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
         <AuthProvider>
           <Navbar />
           <main>
