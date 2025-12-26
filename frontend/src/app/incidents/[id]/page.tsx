@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { incidentApi, activityApi, attachmentApi, userApi } from '@/lib/api';
 import { Incident, Severity, Status } from '@/types/incident';
@@ -11,12 +11,20 @@ import { User } from '@/types/user';
 import Timeline from '@/components/Timeline';
 import { usePermissions } from '@/hooks/usePermissions';
 
+type TabType = 'overview' | 'attachments' | 'timeline' | 'activity';
+
 export default function IncidentDetailPage() {
   const { token, user, loading: authLoading } = useAuth();
   const permissions = usePermissions();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
+
+  // Tab state - read from URL params
+  const tabParam = searchParams.get('tab') as TabType | null;
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam || 'overview');
+
   const [incident, setIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -270,6 +278,33 @@ export default function IncidentDetailPage() {
     }
   };
 
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    // Update URL without page reload
+    const newUrl = `/incidents/${id}?tab=${tab}`;
+    window.history.pushState({}, '', newUrl);
+  };
+
+  const getSeverityStyle = (severity: Severity) => {
+    switch (severity) {
+      case 'critical': return { background: 'var(--critical-light)', color: 'var(--critical)', borderColor: 'var(--critical)' };
+      case 'high': return { background: 'var(--high-light)', color: 'var(--high)', borderColor: 'var(--high)' };
+      case 'medium': return { background: 'var(--medium-light)', color: 'var(--medium)', borderColor: 'var(--medium)' };
+      case 'low': return { background: 'var(--low-light)', color: 'var(--low)', borderColor: 'var(--low)' };
+      default: return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-300)' };
+    }
+  };
+
+  const getStatusStyle = (status: Status) => {
+    switch (status) {
+      case 'open': return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-400)' };
+      case 'investigating': return { background: 'var(--info-light)', color: 'var(--info)', borderColor: 'var(--info)' };
+      case 'resolved': return { background: 'var(--success-light)', color: 'var(--success)', borderColor: 'var(--success)' };
+      case 'closed': return { background: 'var(--secondary-light)', color: 'var(--secondary-dark)', borderColor: 'var(--secondary)' };
+      default: return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-300)' };
+    }
+  };
+
   const getSeverityColor = (severity: Severity) => {
     switch (severity) {
       case 'critical': return 'bg-red-100 text-red-800 border-red-300';
@@ -343,228 +378,579 @@ export default function IncidentDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 animate-slideDown">
           <button
             onClick={() => router.push('/incidents')}
-            className="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center"
+            className="mb-4 inline-flex items-center font-semibold transition-all"
+            style={{ color: 'var(--primary)', fontFamily: 'var(--font-body)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--primary-hover)';
+              e.currentTarget.style.transform = 'translateX(-4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--primary)';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
           >
-            ← Back to List
+            ← インシデント一覧に戻る
           </button>
 
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{incident.title}</h1>
-              <div className="flex gap-2">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+            <div className="flex-1">
+              <h1
+                className="text-3xl md:text-4xl font-bold mb-3"
+                style={{
+                  color: 'var(--foreground)',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                {incident.title}
+              </h1>
+              <div className="flex flex-wrap gap-2">
                 <span
-                  className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full border ${getSeverityColor(
-                    incident.severity
-                  )}`}
+                  className={`px-3 py-1.5 inline-flex text-sm font-bold rounded-full border-2`}
+                  style={{
+                    background: getSeverityStyle(incident.severity).background,
+                    color: getSeverityStyle(incident.severity).color,
+                    borderColor: getSeverityStyle(incident.severity).borderColor,
+                    fontFamily: 'var(--font-body)'
+                  }}
                 >
                   {incident.severity.toUpperCase()}
                 </span>
                 <span
-                  className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full border ${getStatusColor(
-                    incident.status
-                  )}`}
+                  className={`px-3 py-1.5 inline-flex text-sm font-bold rounded-full border-2`}
+                  style={{
+                    background: getStatusStyle(incident.status).background,
+                    color: getStatusStyle(incident.status).color,
+                    borderColor: getStatusStyle(incident.status).borderColor,
+                    fontFamily: 'var(--font-body)'
+                  }}
                 >
                   {incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => router.push(`/incidents/${id}/postmortem`)}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                className="px-4 py-2.5 text-white rounded-xl font-semibold transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%)',
+                  fontFamily: 'var(--font-body)',
+                  boxShadow: '0 4px 12px var(--accent-glow)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px var(--accent-glow)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px var(--accent-glow)';
+                }}
               >
                 Post-Mortem
               </button>
               {canEdit() && (
                 <button
                   onClick={() => router.push(`/incidents/${id}/edit`)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="px-4 py-2.5 text-white rounded-xl font-semibold transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                    fontFamily: 'var(--font-body)',
+                    boxShadow: '0 4px 12px var(--primary-glow)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                  }}
                 >
-                  Edit
+                  編集
                 </button>
               )}
               {canDelete() && (
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                  className="px-4 py-2.5 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--error) 0%, var(--error-dark) 100%)',
+                    fontFamily: 'var(--font-body)',
+                    boxShadow: '0 4px 12px var(--error-glow)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!deleting) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px var(--error-glow)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px var(--error-glow)';
+                  }}
                 >
-                  {deleting ? 'Deleting...' : 'Delete'}
+                  {deleting ? '削除中...' : '削除'}
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Content Sections */}
+        {/* Tab Navigation */}
+        <div
+          className="mb-6 rounded-2xl p-2 animate-slideUp border"
+          style={{
+            background: 'var(--surface)',
+            borderColor: 'var(--border)',
+            boxShadow: 'var(--shadow-md)'
+          }}
+        >
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => handleTabChange('overview')}
+              className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl font-bold transition-all duration-200 ${
+                activeTab === 'overview' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: activeTab === 'overview'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: activeTab === 'overview' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: activeTab === 'overview' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'overview') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'overview') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              📋 概要
+            </button>
+            <button
+              onClick={() => handleTabChange('attachments')}
+              className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl font-bold transition-all duration-200 ${
+                activeTab === 'attachments' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: activeTab === 'attachments'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: activeTab === 'attachments' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: activeTab === 'attachments' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'attachments') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'attachments') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              📎 添付ファイル ({attachments.length})
+            </button>
+            <button
+              onClick={() => handleTabChange('timeline')}
+              className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl font-bold transition-all duration-200 ${
+                activeTab === 'timeline' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: activeTab === 'timeline'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: activeTab === 'timeline' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: activeTab === 'timeline' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'timeline') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'timeline') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              ⏱️ タイムライン
+            </button>
+            <button
+              onClick={() => handleTabChange('activity')}
+              className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl font-bold transition-all duration-200 ${
+                activeTab === 'activity' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: activeTab === 'activity'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: activeTab === 'activity' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: activeTab === 'activity' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== 'activity') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== 'activity') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              📊 アクティビティ
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
         <div className="space-y-6">
-          {/* Overview Section */}
-          <div className="space-y-6">
-            {/* Metadata Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">メタデータ</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">検出日時</p>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {new Date(incident.detected_at).toLocaleString('ja-JP')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">解決日時</p>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {incident.resolved_at
-                      ? new Date(incident.resolved_at).toLocaleString('ja-JP')
-                      : '未解決'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">影響範囲</p>
-                  <p className="mt-1 text-sm text-gray-900">{incident.impact_scope || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">担当者</p>
-                  {permissions.canEdit ? (
-                    <select
-                      value={incident.assignee_id || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        handleAssignIncident(value === '' ? null : parseInt(value));
-                      }}
-                      disabled={assigningUser}
-                      className="mt-1 text-sm text-gray-900 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">未割り当て</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} ({user.email})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p className="mt-1 text-sm text-gray-900">
-                      {incident.assignee
-                        ? `${incident.assignee.name} (${incident.assignee.email})`
-                        : '未割り当て'}
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Metadata Section */}
+              <div
+                className="rounded-2xl p-6 border animate-scaleIn"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)'
+                }}
+              >
+                <h2
+                  className="text-xl font-bold mb-5"
+                  style={{
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-display)'
+                  }}
+                >
+                  メタデータ
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>検出日時</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-mono)' }}>
+                      {new Date(incident.detected_at).toLocaleString('ja-JP')}
                     </p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">作成者</p>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {incident.creator.name} ({incident.creator.email})
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">作成日時</p>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {new Date(incident.created_at).toLocaleString('ja-JP')}
-                  </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>解決日時</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-mono)' }}>
+                      {incident.resolved_at
+                        ? new Date(incident.resolved_at).toLocaleString('ja-JP')
+                        : '未解決'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>影響範囲</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>{incident.impact_scope || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>担当者</p>
+                    {permissions.canEdit ? (
+                      <select
+                        value={incident.assignee_id || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          handleAssignIncident(value === '' ? null : parseInt(value));
+                        }}
+                        disabled={assigningUser}
+                        className="text-sm font-medium border-2 rounded-lg px-3 py-2 focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          background: 'var(--surface)',
+                          borderColor: 'var(--border)',
+                          color: 'var(--foreground)',
+                          fontFamily: 'var(--font-body)'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--primary)';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="">未割り当て</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.name} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
+                        {incident.assignee
+                          ? `${incident.assignee.name} (${incident.assignee.email})`
+                          : '未割り当て'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>作成者</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
+                      {incident.creator.name} ({incident.creator.email})
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1.5" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>作成日時</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-mono)' }}>
+                      {new Date(incident.created_at).toLocaleString('ja-JP')}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Description Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">説明</h2>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{incident.description}</p>
-            </div>
+              {/* Description Section */}
+              <div
+                className="rounded-2xl p-6 border animate-scaleIn"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)',
+                  animationDelay: '0.1s'
+                }}
+              >
+                <h2
+                  className="text-xl font-bold mb-4"
+                  style={{
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-display)'
+                  }}
+                >
+                  説明
+                </h2>
+                <p
+                  className="text-sm leading-relaxed whitespace-pre-wrap"
+                  style={{
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-body)'
+                  }}
+                >
+                  {incident.description}
+                </p>
+              </div>
 
-            {/* Summary Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">AI要約</h2>
-                {canEdit() && (
-                  <button
-                    onClick={handleRegenerateSummary}
-                    disabled={regeneratingSummary}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              {/* Summary Section */}
+              <div
+                className="rounded-2xl p-6 border animate-scaleIn"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)',
+                  animationDelay: '0.2s'
+                }}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h2
+                    className="text-xl font-bold"
+                    style={{
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-display)'
+                    }}
                   >
-                    {regeneratingSummary ? '再生成中...' : '要約を再生成'}
-                  </button>
-                )}
-              </div>
-              {incident.summary ? (
-                <p className="text-sm text-gray-700">{incident.summary}</p>
-              ) : (
-                <div>
-                  <p className="text-sm text-gray-500 italic mb-2">
-                    AI要約がまだ生成されていません
-                  </p>
+                    AI要約
+                  </h2>
                   {canEdit() && (
                     <button
                       onClick={handleRegenerateSummary}
                       disabled={regeneratingSummary}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                        fontFamily: 'var(--font-body)',
+                        boxShadow: '0 4px 12px var(--primary-glow)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!regeneratingSummary) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                      }}
                     >
-                      {regeneratingSummary ? '生成中...' : '要約を生成'}
+                      {regeneratingSummary ? '再生成中...' : '要約を再生成'}
                     </button>
                   )}
                 </div>
-              )}
-            </div>
+                {incident.summary ? (
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
+                    {incident.summary}
+                  </p>
+                ) : (
+                  <div>
+                    <p className="text-sm italic mb-3" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                      AI要約がまだ生成されていません
+                    </p>
+                    {canEdit() && (
+                      <button
+                        onClick={handleRegenerateSummary}
+                        disabled={regeneratingSummary}
+                        className="px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50"
+                        style={{
+                          background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                          fontFamily: 'var(--font-body)',
+                          boxShadow: '0 4px 12px var(--primary-glow)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!regeneratingSummary) {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                        }}
+                      >
+                        {regeneratingSummary ? '生成中...' : '要約を生成'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
-            {/* Tags Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">タグ</h2>
-              {incident.tags && incident.tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {incident.tags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="px-3 py-1 rounded-full text-white text-sm"
-                      style={{ backgroundColor: tag.color }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
+              {/* Tags Section */}
+              <div
+                className="rounded-2xl p-6 border animate-scaleIn"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)',
+                  animationDelay: '0.3s'
+                }}
+              >
+                <h2
+                  className="text-xl font-bold mb-4"
+                  style={{
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-display)'
+                  }}
+                >
+                  タグ
+                </h2>
+                {incident.tags && incident.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {incident.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="px-4 py-2 rounded-full text-white text-sm font-semibold shadow-sm"
+                        style={{ backgroundColor: tag.color, fontFamily: 'var(--font-body)' }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                    タグが設定されていません
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Attachments Tab */}
+          {activeTab === 'attachments' && (
+            <div className="animate-fadeIn">
+              <div
+                className="rounded-2xl p-6 border"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)'
+                }}
+              >
+                <h2
+                  className="text-xl font-bold mb-6"
+                  style={{
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-display)'
+                  }}
+                >
+                  添付ファイル
+                </h2>
+
+                {/* Upload Form */}
+                <div className="mb-6 p-5 rounded-xl border-2 border-dashed transition-all" style={{ borderColor: 'var(--border)', background: 'var(--gray-50)' }}>
+                  <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
+                    ファイルをアップロード
+                  </label>
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    disabled={uploadingFile}
+                    className="block w-full text-sm border-2 rounded-lg cursor-pointer focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:transition-all"
+                    style={{
+                      background: 'var(--surface)',
+                      borderColor: 'var(--border)',
+                      color: 'var(--foreground)'
+                    }}
+                  />
+                  <p className="mt-2 text-xs" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                    対応ファイル: 画像 (jpg, png, gif), PDF, テキスト, アーカイブ (zip, tar, gz) - 最大 50MB
+                  </p>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500">タグが設定されていません</p>
-              )}
-            </div>
-          </div>
 
-          {/* Attachments Section */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">添付ファイル</h2>
+                {/* Attachments List */}
+                {loadingAttachments ? (
+                  <div className="text-center py-8" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                    読み込み中...
+                  </div>
+                ) : attachments.length === 0 ? (
+                  <div className="text-center py-12 rounded-xl" style={{ background: 'var(--gray-50)' }}>
+                    <svg className="mx-auto h-12 w-12 mb-3" style={{ color: 'var(--foreground-secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    <p className="text-sm font-medium" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                      添付ファイルはありません
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {attachments.map((attachment) => {
+                      const isImage = isImageFile(attachment.file_name);
+                      const imageUrl = imageUrls[attachment.id];
 
-            {/* Upload Form */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ファイルをアップロード
-              </label>
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                disabled={uploadingFile}
-                className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                対応ファイル: 画像 (jpg, png, gif), PDF, テキスト, アーカイブ (zip, tar, gz) - 最大 50MB
-              </p>
-            </div>
-
-            {/* Attachments List */}
-            {loadingAttachments ? (
-              <div className="text-center py-4 text-gray-500">読み込み中...</div>
-            ) : attachments.length === 0 ? (
-              <p className="text-sm text-gray-500">添付ファイルはありません</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {attachments.map((attachment) => {
-                  const isImage = isImageFile(attachment.file_name);
-                  const imageUrl = imageUrls[attachment.id];
-
-                  return (
-                    <div key={attachment.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
+                      return (
+                        <div
+                          key={attachment.id}
+                          className="border-2 rounded-2xl p-4 transition-all duration-200"
+                          style={{
+                            background: 'var(--surface)',
+                            borderColor: 'var(--border)',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = 'var(--shadow-xl)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                          }}
+                        >
                       {isImage && imageUrl ? (
                         <div
                           className="mb-3 cursor-pointer group relative"
@@ -601,155 +987,349 @@ export default function IncidentDetailPage() {
                           </svg>
                         </div>
                       )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate mb-1">
-                          {attachment.file_name}
-                        </p>
-                        <p className="text-xs text-gray-500 mb-3">
-                          {formatFileSize(attachment.file_size)} • {attachment.user?.name}
-                        </p>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleFileDownload(attachment.id, attachment.file_name)}
-                            className="flex-1 px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                          >
-                            ダウンロード
-                          </button>
-                          {(user?.role === 'admin' || user?.id === attachment.user_id) && (
-                            <button
-                              onClick={() => handleFileDelete(attachment.id)}
-                              className="px-3 py-1 text-xs bg-red-600 text-white rounded-md hover:bg-red-700"
-                            >
-                              削除
-                            </button>
-                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate mb-2" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
+                              {attachment.file_name}
+                            </p>
+                            <p className="text-xs mb-3" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                              {formatFileSize(attachment.file_size)} • {attachment.user?.name}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleFileDownload(attachment.id, attachment.file_name)}
+                                className="flex-1 px-3 py-2 text-xs font-semibold text-white rounded-lg transition-all duration-200"
+                                style={{
+                                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                                  fontFamily: 'var(--font-body)'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                ダウンロード
+                              </button>
+                              {(user?.role === 'admin' || user?.id === attachment.user_id) && (
+                                <button
+                                  onClick={() => handleFileDelete(attachment.id)}
+                                  className="px-3 py-2 text-xs font-semibold text-white rounded-lg transition-all duration-200"
+                                  style={{
+                                    background: 'linear-gradient(135deg, var(--error) 0%, var(--error-dark) 100%)',
+                                    fontFamily: 'var(--font-body)'
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                  削除
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          {/* Timeline & Comments Section */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">タイムライン & コメント</h2>
-              {canEdit() && (
-                <button
-                  onClick={() => {
-                    setShowTimelineEventForm(!showTimelineEventForm);
-                    if (!showTimelineEventForm) {
-                      const now = new Date();
-                      const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-                        .toISOString()
-                        .slice(0, 16);
-                      setTimelineEventTime(localDateTime);
-                    }
-                  }}
-                  className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
-                >
-                  {showTimelineEventForm ? 'キャンセル' : 'イベントを追加'}
-                </button>
-              )}
             </div>
+          )}
 
-            {/* Timeline Event Form */}
-            {showTimelineEventForm && canEdit() && (
-              <form onSubmit={handleAddTimelineEvent} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="mb-4">
-                  <label htmlFor="event_type" className="block text-sm font-medium text-gray-700 mb-1">
-                    イベントタイプ
-                  </label>
-                  <select
-                    id="event_type"
-                    value={timelineEventType}
-                    onChange={(e) => setTimelineEventType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+          {/* Timeline Tab */}
+          {activeTab === 'timeline' && (
+            <div className="animate-fadeIn">
+              <div
+                className="rounded-2xl p-6 border"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)'
+                }}
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <h2
+                    className="text-xl font-bold"
+                    style={{
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-display)'
+                    }}
                   >
-                    <option value="detected">検知</option>
-                    <option value="investigation_started">調査開始</option>
-                    <option value="root_cause_identified">原因特定</option>
-                    <option value="mitigation">緩和</option>
-                    <option value="timeline_resolved">解決</option>
-                    <option value="other">その他</option>
-                  </select>
+                    タイムライン & イベント
+                  </h2>
+                  {canEdit() && (
+                    <button
+                      onClick={() => {
+                        setShowTimelineEventForm(!showTimelineEventForm);
+                        if (!showTimelineEventForm) {
+                          const now = new Date();
+                          const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                            .toISOString()
+                            .slice(0, 16);
+                          setTimelineEventTime(localDateTime);
+                        }
+                      }}
+                      className="px-4 py-2.5 text-white rounded-xl text-sm font-semibold transition-all duration-200"
+                      style={{
+                        background: showTimelineEventForm
+                          ? 'linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%)'
+                          : 'linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%)',
+                        fontFamily: 'var(--font-body)',
+                        boxShadow: '0 4px 12px var(--primary-glow)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                      }}
+                    >
+                      {showTimelineEventForm ? 'キャンセル' : '+ イベントを追加'}
+                    </button>
+                  )}
                 </div>
-                <div className="mb-4">
-                  <label htmlFor="event_time" className="block text-sm font-medium text-gray-700 mb-1">
-                    イベント時刻
-                  </label>
-                  <input
-                    type="datetime-local"
-                    id="event_time"
-                    value={timelineEventTime}
-                    onChange={(e) => setTimelineEventTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    required
-                  />
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="event_description" className="block text-sm font-medium text-gray-700 mb-1">
-                    説明
-                  </label>
-                  <textarea
-                    id="event_description"
-                    rows={3}
-                    value={timelineEventDescription}
-                    onChange={(e) => setTimelineEventDescription(e.target.value)}
-                    placeholder="イベントの説明を入力してください..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                    disabled={submittingTimelineEvent}
-                    required
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={submittingTimelineEvent || !timelineEventDescription.trim()}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submittingTimelineEvent ? '追加中...' : 'イベントを追加'}
-                  </button>
-                </div>
-              </form>
-            )}
 
-            {/* Comment Form */}
-            <form onSubmit={handleAddComment} className="mb-6">
-              <div className="mb-2">
-                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-                  コメントを追加
-                </label>
-                <textarea
-                  id="comment"
-                  rows={3}
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="コメントを入力してください..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  disabled={submittingComment}
-                />
+                {/* Timeline Event Form */}
+                {showTimelineEventForm && canEdit() && (
+                  <form
+                    onSubmit={handleAddTimelineEvent}
+                    className="mb-6 p-5 rounded-xl border-2 animate-slideDown"
+                    style={{
+                      background: 'var(--gray-50)',
+                      borderColor: 'var(--border)'
+                    }}
+                  >
+                    <div className="mb-4">
+                      <label
+                        htmlFor="event_type"
+                        className="block text-sm font-semibold mb-2"
+                        style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}
+                      >
+                        イベントタイプ
+                      </label>
+                      <select
+                        id="event_type"
+                        value={timelineEventType}
+                        onChange={(e) => setTimelineEventType(e.target.value as any)}
+                        className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none transition-all"
+                        style={{
+                          background: 'var(--surface)',
+                          borderColor: 'var(--border)',
+                          color: 'var(--foreground)',
+                          fontFamily: 'var(--font-body)'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--primary)';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <option value="detected">検知</option>
+                        <option value="investigation_started">調査開始</option>
+                        <option value="root_cause_identified">原因特定</option>
+                        <option value="mitigation">緩和</option>
+                        <option value="timeline_resolved">解決</option>
+                        <option value="other">その他</option>
+                      </select>
+                    </div>
+                    <div className="mb-4">
+                      <label
+                        htmlFor="event_time"
+                        className="block text-sm font-semibold mb-2"
+                        style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}
+                      >
+                        イベント時刻
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="event_time"
+                        value={timelineEventTime}
+                        onChange={(e) => setTimelineEventTime(e.target.value)}
+                        className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none transition-all"
+                        style={{
+                          background: 'var(--surface)',
+                          borderColor: 'var(--border)',
+                          color: 'var(--foreground)',
+                          fontFamily: 'var(--font-body)'
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--primary)';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                        required
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <label
+                        htmlFor="event_description"
+                        className="block text-sm font-semibold mb-2"
+                        style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}
+                      >
+                        説明
+                      </label>
+                      <textarea
+                        id="event_description"
+                        rows={3}
+                        value={timelineEventDescription}
+                        onChange={(e) => setTimelineEventDescription(e.target.value)}
+                        placeholder="イベントの説明を入力してください..."
+                        className="w-full px-3 py-2 border-2 rounded-lg focus:outline-none transition-all"
+                        style={{
+                          background: 'var(--surface)',
+                          borderColor: 'var(--border)',
+                          color: 'var(--foreground)',
+                          fontFamily: 'var(--font-body)'
+                        }}
+                        disabled={submittingTimelineEvent}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--primary)';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={submittingTimelineEvent || !timelineEventDescription.trim()}
+                        className="px-5 py-2.5 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50"
+                        style={{
+                          background: 'linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100())',
+                          fontFamily: 'var(--font-body)',
+                          boxShadow: '0 4px 12px var(--success-glow)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!submittingTimelineEvent && timelineEventDescription.trim()) {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 8px 20px var(--success-glow)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px var(--success-glow)';
+                        }}
+                      >
+                        {submittingTimelineEvent ? '追加中...' : 'イベントを追加'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Timeline */}
+                {loadingActivities ? (
+                  <div className="text-center py-8" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                    読み込み中...
+                  </div>
+                ) : (
+                  <Timeline activities={activities} />
+                )}
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={submittingComment || !newComment.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            </div>
+          )}
+
+          {/* Activity Tab (Comments & Collaboration) */}
+          {activeTab === 'activity' && (
+            <div className="animate-fadeIn">
+              <div
+                className="rounded-2xl p-6 border"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  boxShadow: 'var(--shadow-lg)'
+                }}
+              >
+                <h2
+                  className="text-xl font-bold mb-6"
+                  style={{
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-display)'
+                  }}
                 >
-                  {submittingComment ? '送信中...' : 'コメントを投稿'}
-                </button>
-              </div>
-            </form>
+                  コメント & アクティビティ履歴
+                </h2>
 
-            {/* Timeline */}
-            {loadingActivities ? (
-              <div className="text-center py-4 text-gray-500">読み込み中...</div>
-            ) : (
-              <Timeline activities={activities} />
-            )}
-          </div>
+                {/* Comment Form */}
+                <form onSubmit={handleAddComment} className="mb-6">
+                  <div className="mb-3">
+                    <label
+                      htmlFor="comment"
+                      className="block text-sm font-semibold mb-2"
+                      style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}
+                    >
+                      コメントを追加
+                    </label>
+                    <textarea
+                      id="comment"
+                      rows={4}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="コメントを入力してください..."
+                      className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none transition-all"
+                      style={{
+                        background: 'var(--surface)',
+                        borderColor: 'var(--border)',
+                        color: 'var(--foreground)',
+                        fontFamily: 'var(--font-body)'
+                      }}
+                      disabled={submittingComment}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--primary)';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={submittingComment || !newComment.trim()}
+                      className="px-5 py-2.5 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                        fontFamily: 'var(--font-body)',
+                        boxShadow: '0 4px 12px var(--primary-glow)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!submittingComment && newComment.trim()) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                      }}
+                    >
+                      {submittingComment ? '送信中...' : 'コメントを投稿'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Activity Timeline */}
+                <div className="mt-8">
+                  {loadingActivities ? (
+                    <div className="text-center py-8" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                      読み込み中...
+                    </div>
+                  ) : (
+                    <Timeline activities={activities} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
