@@ -45,7 +45,10 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("userID", claims["user_id"])
+			// Convert user_id from float64 to uint
+			if userIDFloat, ok := claims["user_id"].(float64); ok {
+				c.Set("userID", uint(userIDFloat))
+			}
 			c.Set("role", claims["role"])
 		}
 
