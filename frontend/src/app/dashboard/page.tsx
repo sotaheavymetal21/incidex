@@ -35,16 +35,23 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Closed（完了）',
 };
 
+type GraphType = 'pie' | 'timeseries' | 'bar';
+
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tagStats, setTagStats] = useState<TagStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [period, setPeriod] = useState<TrendPeriod>('daily');
+  const [graphType, setGraphType] = useState<GraphType>('pie');
 
   useEffect(() => {
+    if (authLoading) {
+      return; // 認証状態の読み込み中は何もしない
+    }
+
     if (!token) {
       router.push('/login');
       return;
@@ -68,7 +75,7 @@ export default function DashboardPage() {
     };
 
     fetchStats();
-  }, [token, router, period]);
+  }, [token, authLoading, router, period]);
 
   if (!user) {
     return null;
@@ -384,26 +391,118 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Severity Distribution - Pie Chart */}
+        {/* Graph Type Selector */}
+        <div className="mb-6 animate-slideUp">
           <div
-            className="rounded-2xl p-6 animate-scaleIn stagger-5"
+            className="inline-flex rounded-2xl p-2 gap-2"
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              boxShadow: 'var(--shadow-lg)'
+              boxShadow: 'var(--shadow-md)'
             }}
           >
-            <h2
-              className="text-xl font-bold mb-2"
-              style={{ color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}
+            <button
+              onClick={() => setGraphType('pie')}
+              className={`px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
+                graphType === 'pie' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: graphType === 'pie'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: graphType === 'pie' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: graphType === 'pie' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (graphType !== 'pie') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (graphType !== 'pie') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
-              重要度別分布
-            </h2>
-            <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
-              クリックして詳細を表示
-            </p>
+              📊 分布グラフ
+            </button>
+            <button
+              onClick={() => setGraphType('timeseries')}
+              className={`px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
+                graphType === 'timeseries' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: graphType === 'timeseries'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: graphType === 'timeseries' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: graphType === 'timeseries' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (graphType !== 'timeseries') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (graphType !== 'timeseries') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              📈 時系列グラフ
+            </button>
+            <button
+              onClick={() => setGraphType('bar')}
+              className={`px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
+                graphType === 'bar' ? 'shadow-lg' : ''
+              }`}
+              style={{
+                background: graphType === 'bar'
+                  ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                  : 'transparent',
+                color: graphType === 'bar' ? 'white' : 'var(--foreground)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: graphType === 'bar' ? '0 4px 12px var(--primary-glow)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (graphType !== 'bar') {
+                  e.currentTarget.style.background = 'var(--primary-light)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (graphType !== 'bar') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+            >
+              📊 棒グラフ
+            </button>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        {graphType === 'pie' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fadeIn">
+            {/* Severity Distribution - Pie Chart */}
+            <div
+              className="rounded-2xl p-6 animate-scaleIn stagger-5"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            >
+              <h2
+                className="text-xl font-bold mb-2"
+                style={{ color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}
+              >
+                重要度別分布
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                クリックして詳細を表示
+              </p>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -480,8 +579,191 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         </div>
+        )}
 
-        {/* Trend Chart */}
+        {/* Timeseries Graph */}
+        {graphType === 'timeseries' && (
+          <div className="mb-8 animate-fadeIn">
+            {/* Period Selector */}
+            <div className="mb-6">
+              <div
+                className="inline-flex rounded-xl p-1.5 gap-1.5"
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                {(['daily', 'weekly', 'monthly'] as TrendPeriod[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200`}
+                    style={{
+                      background: period === p
+                        ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)'
+                        : 'transparent',
+                      color: period === p ? 'white' : 'var(--foreground)',
+                      fontFamily: 'var(--font-body)',
+                      boxShadow: period === p ? '0 2px 8px var(--primary-glow)' : 'none'
+                    }}
+                  >
+                    {p === 'daily' ? '日別' : p === 'weekly' ? '週別' : '月別'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="rounded-2xl p-6"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            >
+              <h2
+                className="text-xl font-bold mb-2"
+                style={{ color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}
+              >
+                インシデント発生推移
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                {period === 'daily' && '過去30日間の'}
+                {period === 'weekly' && '過去12週間の'}
+                {period === 'monthly' && '過去12ヶ月の'}
+                インシデント発生件数
+              </p>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={stats.trend_data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="var(--foreground)"
+                    style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                  />
+                  <YAxis
+                    stroke="var(--foreground)"
+                    style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ fontFamily: 'var(--font-body)', fontSize: '13px' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    name="件数"
+                    stroke="var(--primary)"
+                    strokeWidth={3}
+                    dot={{ fill: 'var(--primary)', r: 4 }}
+                    activeDot={{ r: 6 }}
+                    animationDuration={800}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Bar Graph */}
+        {graphType === 'bar' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fadeIn">
+            {/* Severity Bar Chart */}
+            <div
+              className="rounded-2xl p-6"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            >
+              <h2
+                className="text-xl font-bold mb-2"
+                style={{ color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}
+              >
+                重要度別件数
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                深刻度ごとのインシデント数
+              </p>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={severityData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--foreground)"
+                    style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}
+                    tickFormatter={(value) => value.split('（')[0]}
+                  />
+                  <YAxis
+                    stroke="var(--foreground)"
+                    style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar
+                    dataKey="value"
+                    name="件数"
+                    radius={[8, 8, 0, 0]}
+                    animationDuration={800}
+                  >
+                    {severityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Status Bar Chart */}
+            <div
+              className="rounded-2xl p-6"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-lg)'
+              }}
+            >
+              <h2
+                className="text-xl font-bold mb-2"
+                style={{ color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}
+              >
+                ステータス別件数
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+                ステータスごとのインシデント数
+              </p>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={statusData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--foreground)"
+                    style={{ fontSize: '11px', fontFamily: 'var(--font-body)' }}
+                    tickFormatter={(value) => value.split('（')[0]}
+                  />
+                  <YAxis
+                    stroke="var(--foreground)"
+                    style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar
+                    dataKey="value"
+                    name="件数"
+                    radius={[8, 8, 0, 0]}
+                    animationDuration={800}
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Trend Chart (kept for compatibility) */}
         <div
           className="rounded-2xl p-6 mb-8 animate-fadeIn"
           style={{
