@@ -1,26 +1,301 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background Colors - Subtle Green Tint */
+  --background: #f0fdf4;
+  --background-secondary: #ecfdf5;
+  --surface: #ffffff;
+  --foreground: #0f172a;
+  --foreground-secondary: #475569;
+
+  /* Primary - Vibrant Emerald Green */
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-light: #d1fae5;
+  --primary-dark: #047857;
+  --primary-glow: rgba(16, 185, 129, 0.3);
+
+  /* Secondary - Modern Slate */
+  --secondary: #64748b;
+  --secondary-hover: #475569;
+  --secondary-light: #f1f5f9;
+  --secondary-dark: #334155;
+
+  /* Accent - Warm Amber for Contrast */
+  --accent: #f59e0b;
+  --accent-hover: #d97706;
+  --accent-light: #fef3c7;
+  --accent-glow: rgba(245, 158, 11, 0.3);
+
+  /* Severity Colors (Vibrant & Modern) */
+  --critical: #dc2626;
+  --critical-light: #fee2e2;
+  --critical-glow: rgba(220, 38, 38, 0.2);
+  --high: #ea580c;
+  --high-light: #ffedd5;
+  --high-glow: rgba(234, 88, 12, 0.2);
+  --medium: #f59e0b;
+  --medium-light: #fef3c7;
+  --medium-glow: rgba(245, 158, 11, 0.2);
+  --low: #3b82f6;
+  --low-light: #dbeafe;
+  --low-glow: rgba(59, 130, 246, 0.2);
+
+  /* Status Colors */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --error: #dc2626;
+  --error-light: #fee2e2;
+  --info: #0ea5e9;
+  --info-light: #e0f2fe;
+
+  /* Neutral Palette */
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+
+  /* Borders - Subtle with Green Tint */
+  --border: #d1fae5;
+  --border-light: #ecfdf5;
+  --border-strong: #10b981;
+
+  /* Shadows - Modern with Green Glow */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.1), 0 1px 2px -1px rgba(15, 23, 42, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  --shadow-glow: 0 0 20px var(--primary-glow);
+  --shadow-glow-accent: 0 0 20px var(--accent-glow);
+
+  /* Fonts */
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 }
 
 @theme inline {
+  /* Background */
   --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground-secondary: var(--foreground-secondary);
+
+  /* Primary */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-glow: var(--primary-glow);
+
+  /* Secondary */
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-light: var(--secondary-light);
+  --color-secondary-dark: var(--secondary-dark);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+  --color-accent-glow: var(--accent-glow);
+
+  /* Severity */
+  --color-critical: var(--critical);
+  --color-critical-light: var(--critical-light);
+  --color-critical-glow: var(--critical-glow);
+  --color-high: var(--high);
+  --color-high-light: var(--high-light);
+  --color-high-glow: var(--high-glow);
+  --color-medium: var(--medium);
+  --color-medium-light: var(--medium-light);
+  --color-medium-glow: var(--medium-glow);
+  --color-low: var(--low);
+  --color-low-light: var(--low-light);
+  --color-low-glow: var(--low-glow);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-error: var(--error);
+  --color-error-light: var(--error-light);
+  --color-info: var(--info);
+  --color-info-light: var(--info-light);
+
+  /* Grays */
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+
+  /* Borders */
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-border-strong: var(--border-strong);
+
+  /* Fonts */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base Styles */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle grid pattern overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(var(--border-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+/* Headings use display font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Code elements use mono font */
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--primary-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--primary-glow);
+  }
+}
+
+/* Utility classes */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s ease-out;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.5s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s ease-out;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Stagger delays for sequential animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }
+
+/* Green glow effect for interactive elements */
+.glow-on-hover:hover {
+  box-shadow: 0 0 20px var(--primary-glow), var(--shadow-lg);
+}
+
+/* Card with green accent border */
+.card-green-accent {
+  border-left: 4px solid var(--primary);
+  box-shadow: var(--shadow-md);
+}
+
+.card-green-accent:hover {
+  box-shadow: 0 0 15px var(--primary-glow), var(--shadow-lg);
+  transform: translateY(-2px);
 }
