@@ -127,11 +127,11 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">月次レポート</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-base text-gray-700">
           インシデント管理の月次統計とパフォーマンスメトリクス
         </p>
       </div>
