@@ -110,36 +110,39 @@ export default function CreateIncidentPage() {
 
   if (authLoading || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div style={{ color: 'var(--secondary)' }}>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <button
             onClick={() => router.push('/incidents')}
-            className="text-blue-600 hover:text-blue-800 mb-4 inline-flex items-center"
+            className="mb-4 inline-flex items-center transition-colors"
+            style={{ color: 'var(--primary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary)'}
           >
             ← Back to List
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Incident</h1>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>Create New Incident</h1>
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="px-4 py-3 rounded-xl mb-4 border-2" style={{ background: 'var(--error-light)', borderColor: 'var(--error)', color: 'var(--error)' }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
+        <form onSubmit={handleSubmit} className="rounded-xl shadow-lg p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
           {/* Title */}
-          <div className="mb-4">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-              Title <span className="text-red-500">*</span>
+          <div className="mb-5">
+            <label htmlFor="title" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              Title <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="text"
@@ -148,14 +151,27 @@ export default function CreateIncidentPage() {
               onChange={(e) => setTitle(e.target.value)}
               maxLength={500}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
 
           {/* Description */}
-          <div className="mb-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description <span className="text-red-500">*</span>
+          <div className="mb-5">
+            <label htmlFor="description" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              Description <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <textarea
               id="description"
@@ -163,43 +179,82 @@ export default function CreateIncidentPage() {
               onChange={(e) => setDescription(e.target.value)}
               required
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
 
           {/* Severity and Status */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-2 gap-4 mb-5">
             <div>
-              <label htmlFor="severity" className="block text-sm font-medium text-gray-700 mb-1">
-                Severity（重要度） <span className="text-red-500">*</span>
+              <label htmlFor="severity" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+                Severity（重要度） <span style={{ color: 'var(--error)' }}>*</span>
               </label>
               <select
                 id="severity"
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value as Severity)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 <option value="low">🟢 Low - 軽微な問題（通常業務時間内で対応）</option>
                 <option value="medium">🟡 Medium - 機能劣化あり（4時間以内に対応開始）</option>
                 <option value="high">🟠 High - 主要機能に重大な影響（1時間以内に対応開始）</option>
                 <option value="critical">🔴 Critical - サービス停止・全体障害（即座に対応）</option>
               </select>
-              <p className="mt-1 text-xs text-gray-600">
-                詳細な基準は <a href="/docs/severity-guidelines.md" target="_blank" className="text-blue-600 hover:underline">Severityガイドライン</a> を参照してください
+              <p className="mt-1.5 text-xs" style={{ color: 'var(--secondary)' }}>
+                詳細な基準は <a href="/docs/severity-guidelines.md" target="_blank" className="transition-colors" style={{ color: 'var(--primary)' }} onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}>Severityガイドライン</a> を参照してください
               </p>
             </div>
 
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Status <span className="text-red-500">*</span>
+              <label htmlFor="status" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+                Status <span style={{ color: 'var(--error)' }}>*</span>
               </label>
               <select
                 id="status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as Status)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+                style={{
+                  background: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                  color: 'var(--foreground)'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary)';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 <option value="open">Open</option>
                 <option value="investigating">Investigating</option>
@@ -210,8 +265,8 @@ export default function CreateIncidentPage() {
           </div>
 
           {/* Impact Scope */}
-          <div className="mb-4">
-            <label htmlFor="impactScope" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="mb-5">
+            <label htmlFor="impactScope" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Impact Scope
             </label>
             <input
@@ -220,14 +275,27 @@ export default function CreateIncidentPage() {
               value={impactScope}
               onChange={(e) => setImpactScope(e.target.value)}
               maxLength={500}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
 
           {/* Detected At */}
-          <div className="mb-4">
-            <label htmlFor="detectedAt" className="block text-sm font-medium text-gray-700 mb-1">
-              Detected At <span className="text-red-500">*</span>
+          <div className="mb-5">
+            <label htmlFor="detectedAt" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              Detected At <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="datetime-local"
@@ -235,20 +303,46 @@ export default function CreateIncidentPage() {
               value={detectedAt}
               onChange={(e) => setDetectedAt(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
 
           {/* Assignee */}
-          <div className="mb-4">
-            <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="mb-5">
+            <label htmlFor="assignee" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Assignee
             </label>
             <select
               id="assignee"
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value ? parseInt(e.target.value) : '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
               <option value="">Unassigned</option>
               {users.map((user) => (
@@ -261,23 +355,31 @@ export default function CreateIncidentPage() {
 
           {/* Tags */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>Tags</label>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <button
                   key={tag.id}
                   type="button"
                   onClick={() => handleTagToggle(tag.id)}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    selectedTagIds.includes(tag.id)
-                      ? 'text-white'
-                      : 'bg-white border-gray-300 text-gray-700'
-                  }`}
+                  className="px-3 py-1.5 rounded-full text-sm border-2 transition-all shadow-sm"
                   style={
                     selectedTagIds.includes(tag.id)
-                      ? { backgroundColor: tag.color, borderColor: tag.color }
-                      : undefined
+                      ? { backgroundColor: tag.color, borderColor: tag.color, color: 'white' }
+                      : { background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--foreground)' }
                   }
+                  onMouseEnter={(e) => {
+                    if (!selectedTagIds.includes(tag.id)) {
+                      e.currentTarget.style.borderColor = tag.color;
+                      e.currentTarget.style.color = tag.color;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!selectedTagIds.includes(tag.id)) {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--foreground)';
+                    }
+                  }}
                 >
                   {tag.name}
                 </button>
@@ -290,14 +392,26 @@ export default function CreateIncidentPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 text-white rounded-lg shadow-lg transition-all disabled:opacity-50 font-medium"
+              style={{ background: 'var(--primary)' }}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-hover)')}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
             >
               {loading ? 'Creating...' : 'Create Incident'}
             </button>
             <button
               type="button"
               onClick={() => router.push('/incidents')}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              className="px-6 py-2.5 border-2 rounded-lg transition-all font-medium"
+              style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--surface)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--secondary-light)';
+                e.currentTarget.style.borderColor = 'var(--secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--surface)';
+                e.currentTarget.style.borderColor = 'var(--border)';
+              }}
             >
               Cancel
             </button>

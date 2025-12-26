@@ -163,24 +163,33 @@ function IncidentsPageContent() {
     }
   };
 
-  const getSeverityColor = (severity: Severity) => {
+  const getSeverityStyle = (severity: Severity) => {
     switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-300';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'low': return 'bg-green-100 text-green-800 border-green-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'critical': return { background: 'var(--critical-light)', color: 'var(--critical)', borderColor: 'var(--critical)' };
+      case 'high': return { background: 'var(--high-light)', color: 'var(--high)', borderColor: 'var(--high)' };
+      case 'medium': return { background: 'var(--medium-light)', color: 'var(--medium)', borderColor: 'var(--medium)' };
+      case 'low': return { background: 'var(--low-light)', color: 'var(--low)', borderColor: 'var(--low)' };
+      default: return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-300)' };
     }
   };
 
-  const getStatusColor = (status: Status) => {
+  const getStatusStyle = (status: Status) => {
     switch (status) {
-      case 'open': return 'bg-gray-100 text-gray-800 border-gray-300';
-      case 'investigating': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'resolved': return 'bg-green-100 text-green-800 border-green-300';
-      case 'closed': return 'bg-purple-100 text-purple-800 border-purple-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'open': return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-400)' };
+      case 'investigating': return { background: 'var(--info-light)', color: 'var(--info)', borderColor: 'var(--info)' };
+      case 'resolved': return { background: 'var(--success-light)', color: 'var(--success)', borderColor: 'var(--success)' };
+      case 'closed': return { background: 'var(--secondary-light)', color: 'var(--secondary-dark)', borderColor: 'var(--secondary)' };
+      default: return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-300)' };
     }
+  };
+
+  // 旧関数との互換性のため残す（使っている箇所があれば）
+  const getSeverityColor = (severity: Severity) => {
+    return '';  // style属性に置き換えるため、classNameは空文字列
+  };
+
+  const getStatusColor = (status: Status) => {
+    return '';  // style属性に置き換えるため、classNameは空文字列
   };
 
   const handleExportCSV = async () => {
@@ -210,22 +219,28 @@ function IncidentsPageContent() {
 
   if (authLoading || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div style={{ color: 'var(--secondary)' }}>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">インシデント一覧</h1>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>インシデント一覧</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--secondary)' }}>インシデントの管理と追跡</p>
+          </div>
           <div className="flex space-x-3">
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+              className="px-4 py-2.5 text-white rounded-lg flex items-center shadow-md transition-all"
+              style={{ background: 'var(--accent)' }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -235,7 +250,10 @@ function IncidentsPageContent() {
             {permissions.canCreateIncidents && (
               <button
                 onClick={() => router.push('/incidents/create')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2.5 text-white rounded-lg shadow-lg transition-all"
+                style={{ background: 'var(--primary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
               >
                 新規作成
               </button>
@@ -250,12 +268,18 @@ function IncidentsPageContent() {
           {/* Sidebar Filter Panel */}
           {showSidebar && (
             <div className="w-64 flex-shrink-0">
-              <div className="bg-white rounded-lg shadow p-4 sticky top-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">フィルター</h2>
+              <div className="rounded-xl shadow-lg p-5 sticky top-8 border" style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)'
+              }}>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>フィルター</h2>
                   <button
                     onClick={() => setShowSidebar(false)}
-                    className="text-gray-400 hover:text-gray-600 lg:hidden"
+                    className="lg:hidden transition-colors"
+                    style={{ color: 'var(--secondary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--secondary)'}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -265,23 +289,40 @@ function IncidentsPageContent() {
 
                 {/* Filter Presets */}
                 <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">クイックフィルター</h3>
+                  <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--foreground)' }}>クイックフィルター</h3>
                   <div className="space-y-2">
                     <button
                       onClick={() => applyPreset('unresolved')}
-                      className="w-full px-3 py-2 text-sm text-left bg-gray-50 hover:bg-gray-100 rounded-md text-gray-700"
+                      className="w-full px-3 py-2 text-sm text-left rounded-lg transition-all"
+                      style={{ background: 'var(--secondary-light)', color: 'var(--foreground)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-light)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
                     >
                       未解決のインシデント
                     </button>
                     <button
                       onClick={() => applyPreset('critical')}
-                      className="w-full px-3 py-2 text-sm text-left bg-gray-50 hover:bg-gray-100 rounded-md text-gray-700"
+                      className="w-full px-3 py-2 text-sm text-left rounded-lg transition-all"
+                      style={{ background: 'var(--secondary-light)', color: 'var(--foreground)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-light)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
                     >
                       Critical のみ
                     </button>
                     <button
                       onClick={clearFilters}
-                      className="w-full px-3 py-2 text-sm text-left bg-gray-50 hover:bg-gray-100 rounded-md text-gray-700"
+                      className="w-full px-3 py-2 text-sm text-left rounded-lg border transition-all"
+                      style={{ borderColor: 'var(--border)', color: 'var(--secondary)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--error-light)';
+                        e.currentTarget.style.borderColor = 'var(--error)';
+                        e.currentTarget.style.color = 'var(--error)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.color = 'var(--secondary)';
+                      }}
                     >
                       すべてクリア
                     </button>
@@ -290,7 +331,7 @@ function IncidentsPageContent() {
 
                 {/* Search */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     検索
                   </label>
                   <input
@@ -298,18 +339,31 @@ function IncidentsPageContent() {
                     value={search}
                     onChange={handleSearchChange}
                     placeholder="タイトル、説明を検索..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                    style={{
+                      background: 'var(--surface)',
+                      borderColor: 'var(--border)',
+                      color: 'var(--foreground)'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
                   />
                 </div>
 
                 {/* Severity Filter */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     深刻度
                   </label>
                   <div className="space-y-2">
                     {(Object.keys(SEVERITY_LABELS) as Severity[]).map((sev) => (
-                      <label key={sev} className="flex items-center">
+                      <label key={sev} className="flex items-center cursor-pointer">
                         <input
                           type="radio"
                           name="severity"
@@ -318,12 +372,13 @@ function IncidentsPageContent() {
                             setSeverity(sev);
                             setPagination({ ...pagination, page: 1 });
                           }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          className="h-4 w-4 accent-[--primary] border-2"
+                          style={{ borderColor: 'var(--border)' }}
                         />
-                        <span className="ml-2 text-sm text-gray-700">{SEVERITY_LABELS[sev]}</span>
+                        <span className="ml-2 text-sm" style={{ color: 'var(--foreground)' }}>{SEVERITY_LABELS[sev]}</span>
                       </label>
                     ))}
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
                       <input
                         type="radio"
                         name="severity"
@@ -332,21 +387,22 @@ function IncidentsPageContent() {
                           setSeverity('');
                           setPagination({ ...pagination, page: 1 });
                         }}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        className="h-4 w-4 accent-[--primary] border-2"
+                        style={{ borderColor: 'var(--border)' }}
                       />
-                      <span className="ml-2 text-sm text-gray-700">すべて</span>
+                      <span className="ml-2 text-sm" style={{ color: 'var(--foreground)' }}>すべて</span>
                     </label>
                   </div>
                 </div>
 
                 {/* Status Filter */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     ステータス
                   </label>
                   <div className="space-y-2">
                     {(Object.keys(STATUS_LABELS) as Status[]).map((st) => (
-                      <label key={st} className="flex items-center">
+                      <label key={st} className="flex items-center cursor-pointer">
                         <input
                           type="radio"
                           name="status"
@@ -355,12 +411,13 @@ function IncidentsPageContent() {
                             setStatus(st);
                             setPagination({ ...pagination, page: 1 });
                           }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                          className="h-4 w-4 accent-[--primary] border-2"
+                          style={{ borderColor: 'var(--border)' }}
                         />
-                        <span className="ml-2 text-sm text-gray-700">{STATUS_LABELS[st]}</span>
+                        <span className="ml-2 text-sm" style={{ color: 'var(--foreground)' }}>{STATUS_LABELS[st]}</span>
                       </label>
                     ))}
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
                       <input
                         type="radio"
                         name="status"
@@ -369,30 +426,32 @@ function IncidentsPageContent() {
                           setStatus('');
                           setPagination({ ...pagination, page: 1 });
                         }}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                        className="h-4 w-4 accent-[--primary] border-2"
+                        style={{ borderColor: 'var(--border)' }}
                       />
-                      <span className="ml-2 text-sm text-gray-700">すべて</span>
+                      <span className="ml-2 text-sm" style={{ color: 'var(--foreground)' }}>すべて</span>
                     </label>
                   </div>
                 </div>
 
                 {/* Tag Filter */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     タグ
                   </label>
                   <div className="space-y-2">
                     {tags.map((tag) => (
-                      <label key={tag.id} className="flex items-center">
+                      <label key={tag.id} className="flex items-center cursor-pointer">
                         <input
                           type="checkbox"
                           checked={selectedTagIds.includes(tag.id)}
                           onChange={() => handleTagToggle(tag.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 rounded accent-[--primary] border-2"
+                          style={{ borderColor: 'var(--border)' }}
                         />
-                        <span className="ml-2 text-sm text-gray-700">{tag.name}</span>
+                        <span className="ml-2 text-sm flex-1" style={{ color: 'var(--foreground)' }}>{tag.name}</span>
                         <span
-                          className="ml-auto w-3 h-3 rounded-full"
+                          className="w-3 h-3 rounded-full shadow-sm"
                           style={{ backgroundColor: tag.color }}
                         ></span>
                       </label>
@@ -409,7 +468,10 @@ function IncidentsPageContent() {
             {!showSidebar && (
               <button
                 onClick={() => setShowSidebar(true)}
-                className="mb-4 px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center"
+                className="mb-4 px-4 py-2 rounded-lg flex items-center border transition-all"
+                style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface)'}
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -420,23 +482,28 @@ function IncidentsPageContent() {
 
             {/* Filter Chips */}
             {hasActiveFilters && (
-              <div className="mb-4 bg-white p-4 rounded-lg shadow">
+              <div className="mb-4 p-4 rounded-xl shadow-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">適用中のフィルター:</h3>
+                  <h3 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>適用中のフィルター:</h3>
                   <button
                     onClick={clearFilters}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="text-sm transition-colors"
+                    style={{ color: 'var(--primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary)'}
                   >
                     すべてクリア
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {search && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm border-2" style={{ background: 'var(--info-light)', color: 'var(--info)', borderColor: 'var(--info)' }}>
                       検索: {search}
                       <button
                         onClick={() => clearFilter('search')}
-                        className="ml-2 text-blue-600 hover:text-blue-900"
+                        className="ml-2 transition-opacity"
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -445,11 +512,13 @@ function IncidentsPageContent() {
                     </span>
                   )}
                   {severity && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-orange-100 text-orange-800">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm border-2" style={getSeverityStyle(severity)}>
                       深刻度: {SEVERITY_LABELS[severity]}
                       <button
                         onClick={() => clearFilter('severity')}
-                        className="ml-2 text-orange-600 hover:text-orange-900"
+                        className="ml-2 transition-opacity"
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -458,11 +527,13 @@ function IncidentsPageContent() {
                     </span>
                   )}
                   {status && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm border-2" style={getStatusStyle(status)}>
                       ステータス: {STATUS_LABELS[status]}
                       <button
                         onClick={() => clearFilter('status')}
-                        className="ml-2 text-green-600 hover:text-green-900"
+                        className="ml-2 transition-opacity"
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -475,13 +546,15 @@ function IncidentsPageContent() {
                     return tag ? (
                       <span
                         key={tagId}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm text-white"
+                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm text-white shadow-sm"
                         style={{ backgroundColor: tag.color }}
                       >
                         {tag.name}
                         <button
                           onClick={() => clearFilter('tag', tagId)}
-                          className="ml-2 text-white hover:text-gray-200"
+                          className="ml-2 text-white transition-opacity"
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -496,86 +569,93 @@ function IncidentsPageContent() {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <div className="px-4 py-3 rounded-xl mb-4 border-2" style={{ background: 'var(--error-light)', borderColor: 'var(--error)', color: 'var(--error)' }}>
                 {error}
               </div>
             )}
 
             {/* Incidents Table */}
             {loading ? (
-              <div className="text-center py-8 text-gray-600">Loading incidents...</div>
+              <div className="text-center py-8" style={{ color: 'var(--secondary)' }}>Loading incidents...</div>
             ) : incidents.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
-                インシデントが見つかりませんでした。フィルターを変更するか、新しいインシデントを作成してください。
+              <div className="text-center py-12 px-4 rounded-xl shadow-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'var(--secondary)' }}>
+                <svg className="mx-auto h-12 w-12 mb-4" style={{ color: 'var(--secondary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-base font-medium" style={{ color: 'var(--foreground)' }}>インシデントが見つかりませんでした</p>
+                <p className="text-sm mt-1">フィルターを変更するか、新しいインシデントを作成してください。</p>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="rounded-xl shadow-lg overflow-hidden border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+                <table className="min-w-full">
+                  <thead style={{ background: 'var(--secondary-light)' }}>
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Title
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Severity
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Detected At
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Assignee
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Tags
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {incidents.map((incident) => (
+                  <tbody>
+                    {incidents.map((incident, index) => (
                       <tr
                         key={incident.id}
                         onClick={() => router.push(`/incidents/${incident.id}`)}
-                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="cursor-pointer transition-all"
+                        style={{
+                          borderTop: index > 0 ? `1px solid var(--border)` : 'none'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
                             {incident.title}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getSeverityColor(
-                              incident.severity
-                            )}`}
+                            className="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border-2"
+                            style={getSeverityStyle(incident.severity)}
                           >
                             {incident.severity.toUpperCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusColor(
-                              incident.status
-                            )}`}
+                            className="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border-2"
+                            style={getStatusStyle(incident.status)}
                           >
                             {incident.status.charAt(0).toUpperCase() +
                               incident.status.slice(1)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--secondary)' }}>
                           {new Date(incident.detected_at).toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm" style={{ color: 'var(--secondary)' }}>
                           {incident.assignee?.name || '-'}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1 max-w-xs">
+                          <div className="flex flex-wrap gap-1.5 max-w-xs">
                             {incident.tags?.map((tag) => (
                               <span
                                 key={tag.id}
-                                className="px-2 py-1 text-xs rounded-full text-white whitespace-nowrap"
+                                className="px-2.5 py-1 text-xs rounded-full text-white whitespace-nowrap shadow-sm"
                                 style={{ backgroundColor: tag.color }}
                               >
                                 {tag.name}
@@ -589,14 +669,21 @@ function IncidentsPageContent() {
                 </table>
 
                 {/* Pagination */}
-                <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div className="px-4 py-3.5 flex items-center justify-between border-t sm:px-6" style={{ background: 'var(--secondary-light)', borderColor: 'var(--border)' }}>
                   <div className="flex-1 flex justify-between sm:hidden">
                     <button
                       onClick={() =>
                         setPagination({ ...pagination, page: Math.max(pagination.page - 1, 1) })
                       }
                       disabled={pagination.page === 1}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="relative inline-flex items-center px-4 py-2 border-2 text-sm font-medium rounded-lg transition-all disabled:opacity-40"
+                      style={{
+                        background: 'var(--surface)',
+                        borderColor: 'var(--border)',
+                        color: 'var(--foreground)'
+                      }}
+                      onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.borderColor = 'var(--primary)')}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
                       Previous
                     </button>
@@ -608,27 +695,41 @@ function IncidentsPageContent() {
                         })
                       }
                       disabled={pagination.page === pagination.total_pages}
-                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border-2 text-sm font-medium rounded-lg transition-all disabled:opacity-40"
+                      style={{
+                        background: 'var(--surface)',
+                        borderColor: 'var(--border)',
+                        color: 'var(--foreground)'
+                      }}
+                      onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.borderColor = 'var(--primary)')}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
                       Next
                     </button>
                   </div>
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm text-gray-700">
-                        Showing page <span className="font-medium">{pagination.page}</span> of{' '}
-                        <span className="font-medium">{pagination.total_pages}</span> (
-                        <span className="font-medium">{pagination.total}</span> total)
+                      <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+                        Showing page <span className="font-semibold">{pagination.page}</span> of{' '}
+                        <span className="font-semibold">{pagination.total_pages}</span> (
+                        <span className="font-semibold">{pagination.total}</span> total)
                       </p>
                     </div>
                     <div>
-                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                      <nav className="relative z-0 inline-flex rounded-lg shadow-sm gap-2">
                         <button
                           onClick={() =>
                             setPagination({ ...pagination, page: Math.max(pagination.page - 1, 1) })
                           }
                           disabled={pagination.page === 1}
-                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                          className="relative inline-flex items-center px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all disabled:opacity-40"
+                          style={{
+                            background: 'var(--surface)',
+                            borderColor: 'var(--border)',
+                            color: 'var(--foreground)'
+                          }}
+                          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.borderColor = 'var(--primary)')}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                         >
                           Previous
                         </button>
@@ -640,7 +741,14 @@ function IncidentsPageContent() {
                             })
                           }
                           disabled={pagination.page === pagination.total_pages}
-                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                          className="relative inline-flex items-center px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all disabled:opacity-40"
+                          style={{
+                            background: 'var(--surface)',
+                            borderColor: 'var(--border)',
+                            color: 'var(--foreground)'
+                          }}
+                          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.borderColor = 'var(--primary)')}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                         >
                           Next
                         </button>
@@ -659,7 +767,7 @@ function IncidentsPageContent() {
 
 export default function IncidentsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}><div style={{ color: 'var(--secondary)' }}>Loading...</div></div>}>
       <IncidentsPageContent />
     </Suspense>
   );
