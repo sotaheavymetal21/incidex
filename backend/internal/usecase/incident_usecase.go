@@ -2,6 +2,9 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"incidex/internal/domain"
@@ -124,15 +127,67 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		}
 	}
 
-	// Invalidate statistics cache
+	// Cache the summary if generated (TTL = 0 means no expiration)
+	if summary != "" {
+		cacheKey := fmt.Sprintf("incident:summary:%d", incident.ID)
+		if err := u.cacheRepo.Set(ctx, cacheKey, summary, 0); err != nil {
+			// Log error but don't fail the request if caching fails
+			fmt.Printf("Warning: Failed to cache summary for incident %d: %v\n", incident.ID, err)
+		}
+	}
+
+	// Invalidate caches
 	u.invalidateStatsCache(ctx)
+	u.invalidateSearchCache(ctx)
 
 	// Reload to get all relations
 	return u.incidentRepo.FindByID(ctx, incident.ID)
 }
 
 func (u *incidentUsecase) GetAllIncidents(ctx context.Context, filters domain.IncidentFilters, pagination domain.Pagination) ([]*domain.Incident, *domain.PaginationResult, error) {
-	return u.incidentRepo.FindAll(ctx, filters, pagination)
+	// Generate cache key from filters and pagination
+	cacheKey, err := u.generateSearchCacheKey(filters, pagination)
+	if err == nil {
+		// Try to get from cache
+		if cachedData, cacheErr := u.cacheRepo.Get(ctx, cacheKey); cacheErr == nil {
+			type CachedSearchResult struct {
+				Incidents []*domain.Incident       `json:"incidents"`
+				Result    *domain.PaginationResult `json:"result"`
+			}
+			var cached CachedSearchResult
+			if unmarshalErr := json.Unmarshal([]byte(cachedData), &cached); unmarshalErr == nil {
+				fmt.Printf("Cache hit for search (key: %s)\n", cacheKey)
+				return cached.Incidents, cached.Result, nil
+			}
+		}
+	}
+
+	fmt.Printf("Cache miss for search, querying database...\n")
+
+	// Get from database
+	incidents, result, err := u.incidentRepo.FindAll(ctx, filters, pagination)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Cache the result for 3 minutes
+	if cacheKey != "" {
+		type CachedSearchResult struct {
+			Incidents []*domain.Incident       `json:"incidents"`
+			Result    *domain.PaginationResult `json:"result"`
+		}
+		cached := CachedSearchResult{
+			Incidents: incidents,
+			Result:    result,
+		}
+		if cachedJSON, marshalErr := json.Marshal(cached); marshalErr == nil {
+			if setErr := u.cacheRepo.Set(ctx, cacheKey, string(cachedJSON), 3*time.Minute); setErr != nil {
+				fmt.Printf("Warning: Failed to cache search results: %v\n", setErr)
+			}
+		}
+	}
+
+	return incidents, result, nil
 }
 
 func (u *incidentUsecase) GetIncidentByID(ctx context.Context, id uint) (*domain.Incident, error) {
@@ -257,6 +312,12 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		})
 	}
 
+	// Check if summary-affecting fields changed
+	summaryChanged := incident.Title != title ||
+		incident.Description != description ||
+		incident.Severity != severity ||
+		incident.ImpactScope != impactScope
+
 	// Update incident fields
 	incident.Title = title
 	incident.Description = description
@@ -323,6 +384,18 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		}
 	}
 
+	// Delete summary cache if summary-affecting fields changed
+	if summaryChanged {
+		cacheKey := fmt.Sprintf("incident:summary:%d", incident.ID)
+		if err := u.cacheRepo.Delete(ctx, cacheKey); err != nil {
+			fmt.Printf("Warning: Failed to delete summary cache for incident %d: %v\n", incident.ID, err)
+		}
+	}
+
+	// Invalidate caches
+	u.invalidateStatsCache(ctx)
+	u.invalidateSearchCache(ctx)
+
 	// Reload to get all relations
 	return u.incidentRepo.FindByID(ctx, incident.ID)
 }
@@ -337,6 +410,16 @@ func (u *incidentUsecase) DeleteIncident(ctx context.Context, userRole domain.Ro
 	if _, err := u.incidentRepo.FindByID(ctx, id); err != nil {
 		return err
 	}
+
+	// Delete summary cache
+	cacheKey := fmt.Sprintf("incident:summary:%d", id)
+	if err := u.cacheRepo.Delete(ctx, cacheKey); err != nil {
+		fmt.Printf("Warning: Failed to delete cache for incident %d: %v\n", id, err)
+	}
+
+	// Invalidate caches
+	u.invalidateStatsCache(ctx)
+	u.invalidateSearchCache(ctx)
 
 	return u.incidentRepo.Delete(ctx, id)
 }
@@ -493,4 +576,39 @@ func (u *incidentUsecase) invalidateStatsCache(ctx context.Context) {
 			fmt.Printf("Warning: Failed to invalidate cache pattern %s: %v\n", pattern, err)
 		}
 	}
+}
+
+// invalidateSearchCache invalidates all search result caches
+func (u *incidentUsecase) invalidateSearchCache(ctx context.Context) {
+	pattern := "search:incidents:*"
+	if err := u.cacheRepo.DeleteByPattern(ctx, pattern); err != nil {
+		fmt.Printf("Warning: Failed to invalidate search cache: %v\n", err)
+	}
+}
+
+// generateSearchCacheKey generates a cache key for search results
+func (u *incidentUsecase) generateSearchCacheKey(filters domain.IncidentFilters, pagination domain.Pagination) (string, error) {
+	// Create a struct with all cache-relevant fields
+	type CacheKeyData struct {
+		Filters    domain.IncidentFilters `json:"filters"`
+		Pagination domain.Pagination      `json:"pagination"`
+	}
+
+	data := CacheKeyData{
+		Filters:    filters,
+		Pagination: pagination,
+	}
+
+	// Marshal to JSON
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	// Generate SHA256 hash
+	hash := sha256.Sum256(jsonData)
+	hashStr := hex.EncodeToString(hash[:])
+
+	// Return cache key
+	return fmt.Sprintf("search:incidents:%s", hashStr), nil
 }

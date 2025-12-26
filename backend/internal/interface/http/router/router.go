@@ -93,6 +93,8 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			export := protected.Group("/export")
 			{
 				export.GET("/incidents", exportHandler.ExportIncidentsCSV)
+				export.GET("/incidents/:id/pdf", exportHandler.ExportIncidentPDF)
+				export.GET("/summary/pdf", exportHandler.ExportSummaryPDF)
 			}
 
 			// Notification routes
