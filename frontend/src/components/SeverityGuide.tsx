@@ -85,38 +85,59 @@ export default function SeverityGuide() {
   ];
 
   return (
-    <div className="rounded-xl shadow-lg mb-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+    <div
+      className="rounded-2xl mb-6 border transition-all duration-300 overflow-hidden animate-scaleIn"
+      style={{
+        background: 'var(--surface)',
+        borderColor: 'var(--border)',
+        boxShadow: isExpanded ? 'var(--shadow-xl)' : 'var(--shadow-md)'
+      }}
+    >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex justify-between items-center transition-all rounded-t-xl"
+        className="w-full px-6 py-5 flex justify-between items-center transition-all duration-200"
         style={{ color: 'var(--foreground)' }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-light)'}
         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
       >
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-5 h-5"
-            style={{ color: 'var(--primary)' }}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-3">
+          <div
+            className="p-2 rounded-xl"
+            style={{
+              background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%)',
+              color: 'var(--primary-dark)',
+              boxShadow: '0 4px 12px var(--primary-glow)'
+            }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h2 className="text-lg font-semibold">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <h2
+            className="text-xl font-bold"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--foreground)'
+            }}
+          >
             Severity（深刻度）の設定基準
           </h2>
         </div>
         <svg
-          className={`w-5 h-5 transition-transform ${
+          className={`w-6 h-6 transition-transform duration-300 ${
             isExpanded ? 'rotate-180' : ''
           }`}
-          style={{ color: 'var(--secondary)' }}
+          style={{ color: 'var(--primary)' }}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -131,49 +152,84 @@ export default function SeverityGuide() {
       </button>
 
       {isExpanded && (
-        <div className="px-6 pb-6 border-t" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-sm mb-6 mt-4" style={{ color: 'var(--secondary)' }}>
+        <div className="px-6 pb-6 border-t animate-slideDown" style={{ borderColor: 'var(--border)' }}>
+          <p
+            className="text-sm mb-6 mt-5 font-medium"
+            style={{
+              color: 'var(--foreground-secondary)',
+              fontFamily: 'var(--font-body)'
+            }}
+          >
             インシデントの深刻度は、以下の基準に基づいて設定してください。適切な深刻度を設定することで、優先順位付けと迅速な対応が可能になります。
           </p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {severityLevels.map((severity) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {severityLevels.map((severity, index) => (
               <div
                 key={severity.level}
-                className="border-2 rounded-xl p-4"
+                className="border-2 rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1"
                 style={{
                   ...severity.bgColor,
                   borderColor: severity.color.borderColor,
+                  boxShadow: 'var(--shadow-sm)',
+                  animationDelay: `${index * 0.1}s`
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = `0 8px 20px ${severity.color.borderColor}40`;
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   <span
-                    className="px-3 py-1 inline-flex text-sm font-semibold rounded-full border-2"
+                    className="px-4 py-2 inline-flex text-sm font-bold rounded-xl border-2"
                     style={{
                       ...severity.color,
-                      fontWeight: '600',
+                      fontFamily: 'var(--font-display)'
                     }}
                   >
                     {severity.label}
                   </span>
-                  <span className="text-xs font-medium" style={{ color: 'var(--secondary)' }}>
+                  <span
+                    className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                    style={{
+                      color: 'var(--foreground-secondary)',
+                      background: 'var(--gray-100)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                  >
                     対応目安: {severity.responseTime}
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+                    <h4
+                      className="text-sm font-bold mb-3"
+                      style={{
+                        color: 'var(--foreground)',
+                        fontFamily: 'var(--font-body)'
+                      }}
+                    >
                       設定基準:
                     </h4>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {severity.criteria.map((criterion, index) => (
                         <li
                           key={index}
-                          className="text-xs flex items-start"
-                          style={{ color: 'var(--foreground)' }}
+                          className="text-xs flex items-start font-medium"
+                          style={{
+                            color: 'var(--foreground)',
+                            fontFamily: 'var(--font-body)'
+                          }}
                         >
-                          <span className="mr-2 mt-0.5">•</span>
+                          <span
+                            className="mr-2 mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ background: severity.color.borderColor }}
+                          />
                           <span>{criterion}</span>
                         </li>
                       ))}
@@ -181,15 +237,24 @@ export default function SeverityGuide() {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+                    <h4
+                      className="text-sm font-bold mb-3"
+                      style={{
+                        color: 'var(--foreground)',
+                        fontFamily: 'var(--font-body)'
+                      }}
+                    >
                       具体例:
                     </h4>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {severity.examples.map((example, index) => (
                         <li
                           key={index}
-                          className="text-xs flex items-start"
-                          style={{ color: 'var(--secondary)' }}
+                          className="text-xs flex items-start font-medium"
+                          style={{
+                            color: 'var(--foreground-secondary)',
+                            fontFamily: 'var(--font-body)'
+                          }}
                         >
                           <span className="mr-2 mt-0.5">-</span>
                           <span>{example}</span>
@@ -202,22 +267,41 @@ export default function SeverityGuide() {
             ))}
           </div>
 
-          <div className="mt-6 p-4 rounded-xl border-2" style={{
-            background: 'var(--info-light)',
-            borderColor: 'var(--info)',
-          }}>
-            <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--info)' }}>
-              💡 Tips
+          <div
+            className="mt-6 p-5 rounded-2xl border-2 transition-all duration-300"
+            style={{
+              background: 'var(--info-light)',
+              borderColor: 'var(--info)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 8px 20px rgba(14, 165, 233, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <h4
+              className="text-base font-bold mb-3 flex items-center"
+              style={{
+                color: 'var(--info)',
+                fontFamily: 'var(--font-display)'
+              }}
+            >
+              <span className="text-2xl mr-2">💡</span>
+              Tips
             </h4>
-            <ul className="space-y-1 text-xs" style={{ color: 'var(--info)' }}>
-              <li>
-                • 深刻度は状況に応じて変更できます。調査が進むにつれて適切なレベルに調整してください。
+            <ul className="space-y-2 text-sm font-medium" style={{ color: 'var(--info)', fontFamily: 'var(--font-body)' }}>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>深刻度は状況に応じて変更できます。調査が進むにつれて適切なレベルに調整してください。</span>
               </li>
-              <li>
-                • 迷った場合は、影響範囲（ユーザー数）とビジネスへの影響度を最優先で考慮してください。
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>迷った場合は、影響範囲（ユーザー数）とビジネスへの影響度を最優先で考慮してください。</span>
               </li>
-              <li>
-                • セキュリティに関連するインシデントは、1段階上の深刻度を設定することを推奨します。
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>セキュリティに関連するインシデントは、1段階上の深刻度を設定することを推奨します。</span>
               </li>
             </ul>
           </div>
