@@ -9,8 +9,8 @@ export default function SeverityGuide() {
     {
       level: 'critical',
       label: 'Critical（致命的）',
-      color: 'bg-red-100 text-red-800 border-red-300',
-      bgColor: 'bg-red-50',
+      color: { background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' },
+      bgColor: { background: '#fef2f2' },
       criteria: [
         'サービス全体が停止している、または停止する可能性が高い',
         'データ損失や重大なセキュリティ侵害が発生している',
@@ -28,8 +28,8 @@ export default function SeverityGuide() {
     {
       level: 'high',
       label: 'High（高）',
-      color: 'bg-orange-100 text-orange-800 border-orange-300',
-      bgColor: 'bg-orange-50',
+      color: { background: '#ffedd5', color: '#ea580c', borderColor: '#ea580c' },
+      bgColor: { background: '#fff7ed' },
       criteria: [
         '主要機能が正常に動作していない',
         '多くのユーザーに影響がある（30%以上）',
@@ -47,8 +47,8 @@ export default function SeverityGuide() {
     {
       level: 'medium',
       label: 'Medium（中）',
-      color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      bgColor: 'bg-yellow-50',
+      color: { background: '#fef3c7', color: '#f59e0b', borderColor: '#f59e0b' },
+      bgColor: { background: '#fffbeb' },
       criteria: [
         '一部の機能に問題がある',
         '限定的なユーザーに影響がある（5-30%程度）',
@@ -66,8 +66,8 @@ export default function SeverityGuide() {
     {
       level: 'low',
       label: 'Low（低）',
-      color: 'bg-green-100 text-green-800 border-green-300',
-      bgColor: 'bg-green-50',
+      color: { background: '#dbeafe', color: '#3b82f6', borderColor: '#3b82f6' },
+      bgColor: { background: '#eff6ff' },
       criteria: [
         'マイナーな問題や改善要望',
         '影響範囲が非常に限定的',
@@ -85,14 +85,18 @@ export default function SeverityGuide() {
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow mb-6">
+    <div className="rounded-xl shadow-lg mb-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
+        className="w-full px-6 py-4 flex justify-between items-center transition-all rounded-t-xl"
+        style={{ color: 'var(--foreground)' }}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
       >
         <div className="flex items-center gap-2">
           <svg
-            className="w-5 h-5 text-blue-600"
+            className="w-5 h-5"
+            style={{ color: 'var(--primary)' }}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -104,14 +108,15 @@ export default function SeverityGuide() {
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold">
             Severity（深刻度）の設定基準
           </h2>
         </div>
         <svg
-          className={`w-5 h-5 text-gray-500 transition-transform ${
+          className={`w-5 h-5 transition-transform ${
             isExpanded ? 'rotate-180' : ''
           }`}
+          style={{ color: 'var(--secondary)' }}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -126,8 +131,8 @@ export default function SeverityGuide() {
       </button>
 
       {isExpanded && (
-        <div className="px-6 pb-6 border-t border-gray-200">
-          <p className="text-sm text-gray-600 mb-6 mt-4">
+        <div className="px-6 pb-6 border-t" style={{ borderColor: 'var(--border)' }}>
+          <p className="text-sm mb-6 mt-4" style={{ color: 'var(--secondary)' }}>
             インシデントの深刻度は、以下の基準に基づいて設定してください。適切な深刻度を設定することで、優先順位付けと迅速な対応が可能になります。
           </p>
 
@@ -135,29 +140,38 @@ export default function SeverityGuide() {
             {severityLevels.map((severity) => (
               <div
                 key={severity.level}
-                className={`border-2 rounded-lg p-4 ${severity.bgColor}`}
+                className="border-2 rounded-xl p-4"
+                style={{
+                  ...severity.bgColor,
+                  borderColor: severity.color.borderColor,
+                }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span
-                    className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full border ${severity.color}`}
+                    className="px-3 py-1 inline-flex text-sm font-semibold rounded-full border-2"
+                    style={{
+                      ...severity.color,
+                      fontWeight: '600',
+                    }}
                   >
                     {severity.label}
                   </span>
-                  <span className="text-xs font-medium text-gray-600">
+                  <span className="text-xs font-medium" style={{ color: 'var(--secondary)' }}>
                     対応目安: {severity.responseTime}
                   </span>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
                       設定基準:
                     </h4>
                     <ul className="space-y-1">
                       {severity.criteria.map((criterion, index) => (
                         <li
                           key={index}
-                          className="text-xs text-gray-700 flex items-start"
+                          className="text-xs flex items-start"
+                          style={{ color: 'var(--foreground)' }}
                         >
                           <span className="mr-2 mt-0.5">•</span>
                           <span>{criterion}</span>
@@ -167,14 +181,15 @@ export default function SeverityGuide() {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
                       具体例:
                     </h4>
                     <ul className="space-y-1">
                       {severity.examples.map((example, index) => (
                         <li
                           key={index}
-                          className="text-xs text-gray-600 flex items-start"
+                          className="text-xs flex items-start"
+                          style={{ color: 'var(--secondary)' }}
                         >
                           <span className="mr-2 mt-0.5">-</span>
                           <span>{example}</span>
@@ -187,11 +202,14 @@ export default function SeverityGuide() {
             ))}
           </div>
 
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">
+          <div className="mt-6 p-4 rounded-xl border-2" style={{
+            background: 'var(--info-light)',
+            borderColor: 'var(--info)',
+          }}>
+            <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--info)' }}>
               💡 Tips
             </h4>
-            <ul className="space-y-1 text-xs text-blue-800">
+            <ul className="space-y-1 text-xs" style={{ color: 'var(--info)' }}>
               <li>
                 • 深刻度は状況に応じて変更できます。調査が進むにつれて適切なレベルに調整してください。
               </li>
