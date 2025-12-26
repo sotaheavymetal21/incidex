@@ -96,7 +96,8 @@ setup-frontend:
 	cd frontend && npm install
 
 seed:
-	cd backend && go run cmd/seed/main.go
+	@echo "Generating test data..."
+	@node scripts/generate-test-data.js
 
 seed-docker:
 	docker compose exec backend ./seeder
