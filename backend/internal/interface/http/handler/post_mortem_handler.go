@@ -64,7 +64,7 @@ func (h *PostMortemHandler) Create(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
@@ -72,7 +72,7 @@ func (h *PostMortemHandler) Create(c *gin.Context) {
 
 	pm, err := h.postMortemUsecase.CreatePostMortem(
 		c.Request.Context(),
-		uint(userIDFloat),
+		userIDUint,
 		req.IncidentID,
 		req.RootCause,
 		req.ImpactAnalysis,
@@ -247,7 +247,7 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
@@ -267,7 +267,7 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 
 	pm, err := h.postMortemUsecase.UpdatePostMortem(
 		c.Request.Context(),
-		uint(userIDFloat),
+		userIDUint,
 		domain.Role(userRoleStr),
 		uint(id),
 		req.RootCause,
@@ -313,7 +313,7 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
@@ -333,7 +333,7 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 
 	pm, err := h.postMortemUsecase.PublishPostMortem(
 		c.Request.Context(),
-		uint(userIDFloat),
+		userIDUint,
 		domain.Role(userRoleStr),
 		uint(id),
 	)
@@ -373,7 +373,7 @@ func (h *PostMortemHandler) Unpublish(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
@@ -393,7 +393,7 @@ func (h *PostMortemHandler) Unpublish(c *gin.Context) {
 
 	pm, err := h.postMortemUsecase.UnpublishPostMortem(
 		c.Request.Context(),
-		uint(userIDFloat),
+		userIDUint,
 		domain.Role(userRoleStr),
 		uint(id),
 	)

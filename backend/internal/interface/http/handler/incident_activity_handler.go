@@ -53,14 +53,14 @@ func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
 		return
 	}
 
-	// Convert float64 to uint (JWT claims are parsed as float64)
-	userIDFloat, ok := userID.(float64)
+	// Convert to uint
+	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
 	}
 
-	if err := h.activityUsecase.AddComment(uint(incidentID), uint(userIDFloat), req.Comment); err != nil {
+	if err := h.activityUsecase.AddComment(uint(incidentID), userIDUint, req.Comment); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -148,8 +148,8 @@ func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
 		return
 	}
 
-	// Convert float64 to uint (JWT claims are parsed as float64)
-	userIDFloat, ok := userID.(float64)
+	// Convert to uint
+	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
@@ -164,7 +164,7 @@ func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
 
 	activity, err := h.activityUsecase.AddTimelineEvent(
 		uint(incidentID),
-		uint(userIDFloat),
+		userIDUint,
 		domain.ActivityType(req.EventType),
 		eventTime,
 		req.Description,

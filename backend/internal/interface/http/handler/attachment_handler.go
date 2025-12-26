@@ -29,13 +29,13 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 	}
 
 	// Get user from context (set by JWT middleware)
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
@@ -66,7 +66,7 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 	attachment, err := h.attachmentUsecase.UploadAttachment(
 		c.Request.Context(),
 		uint(incidentID),
-		uint(userIDFloat),
+		userIDUint,
 		file.Filename,
 		file.Size,
 		contentType,
@@ -150,13 +150,13 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 	}
 
 	// Get user from context
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
@@ -172,7 +172,7 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 	if err := h.attachmentUsecase.DeleteAttachment(
 		c.Request.Context(),
 		uint(attachmentID),
-		uint(userIDFloat),
+		userIDUint,
 		role.(domain.Role),
 	); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

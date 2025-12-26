@@ -55,13 +55,13 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 	}
 
 	// Get user ID from JWT context (set by middleware)
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
@@ -76,7 +76,7 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 
 	incident, err := h.incidentUsecase.CreateIncident(
 		c.Request.Context(),
-		uint(userIDFloat),
+		userID,
 		req.Title,
 		req.Description,
 		domain.Severity(req.Severity),
@@ -187,13 +187,13 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 	}
 
 	// Get user ID and role from JWT context
-	userID, exists := c.Get("userID")
+	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
-	userIDFloat, ok := userID.(float64)
+	userIDUint, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
@@ -225,7 +225,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 
 	incident, err := h.incidentUsecase.UpdateIncident(
 		c.Request.Context(),
-		uint(userIDFloat),
+		userIDUint,
 		domain.Role(role.(string)),
 		uint(id),
 		req.Title,

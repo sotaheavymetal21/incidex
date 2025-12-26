@@ -35,12 +35,11 @@ func (h *NotificationHandler) GetMyNotificationSetting(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	setting, err := h.notificationUsecase.GetSettingByUserID(userID)
 	if err != nil {
@@ -69,12 +68,11 @@ func (h *NotificationHandler) UpdateMyNotificationSetting(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	var req domain.NotificationSetting
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -69,12 +69,11 @@ func (h *IncidentTemplateHandler) Create(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	var req CreateTemplateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -119,12 +118,11 @@ func (h *IncidentTemplateHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	templates, err := h.templateUsecase.GetAllTemplates(c.Request.Context(), userID)
 	if err != nil {
@@ -183,12 +181,11 @@ func (h *IncidentTemplateHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	roleValue, exists := c.Get("role")
 	if !exists {
@@ -257,12 +254,11 @@ func (h *IncidentTemplateHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	roleValue, exists := c.Get("role")
 	if !exists {
@@ -308,12 +304,11 @@ func (h *IncidentTemplateHandler) CreateIncidentFromTemplate(c *gin.Context) {
 		return
 	}
 
-	userIDFloat, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
 		return
 	}
-	userID := uint(userIDFloat)
 
 	var req CreateIncidentFromTemplateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
