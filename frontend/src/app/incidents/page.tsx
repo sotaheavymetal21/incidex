@@ -572,7 +572,7 @@ function IncidentsPageContent() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1 max-w-xs">
-                            {incident.tags.map((tag) => (
+                            {incident.tags?.map((tag) => (
                               <span
                                 key={tag.id}
                                 className="px-2 py-1 text-xs rounded-full text-white whitespace-nowrap"
@@ -580,7 +580,7 @@ function IncidentsPageContent() {
                               >
                                 {tag.name}
                               </span>
-                            ))}
+                            )) || '-'}
                           </div>
                         </td>
                       </tr>

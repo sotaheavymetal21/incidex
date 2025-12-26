@@ -524,7 +524,7 @@ export default function IncidentDetailPage() {
                   {/* Tags Section */}
                   <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">タグ</h2>
-                    {incident.tags.length > 0 ? (
+                    {incident.tags && incident.tags.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {incident.tags.map((tag) => (
                           <span
