@@ -16,6 +16,8 @@ export default function EditUserModal({ user, onClose, onSuccess }: EditUserModa
   const [formData, setFormData] = useState<UpdateUserRequest>({
     name: user.name,
     email: user.email,
+    employee_number: user.employee_number,
+    department: user.department,
     role: user.role,
   });
   const [loading, setLoading] = useState(false);
@@ -72,6 +74,32 @@ export default function EditUserModal({ user, onClose, onSuccess }: EditUserModa
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              社員番号
+            </label>
+            <input
+              type="text"
+              value={formData.employee_number || ''}
+              onChange={(e) => setFormData({ ...formData, employee_number: e.target.value })}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="例: EMP-001"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              所属部署
+            </label>
+            <input
+              type="text"
+              value={formData.department || ''}
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="例: 開発部"
             />
           </div>
 
