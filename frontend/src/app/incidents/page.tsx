@@ -23,6 +23,9 @@ const STATUS_LABELS: Record<Status, string> = {
   closed: 'Closed',
 };
 
+type SortField = 'detected_at' | 'resolved_at' | 'severity' | 'status' | 'title';
+type SortOrder = 'asc' | 'desc';
+
 function IncidentsPageContent() {
   const { token, loading: authLoading, user } = useAuth();
   const permissions = usePermissions();
@@ -46,6 +49,10 @@ function IncidentsPageContent() {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
 
+  // Sorting
+  const [sortBy, setSortBy] = useState<SortField>('detected_at');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
   // Load filters from URL params
   useEffect(() => {
     const paramSeverity = searchParams.get('severity') as Severity | null;
@@ -60,22 +67,34 @@ function IncidentsPageContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!authLoading && !token) {
+    if (authLoading) {
+      return; // 認証状態の読み込み中は何もしない
+    }
+
+    if (!token) {
       router.push('/login');
     }
   }, [token, authLoading, router]);
 
   useEffect(() => {
+    if (authLoading) {
+      return; // 認証状態の読み込み中は何もしない
+    }
+
     if (token) {
       fetchTags();
     }
-  }, [token]);
+  }, [token, authLoading]);
 
   useEffect(() => {
+    if (authLoading) {
+      return; // 認証状態の読み込み中は何もしない
+    }
+
     if (token) {
       fetchIncidents();
     }
-  }, [token, pagination.page, search, severity, status, selectedTagIds]);
+  }, [token, authLoading, pagination.page, search, severity, status, selectedTagIds]);
 
   const fetchTags = async () => {
     try {
@@ -104,6 +123,56 @@ function IncidentsPageContent() {
       setError(err.message || 'Failed to fetch incidents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ソート関数
+  const sortIncidents = (incidentsToSort: Incident[]): Incident[] => {
+    const sorted = [...incidentsToSort].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'detected_at':
+          comparison = new Date(a.detected_at).getTime() - new Date(b.detected_at).getTime();
+          break;
+        case 'resolved_at':
+          // 未解決の場合は最後に表示
+          if (!a.resolved_at && !b.resolved_at) comparison = 0;
+          else if (!a.resolved_at) comparison = 1;
+          else if (!b.resolved_at) comparison = -1;
+          else comparison = new Date(a.resolved_at).getTime() - new Date(b.resolved_at).getTime();
+          break;
+        case 'severity':
+          const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+          comparison = severityOrder[a.severity] - severityOrder[b.severity];
+          break;
+        case 'status':
+          const statusOrder = { open: 0, investigating: 1, resolved: 2, closed: 3 };
+          comparison = statusOrder[a.status] - statusOrder[b.status];
+          break;
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  };
+
+  // ソートされたインシデントを取得
+  const sortedIncidents = sortIncidents(incidents);
+
+  // ソートハンドラー
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      // 同じフィールドの場合は昇順/降順を切り替え
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 異なるフィールドの場合は新しいフィールドで降順
+      setSortBy(field);
+      setSortOrder('desc');
     }
   };
 
@@ -229,18 +298,41 @@ function IncidentsPageContent() {
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8 flex justify-between items-center animate-slideDown">
           <div>
-            <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>インシデント一覧</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--secondary)' }}>インシデントの管理と追跡</p>
+            <h1
+              className="text-4xl font-bold mb-2"
+              style={{
+                color: 'var(--foreground)',
+                fontFamily: 'var(--font-display)',
+                background: 'linear-gradient(135deg, var(--foreground) 0%, var(--primary) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              インシデント一覧
+            </h1>
+            <p className="text-base font-medium" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
+              インシデントの管理と追跡
+            </p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2.5 text-white rounded-lg flex items-center shadow-md transition-all"
-              style={{ background: 'var(--accent)' }}
-              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              className="px-4 py-2.5 text-white rounded-xl flex items-center font-semibold transition-all duration-200"
+              style={{
+                background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%)',
+                fontFamily: 'var(--font-body)',
+                boxShadow: '0 4px 12px var(--accent-glow)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px var(--accent-glow)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px var(--accent-glow)';
+              }}
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -250,10 +342,20 @@ function IncidentsPageContent() {
             {permissions.canCreateIncidents && (
               <button
                 onClick={() => router.push('/incidents/create')}
-                className="px-4 py-2.5 text-white rounded-lg shadow-lg transition-all"
-                style={{ background: 'var(--primary)' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
+                className="px-5 py-2.5 text-white rounded-xl font-bold transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
+                  fontFamily: 'var(--font-body)',
+                  boxShadow: '0 4px 12px var(--primary-glow)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
+                }}
               >
                 新規作成
               </button>
@@ -267,19 +369,34 @@ function IncidentsPageContent() {
         <div className="flex gap-6">
           {/* Sidebar Filter Panel */}
           {showSidebar && (
-            <div className="w-64 flex-shrink-0">
-              <div className="rounded-xl shadow-lg p-5 sticky top-8 border" style={{
+            <div className="w-64 flex-shrink-0 animate-slideUp">
+              <div className="rounded-2xl p-6 sticky top-8 border card-green-accent transition-all duration-200" style={{
                 background: 'var(--surface)',
-                borderColor: 'var(--border)'
+                borderColor: 'var(--border)',
+                boxShadow: 'var(--shadow-lg)'
               }}>
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>フィルター</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2
+                    className="text-xl font-bold"
+                    style={{
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-display)'
+                    }}
+                  >
+                    フィルター
+                  </h2>
                   <button
                     onClick={() => setShowSidebar(false)}
-                    className="lg:hidden transition-colors"
+                    className="lg:hidden transition-all duration-200 p-1 rounded-lg"
                     style={{ color: 'var(--secondary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--foreground)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--secondary)'}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--error)';
+                      e.currentTarget.style.background = 'var(--error-light)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--secondary)';
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -289,39 +406,77 @@ function IncidentsPageContent() {
 
                 {/* Filter Presets */}
                 <div className="mb-6">
-                  <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--foreground)' }}>クイックフィルター</h3>
+                  <h3
+                    className="text-sm font-semibold mb-3"
+                    style={{
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                  >
+                    クイックフィルター
+                  </h3>
                   <div className="space-y-2">
                     <button
                       onClick={() => applyPreset('unresolved')}
-                      className="w-full px-3 py-2 text-sm text-left rounded-lg transition-all"
-                      style={{ background: 'var(--secondary-light)', color: 'var(--foreground)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-light)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+                      className="w-full px-4 py-2.5 text-sm font-semibold text-left rounded-xl transition-all duration-200"
+                      style={{
+                        background: 'var(--gray-100)',
+                        color: 'var(--foreground)',
+                        fontFamily: 'var(--font-body)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--primary-light)';
+                        e.currentTarget.style.transform = 'translateX(4px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px var(--primary-glow)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--gray-100)';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       未解決のインシデント
                     </button>
                     <button
                       onClick={() => applyPreset('critical')}
-                      className="w-full px-3 py-2 text-sm text-left rounded-lg transition-all"
-                      style={{ background: 'var(--secondary-light)', color: 'var(--foreground)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-light)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+                      className="w-full px-4 py-2.5 text-sm font-semibold text-left rounded-xl transition-all duration-200"
+                      style={{
+                        background: 'var(--gray-100)',
+                        color: 'var(--foreground)',
+                        fontFamily: 'var(--font-body)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--primary-light)';
+                        e.currentTarget.style.transform = 'translateX(4px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px var(--primary-glow)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--gray-100)';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       Critical のみ
                     </button>
                     <button
                       onClick={clearFilters}
-                      className="w-full px-3 py-2 text-sm text-left rounded-lg border transition-all"
-                      style={{ borderColor: 'var(--border)', color: 'var(--secondary)' }}
+                      className="w-full px-4 py-2.5 text-sm font-bold text-left rounded-xl border-2 transition-all duration-200"
+                      style={{
+                        borderColor: 'var(--border)',
+                        color: 'var(--foreground-secondary)',
+                        fontFamily: 'var(--font-body)'
+                      }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'var(--error-light)';
                         e.currentTarget.style.borderColor = 'var(--error)';
                         e.currentTarget.style.color = 'var(--error)';
+                        e.currentTarget.style.transform = 'translateX(4px)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
                         e.currentTarget.style.borderColor = 'var(--border)';
-                        e.currentTarget.style.color = 'var(--secondary)';
+                        e.currentTarget.style.color = 'var(--foreground-secondary)';
+                        e.currentTarget.style.transform = 'translateX(0)';
                       }}
                     >
                       すべてクリア
@@ -590,17 +745,69 @@ function IncidentsPageContent() {
                 <table className="min-w-full">
                   <thead style={{ background: 'var(--secondary-light)' }}>
                     <tr>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
-                        Title
+                      <th className="px-6 py-3.5 text-left">
+                        <button
+                          onClick={() => handleSort('title')}
+                          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+                          style={{ color: sortBy === 'title' ? 'var(--primary)' : 'var(--foreground)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = sortBy === 'title' ? 'var(--primary)' : 'var(--foreground)'}
+                        >
+                          Title
+                          {sortBy === 'title' && (
+                            <span className="text-sm">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </button>
                       </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
-                        Severity
+                      <th className="px-6 py-3.5 text-left">
+                        <button
+                          onClick={() => handleSort('severity')}
+                          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+                          style={{ color: sortBy === 'severity' ? 'var(--primary)' : 'var(--foreground)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = sortBy === 'severity' ? 'var(--primary)' : 'var(--foreground)'}
+                        >
+                          Severity
+                          {sortBy === 'severity' && (
+                            <span className="text-sm">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </button>
                       </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
-                        Status
+                      <th className="px-6 py-3.5 text-left">
+                        <button
+                          onClick={() => handleSort('status')}
+                          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+                          style={{ color: sortBy === 'status' ? 'var(--primary)' : 'var(--foreground)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = sortBy === 'status' ? 'var(--primary)' : 'var(--foreground)'}
+                        >
+                          Status
+                          {sortBy === 'status' && (
+                            <span className="text-sm">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </button>
                       </th>
-                      <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
-                        Detected At
+                      <th className="px-6 py-3.5 text-left">
+                        <button
+                          onClick={() => handleSort('detected_at')}
+                          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-colors"
+                          style={{ color: sortBy === 'detected_at' ? 'var(--primary)' : 'var(--foreground)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = sortBy === 'detected_at' ? 'var(--primary)' : 'var(--foreground)'}
+                        >
+                          Detected At
+                          {sortBy === 'detected_at' && (
+                            <span className="text-sm">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          )}
+                        </button>
                       </th>
                       <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>
                         Assignee
@@ -611,7 +818,7 @@ function IncidentsPageContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {incidents.map((incident, index) => (
+                    {sortedIncidents.map((incident, index) => (
                       <tr
                         key={incident.id}
                         onClick={() => router.push(`/incidents/${incident.id}`)}
