@@ -14,11 +14,11 @@ export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
-  const [formData, setFormData] = useState({ name: '', color: '#808080' });
+  const [formData, setFormData] = useState({ name: '', color: '#10b981' });
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -53,7 +53,7 @@ export default function TagsPage() {
       }
       setIsModalOpen(false);
       setEditingTag(null);
-      setFormData({ name: '', color: '#808080' });
+      setFormData({ name: '', color: '#10b981' });
       fetchTags();
     } catch (err: any) {
       alert(err.message);
@@ -78,112 +78,175 @@ export default function TagsPage() {
 
   const openCreateModal = () => {
     setEditingTag(null);
-    setFormData({ name: '', color: '#808080' });
+    setFormData({ name: '', color: '#10b981' });
     setIsModalOpen(true);
   };
 
   if (authLoading || (loading && !tags.length)) {
-    return <div className="p-8 text-center">Loading...</div>;
+    return <div className="p-8 text-center" style={{ color: 'var(--secondary)' }}>Loading...</div>;
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Tag Management</h1>
-        {permissions.canManageTags && (
-          <button
-            onClick={openCreateModal}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Create Tag
-          </button>
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
+      <div className="container mx-auto max-w-5xl">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>Tag Management</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--secondary)' }}>インシデントの分類用タグを管理</p>
+          </div>
+          {permissions.canManageTags && (
+            <button
+              onClick={openCreateModal}
+              className="px-4 py-2.5 text-white rounded-lg shadow-lg transition-all font-medium"
+              style={{ background: 'var(--primary)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
+            >
+              Create Tag
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <div className="px-4 py-3 rounded-xl mb-4 border-2" style={{ background: 'var(--error-light)', borderColor: 'var(--error)', color: 'var(--error)' }}>
+            {error}
+          </div>
+        )}
+
+        <div className="rounded-xl shadow-lg overflow-hidden border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+          <table className="min-w-full">
+            <thead style={{ background: 'var(--secondary-light)' }}>
+              <tr>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>Name</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>Color</th>
+                <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground)' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tags.map((tag, index) => (
+                <tr
+                  key={tag.id}
+                  className="transition-all"
+                  style={{
+                    borderTop: index > 0 ? `1px solid var(--border)` : 'none'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--secondary-light)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-3 py-1.5 inline-flex text-sm font-semibold rounded-full text-white shadow-sm" style={{ backgroundColor: tag.color }}>
+                      {tag.name}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="h-7 w-7 rounded-lg border-2 shadow-sm" style={{ backgroundColor: tag.color, borderColor: 'var(--border)' }}></div>
+                      <span className="ml-3 text-sm font-medium" style={{ color: 'var(--secondary)' }}>{tag.color}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {permissions.canManageTags ? (
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => openEditModal(tag)}
+                          className="transition-colors font-medium"
+                          style={{ color: 'var(--primary)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-hover)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(tag.id)}
+                          className="transition-colors font-medium"
+                          style={{ color: 'var(--error)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--secondary)' }}>閲覧のみ</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 overflow-y-auto h-full w-full flex items-center justify-center z-50 backdrop-blur-sm">
+            <div className="p-8 rounded-xl shadow-2xl w-96 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+              <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--foreground)' }}>{editingTag ? 'Edit Tag' : 'Create Tag'}</h2>
+              <form onSubmit={handleSubmit}>
+                <div className="mb-5">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full py-2.5 px-3 border-2 rounded-lg focus:outline-none transition-all"
+                    style={{
+                      background: 'var(--surface)',
+                      borderColor: 'var(--border)',
+                      color: 'var(--foreground)'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    required
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Color</label>
+                  <input
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="h-12 w-full rounded-lg cursor-pointer border-2"
+                    style={{ borderColor: 'var(--border)' }}
+                  />
+                  <p className="mt-2 text-xs" style={{ color: 'var(--secondary)' }}>選択した色: {formData.color}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 px-4 py-2.5 border-2 rounded-lg transition-all font-medium"
+                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--surface)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--secondary-light)';
+                      e.currentTarget.style.borderColor = 'var(--secondary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--surface)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 text-white rounded-lg shadow-lg transition-all font-medium"
+                    style={{ background: 'var(--primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--primary-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
+                  >
+                    Save
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </div>
-
-      {error && <div className="text-red-500 mb-4">{error}</div>}
-
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {tags.map((tag) => (
-              <tr key={tag.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100" style={{ color: tag.color }}>
-                    {tag.name}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-6 w-6 rounded border border-gray-300" style={{ backgroundColor: tag.color }}></div>
-                    <span className="ml-2 text-sm text-gray-500">{tag.color}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {permissions.canManageTags ? (
-                    <>
-                      <button onClick={() => openEditModal(tag)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                      <button onClick={() => handleDelete(tag.id)} className="text-red-600 hover:text-red-900">Delete</button>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">閲覧のみ</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-96">
-            <h2 className="text-xl font-bold mb-4">{editingTag ? 'Edit Tag' : 'Create Tag'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  required
-                />
-              </div>
-              <div className="mb-6">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Color</label>
-                <input
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="h-10 w-full rounded cursor-pointer"
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
