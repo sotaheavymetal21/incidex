@@ -4,6 +4,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  employee_number?: string;
+  department?: string;
   role: Role;
   is_active: boolean;
   created_at: string;
@@ -15,12 +17,16 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   name: string;
+  employee_number?: string;
+  department?: string;
   role: Role;
 }
 
 export interface UpdateUserRequest {
   name: string;
   email: string;
+  employee_number?: string;
+  department?: string;
   role: Role;
 }
 
