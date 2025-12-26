@@ -56,6 +56,10 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }
 
+func (r *userRepository) UpdatePassword(ctx context.Context, id uint, passwordHash string) error {
+	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("password_hash", passwordHash).Error
+}
+
 func (r *userRepository) Delete(ctx context.Context, id uint) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", id).Update("deleted_at", now).Error

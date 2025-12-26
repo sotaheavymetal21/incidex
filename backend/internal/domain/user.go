@@ -33,6 +33,7 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id uint) (*User, error)
 	FindAll(ctx context.Context) ([]*User, error)
 	Update(ctx context.Context, user *User) error
+	UpdatePassword(ctx context.Context, id uint, passwordHash string) error
 	Delete(ctx context.Context, id uint) error
 	ToggleActive(ctx context.Context, id uint, isActive bool) error
 }

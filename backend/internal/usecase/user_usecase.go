@@ -154,9 +154,8 @@ func (u *userUsecase) UpdatePassword(ctx context.Context, id uint, oldPassword, 
 		return err
 	}
 
-	user.PasswordHash = string(hashedPassword)
-
-	return u.userRepo.Update(ctx, user)
+	// Update only the password field to avoid unique constraint violations
+	return u.userRepo.UpdatePassword(ctx, id, string(hashedPassword))
 }
 
 func (u *userUsecase) AdminResetPassword(ctx context.Context, id uint, newPassword string) error {
@@ -182,9 +181,8 @@ func (u *userUsecase) AdminResetPassword(ctx context.Context, id uint, newPasswo
 		return err
 	}
 
-	user.PasswordHash = string(hashedPassword)
-
-	return u.userRepo.Update(ctx, user)
+	// Update only the password field to avoid unique constraint violations
+	return u.userRepo.UpdatePassword(ctx, id, string(hashedPassword))
 }
 
 func (u *userUsecase) Delete(ctx context.Context, id uint) error {
