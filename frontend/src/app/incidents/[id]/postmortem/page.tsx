@@ -12,7 +12,8 @@ export default function PostMortemPage() {
   const { token, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
-  const incidentId = parseInt(params.id as string);
+  const id = params.id as string;
+  const incidentId = parseInt(id);
 
   // State management
   const [postMortem, setPostMortem] = useState<PostMortem | null>(null);
@@ -24,12 +25,24 @@ export default function PostMortemPage() {
   const [error, setError] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Validate incidentId
+  if (isNaN(incidentId)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg text-red-600">無効なインシデントIDです</div>
+        </div>
+      </div>
+    );
+  }
+
   // Form state
   const [rootCause, setRootCause] = useState('');
   const [impactAnalysis, setImpactAnalysis] = useState('');
   const [whatWentWell, setWhatWentWell] = useState('');
   const [whatWentWrong, setWhatWentWrong] = useState('');
   const [lessonsLearned, setLessonsLearned] = useState('');
+  const [isDraft, setIsDraft] = useState(true);
   const [fiveWhys, setFiveWhys] = useState<FiveWhysAnalysis>({
     why1: '',
     why2: '',
@@ -50,6 +63,11 @@ export default function PostMortemPage() {
     due_date: '',
     related_links: '',
   });
+
+  useEffect(() => {
+    // Scroll to top when page loads
+    window.scrollTo(0, 0);
+  }, [incidentId]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -84,6 +102,7 @@ export default function PostMortemPage() {
         setWhatWentWell(pmData.what_went_well || '');
         setWhatWentWrong(pmData.what_went_wrong || '');
         setLessonsLearned(pmData.lessons_learned || '');
+        setIsDraft(pmData.status === 'draft');
 
         // Parse five whys
         if (pmData.five_whys_analysis) {
@@ -91,7 +110,7 @@ export default function PostMortemPage() {
             const parsedFiveWhys = JSON.parse(pmData.five_whys_analysis);
             setFiveWhys(parsedFiveWhys);
           } catch (e) {
-            console.error('Failed to parse five whys:', e);
+            console.error('Failed to parse five whys analysis:', e);
           }
         }
 
@@ -105,6 +124,7 @@ export default function PostMortemPage() {
         }
       }
     } catch (err: any) {
+      console.error('Error in fetchData:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -139,7 +159,17 @@ export default function PostMortemPage() {
 
       if (postMortem) {
         // Update existing
-        const updated = await postMortemApi.update(token!, postMortem.id, data);
+        await postMortemApi.update(token!, postMortem.id, data);
+
+        // Update status if needed
+        if (isDraft && postMortem.status === 'published') {
+          await postMortemApi.unpublish(token!, postMortem.id);
+        } else if (!isDraft && postMortem.status === 'draft') {
+          await postMortemApi.publish(token!, postMortem.id);
+        }
+
+        // Reload post-mortem data
+        const updated = await postMortemApi.getByIncidentId(token!, incidentId);
         setPostMortem(updated);
         alert('Post-Mortemを保存しました');
       } else {
@@ -148,55 +178,20 @@ export default function PostMortemPage() {
           incident_id: incidentId,
           ...data,
         });
-        setPostMortem(created);
+
+        // Set status if not draft
+        if (!isDraft) {
+          await postMortemApi.publish(token!, created.id);
+        }
+
+        // Reload post-mortem data
+        const final = await postMortemApi.getByIncidentId(token!, incidentId);
+        setPostMortem(final);
         alert('Post-Mortemを作成しました');
       }
     } catch (err: any) {
       setError(err.message);
       alert('保存に失敗しました: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!postMortem) {
-      alert('まず Post-Mortem を保存してください');
-      return;
-    }
-
-    if (!confirm('Post-Mortemを公開しますか？')) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const published = await postMortemApi.publish(token!, postMortem.id);
-      setPostMortem(published);
-      alert('Post-Mortemを公開しました');
-    } catch (err: any) {
-      alert('公開に失敗しました: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUnpublish = async () => {
-    if (!postMortem) {
-      return;
-    }
-
-    if (!confirm('Post-Mortemをドラフトに戻しますか？再度編集が可能になります。')) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const unpublished = await postMortemApi.unpublish(token!, postMortem.id);
-      setPostMortem(unpublished);
-      alert('Post-Mortemをドラフトに戻しました');
-    } catch (err: any) {
-      alert('ドラフトに戻すのに失敗しました: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -302,8 +297,7 @@ export default function PostMortemPage() {
     }
   };
 
-  const isEditable = !postMortem || postMortem.status === 'draft';
-  const canEditActionItems = !!postMortem; // アクションアイテムは公開後も編集可能
+  const canEditActionItems = !!postMortem;
 
   if (authLoading || loading) {
     return (
@@ -327,23 +321,24 @@ export default function PostMortemPage() {
             ← インシデント詳細に戻る
           </button>
           <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Post-Mortem</h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-900">Post-Mortem</h1>
+                {postMortem && postMortem.status === 'draft' && (
+                  <span className="px-4 py-2 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full border-2 border-yellow-300">
+                    ドラフト
+                  </span>
+                )}
+                {postMortem && postMortem.status === 'published' && (
+                  <span className="px-4 py-2 bg-green-100 text-green-800 text-sm font-semibold rounded-full border-2 border-green-300">
+                    確定
+                  </span>
+                )}
+              </div>
               {incident && (
                 <p className="text-gray-900 mt-2">
                   インシデント: {incident.title}
                 </p>
-              )}
-              {postMortem && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    postMortem.status === 'published'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {postMortem.status === 'published' ? '公開済み' : 'ドラフト'}
-                  </span>
-                </div>
               )}
             </div>
           </div>
@@ -359,15 +354,13 @@ export default function PostMortemPage() {
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Root Cause (根本原因)</h2>
-            {isEditable && (
-              <button
-                onClick={handleAISuggestion}
-                disabled={aiLoading}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
-              >
-                {aiLoading ? 'AI提案生成中...' : 'AI提案を取得'}
-              </button>
-            )}
+            <button
+              onClick={handleAISuggestion}
+              disabled={aiLoading}
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
+            >
+              {aiLoading ? 'AI提案生成中...' : 'AI提案を取得'}
+            </button>
           </div>
           {postMortem?.ai_root_cause_suggestion && (
             <div className="bg-purple-50 border border-purple-200 rounded-md p-4 mb-4">
@@ -378,8 +371,7 @@ export default function PostMortemPage() {
           <textarea
             value={rootCause}
             onChange={(e) => setRootCause(e.target.value)}
-            disabled={!isEditable}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-700"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={4}
             placeholder="インシデントの根本原因を記述してください..."
           />
@@ -391,8 +383,7 @@ export default function PostMortemPage() {
           <textarea
             value={impactAnalysis}
             onChange={(e) => setImpactAnalysis(e.target.value)}
-            disabled={!isEditable}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-700"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={4}
             placeholder="インシデントの影響範囲と程度を分析してください..."
           />
@@ -408,8 +399,7 @@ export default function PostMortemPage() {
               <textarea
                 value={whatWentWell}
                 onChange={(e) => setWhatWentWell(e.target.value)}
-                disabled={!isEditable}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={6}
                 placeholder="対応でうまくいったことを記述してください..."
               />
@@ -421,8 +411,7 @@ export default function PostMortemPage() {
               <textarea
                 value={whatWentWrong}
                 onChange={(e) => setWhatWentWrong(e.target.value)}
-                disabled={!isEditable}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={6}
                 placeholder="対応で問題だった点を記述してください..."
               />
@@ -436,8 +425,7 @@ export default function PostMortemPage() {
           <textarea
             value={lessonsLearned}
             onChange={(e) => setLessonsLearned(e.target.value)}
-            disabled={!isEditable}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-700"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={4}
             placeholder="今回のインシデントから得られた教訓を記述してください..."
           />
@@ -458,8 +446,7 @@ export default function PostMortemPage() {
                   onChange={(e) =>
                     setFiveWhys({ ...fiveWhys, [`why${index}`]: e.target.value })
                   }
-                  disabled={!isEditable}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-700"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder={`なぜ ${index === 1 ? 'この問題が発生したのか' : '前の答えなのか'}？`}
                 />
               </div>
@@ -716,37 +703,29 @@ export default function PostMortemPage() {
           )}
         </section>
 
-        {/* Save/Publish Buttons */}
-        <div className="flex justify-end gap-4">
-          {isEditable && (
-            <>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-              >
-                {saving ? '保存中...' : '保存'}
-              </button>
-              {postMortem && (
-                <button
-                  onClick={handlePublish}
-                  disabled={saving}
-                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
-                >
-                  公開
-                </button>
-              )}
-            </>
-          )}
-          {postMortem && postMortem.status === 'published' && (
+        {/* Save Button with Draft Checkbox */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isDraft"
+                checked={isDraft}
+                onChange={(e) => setIsDraft(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <label htmlFor="isDraft" className="ml-2 text-sm font-medium text-gray-900">
+                ドラフトとして保存
+              </label>
+            </div>
             <button
-              onClick={handleUnpublish}
+              onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:bg-gray-400"
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
             >
-              ドラフトに戻す
+              {saving ? '保存中...' : '保存'}
             </button>
-          )}
+          </div>
         </div>
       </div>
     </div>

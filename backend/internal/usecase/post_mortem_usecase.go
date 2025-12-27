@@ -138,11 +138,6 @@ func (u *postMortemUsecase) UpdatePostMortem(
 		return nil, err
 	}
 
-	// Check if post-mortem is published
-	if pm.Status == domain.PMStatusPublished {
-		return nil, errors.New("cannot update published post-mortem")
-	}
-
 	// Check permissions
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
 		return nil, errors.New("you can only update your own post-mortems")
