@@ -261,52 +261,24 @@ func (r *reportRepository) getPerformanceMetrics(startDate, endDate time.Time) (
 	if len(resolvedIncidents) > 0 {
 		// Calculate average resolution time
 		var totalHours float64
-		var resolutionTimes []float64
+		var count int
 
 		for _, incident := range resolvedIncidents {
 			if incident.ResolvedAt != nil {
-				hours := incident.ResolvedAt.Sub(incident.CreatedAt).Hours()
-				totalHours += hours
-				resolutionTimes = append(resolutionTimes, hours)
+				// Use DetectedAt instead of CreatedAt for accurate resolution time
+				hours := incident.ResolvedAt.Sub(incident.DetectedAt).Hours()
+				// Only include positive values
+				if hours >= 0 {
+					totalHours += hours
+					count++
+				}
 			}
 		}
 
-		metrics.AverageResolutionTime = totalHours / float64(len(resolvedIncidents))
-
-		// Calculate median resolution time
-		if len(resolutionTimes) > 0 {
-			// Simple median calculation (not sorting for simplicity)
-			if len(resolutionTimes)%2 == 0 {
-				mid := len(resolutionTimes) / 2
-				metrics.MedianResolutionTime = (resolutionTimes[mid-1] + resolutionTimes[mid]) / 2
-			} else {
-				metrics.MedianResolutionTime = resolutionTimes[len(resolutionTimes)/2]
-			}
+		if count > 0 {
+			metrics.AverageResolutionTime = totalHours / float64(count)
 		}
 	}
-
-	// SLA compliance rate (placeholder - actual implementation would depend on SLA rules)
-	var totalIncidents int64
-	r.db.Model(&domain.Incident{}).
-		Where("created_at BETWEEN ? AND ?", startDate, endDate).
-		Count(&totalIncidents)
-
-	if totalIncidents > 0 {
-		// Assuming incidents resolved within 24 hours for critical, 72 hours for high are SLA compliant
-		var compliantCount int64
-		r.db.Model(&domain.Incident{}).
-			Where("created_at BETWEEN ? AND ?", startDate, endDate).
-			Where("status = ?", domain.StatusResolved).
-			Where("resolved_at IS NOT NULL").
-			Where("(severity = ? AND TIMESTAMPDIFF(HOUR, created_at, resolved_at) <= 24) OR (severity = ? AND TIMESTAMPDIFF(HOUR, created_at, resolved_at) <= 72) OR (severity NOT IN (?, ?))",
-				domain.SeverityCritical, domain.SeverityHigh, domain.SeverityCritical, domain.SeverityHigh).
-			Count(&compliantCount)
-
-		metrics.SLAComplianceRate = float64(compliantCount) / float64(totalIncidents) * 100
-	}
-
-	// Mean time to acknowledge (placeholder)
-	metrics.MeanTimeToAcknowledge = 2.5 // Placeholder value
 
 	return metrics, nil
 }
@@ -367,10 +339,16 @@ func (r *reportRepository) getPeriodComparison(startDate, endDate time.Time) (*d
 	// Calculate percentage changes
 	if previousTotal > 0 {
 		comparison.TotalIncidentsChangePercent = float64(currentTotal-previousTotal) / float64(previousTotal) * 100
+	} else if currentTotal > 0 {
+		// If previous period had no data but current has, show 100% increase
+		comparison.TotalIncidentsChangePercent = 100.0
 	}
 
 	if previousResolved > 0 {
 		comparison.ResolvedIncidentsChangePercent = float64(currentResolved-previousResolved) / float64(previousResolved) * 100
+	} else if currentResolved > 0 {
+		// If previous period had no data but current has, show 100% increase
+		comparison.ResolvedIncidentsChangePercent = 100.0
 	}
 
 	return comparison, nil

@@ -128,7 +128,7 @@ func main() {
 	// Reports
 	reportRepo := persistence.NewReportRepository(dbConn)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
-	reportHandler := handler.NewReportHandler(reportUsecase)
+	reportHandler := handler.NewReportHandler(reportUsecase, incidentUsecase)
 
 	r := gin.Default()
 

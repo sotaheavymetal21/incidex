@@ -47,9 +47,6 @@ type TagStatistic struct {
 // PerformanceMetrics tracks performance indicators
 type PerformanceMetrics struct {
 	AverageResolutionTime float64 `json:"average_resolution_time_hours"`
-	MedianResolutionTime  float64 `json:"median_resolution_time_hours"`
-	SLAComplianceRate     float64 `json:"sla_compliance_rate"`
-	MeanTimeToAcknowledge float64 `json:"mean_time_to_acknowledge_hours"`
 }
 
 // PeriodComparison compares current period with previous period

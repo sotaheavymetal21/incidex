@@ -59,7 +59,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				// Incident attachment routes
 				incidents.POST("/:id/attachments", middleware.RequireEditorOrAdmin(), attachmentHandler.Upload)
 				incidents.GET("/:id/attachments", attachmentHandler.GetByIncidentID)
-				incidents.GET("/:id/attachments/:attachmentId", attachmentHandler.Download)
+				incidents.GET("/:id/attachments/:attachmentId/download", attachmentHandler.Download)
 				incidents.DELETE("/:id/attachments/:attachmentId", middleware.RequireEditorOrAdmin(), attachmentHandler.Delete)
 
 				// Post-mortem routes under incidents
@@ -151,6 +151,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 		reports := protected.Group("/reports")
 		{
 			reports.GET("/monthly", reportHandler.GetMonthlyReport)
+			reports.GET("/monthly/pdf", reportHandler.GetMonthlyReportPDF)
 			reports.GET("/custom", reportHandler.GetCustomReport)
 		}
 	}
