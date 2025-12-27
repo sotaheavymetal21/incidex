@@ -517,4 +517,37 @@ export const reportApi = {
       { token }
     );
   },
+
+  downloadMonthlyReportPDF: async (token: string, year?: number, month?: number) => {
+    const queryParams = new URLSearchParams();
+    if (year) queryParams.append('year', year.toString());
+    if (month) queryParams.append('month', month.toString());
+    const queryString = queryParams.toString();
+
+    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/reports/monthly/pdf${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to download PDF: ${response.status}`);
+    }
+
+    // Get the blob from the response
+    const blob = await response.blob();
+
+    // Create a download link and trigger download
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `monthly_report_${year || new Date().getFullYear()}_${month || new Date().getMonth() + 1}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  },
 };

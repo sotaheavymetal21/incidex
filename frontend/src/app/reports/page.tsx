@@ -10,6 +10,7 @@ export default function ReportsPage() {
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   // Date selection state
   const currentDate = new Date();
@@ -55,6 +56,17 @@ export default function ReportsPage() {
 
   const formatMonth = (year: number, month: number) => {
     return `${year}年${month}月`;
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloadingPDF(true);
+      await reportApi.downloadMonthlyReportPDF(token!, selectedYear, selectedMonth);
+    } catch (err) {
+      alert('PDFのダウンロードに失敗しました: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setDownloadingPDF(false);
+    }
   };
 
   const getSeverityLabel = (severity: string) => {
@@ -136,7 +148,7 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      {/* Month Selector */}
+      {/* Month Selector and PDF Download */}
       <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-lg shadow">
         <button
           onClick={handlePreviousMonth}
@@ -144,8 +156,32 @@ export default function ReportsPage() {
         >
           ← 前月
         </button>
-        <div className="text-xl font-semibold text-gray-900">
-          {formatMonth(selectedYear, selectedMonth)}
+        <div className="flex items-center gap-4">
+          <div className="text-xl font-semibold text-gray-900">
+            {formatMonth(selectedYear, selectedMonth)}
+          </div>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={downloadingPDF}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md flex items-center gap-2"
+          >
+            {downloadingPDF ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                ダウンロード中...
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                PDFダウンロード
+              </>
+            )}
+          </button>
         </div>
         <button
           onClick={handleNextMonth}
@@ -156,7 +192,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="text-sm font-medium text-gray-600">総インシデント</div>
           <div className="mt-2 text-3xl font-bold text-gray-900">
@@ -184,6 +220,15 @@ export default function ReportsPage() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow">
+          <div className="text-sm font-medium text-gray-600">平均解決時間</div>
+          <div className="mt-2 text-3xl font-bold text-purple-600">
+            {formatHours(report.performance_metrics.average_resolution_time_hours)}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow">
           <div className="text-sm font-medium text-gray-600">未解決</div>
           <div className="mt-2 text-3xl font-bold text-orange-600">
             {report.summary.open_incidents}
@@ -203,37 +248,6 @@ export default function ReportsPage() {
             {report.summary.total_incidents > 0
               ? ((report.summary.resolved_incidents / report.summary.total_incidents) * 100).toFixed(1)
               : 0}%
-          </div>
-        </div>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">パフォーマンスメトリクス</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div>
-            <div className="text-sm font-medium text-gray-600">平均解決時間</div>
-            <div className="mt-2 text-2xl font-bold text-gray-900">
-              {formatHours(report.performance_metrics.average_resolution_time_hours)}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-600">中央値解決時間</div>
-            <div className="mt-2 text-2xl font-bold text-gray-900">
-              {formatHours(report.performance_metrics.median_resolution_time_hours)}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-600">SLA準拠率</div>
-            <div className="mt-2 text-2xl font-bold text-gray-900">
-              {report.performance_metrics.sla_compliance_rate.toFixed(1)}%
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-600">平均応答時間</div>
-            <div className="mt-2 text-2xl font-bold text-gray-900">
-              {formatHours(report.performance_metrics.mean_time_to_acknowledge_hours)}
-            </div>
           </div>
         </div>
       </div>

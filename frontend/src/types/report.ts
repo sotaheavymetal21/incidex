@@ -37,9 +37,6 @@ export interface TagStatistic {
 
 export interface PerformanceMetrics {
   average_resolution_time_hours: number;
-  median_resolution_time_hours: number;
-  sla_compliance_rate: number;
-  mean_time_to_acknowledge_hours: number;
 }
 
 export interface PeriodComparison {
