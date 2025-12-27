@@ -95,9 +95,24 @@ setup-backend:
 setup-frontend:
 	cd frontend && npm install
 
+# ローカルでGoのシードコマンドを実行（データベースに直接接続）
+# TEST_USER_PASSWORD環境変数が必須です
 seed:
-	@echo "Generating test data..."
-	@node scripts/generate-test-data.js
+	@if [ -z "$$TEST_USER_PASSWORD" ]; then \
+		echo "ERROR: TEST_USER_PASSWORD environment variable is required"; \
+		echo "Usage: TEST_USER_PASSWORD=your_password make seed"; \
+		exit 1; \
+	fi
+	@echo "Seeding database with test data using Go seeder..."
+	@cd backend && TEST_USER_PASSWORD=$$TEST_USER_PASSWORD go run cmd/seed/main.go
 
+# Dockerコンテナ内でシードコマンドを実行
+# TEST_USER_PASSWORD環境変数が必須です
 seed-docker:
-	docker compose exec backend ./seeder
+	@if [ -z "$$TEST_USER_PASSWORD" ]; then \
+		echo "ERROR: TEST_USER_PASSWORD environment variable is required"; \
+		echo "Usage: TEST_USER_PASSWORD=your_password make seed-docker"; \
+		exit 1; \
+	fi
+	@echo "Seeding database using Docker container..."
+	@docker compose exec -e TEST_USER_PASSWORD=$$TEST_USER_PASSWORD backend ./seeder

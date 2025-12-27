@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"incidex/internal/domain"
 	"log"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -75,8 +77,15 @@ func seedUsers(db *gorm.DB, ctx context.Context) ([]*domain.User, error) {
 		},
 	}
 
-	// Hash password "password123" for all test users
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	// Get test user password from environment variable
+	// TEST_USER_PASSWORD環境変数が必須です
+	testUserPassword := os.Getenv("TEST_USER_PASSWORD")
+	if testUserPassword == "" {
+		return nil, fmt.Errorf("TEST_USER_PASSWORD environment variable is required")
+	}
+
+	// Hash password for all test users
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(testUserPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
