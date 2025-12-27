@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"incidex/internal/domain"
 	"io"
@@ -59,12 +60,12 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 
 			// Get user info from context (if available)
 			if userIDVal, exists := c.Get("userID"); exists {
-				if userID, ok := userIDVal.(float64); ok {
-					uid := uint(userID)
-					log.UserID = &uid
+				if userID, ok := userIDVal.(uint); ok {
+					log.UserID = &userID
 
-					// Fetch user details
-					user, err := m.userRepo.FindByID(c.Request.Context(), uid)
+					// Fetch user details (use background context since we're in a goroutine)
+					ctx := context.Background()
+					user, err := m.userRepo.FindByID(ctx, userID)
 					if err == nil && user != nil {
 						log.UserName = user.Name
 						log.UserEmail = user.Email
@@ -89,17 +90,17 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 			}
 
 			// Save audit log (ignore errors to not affect main request)
-			_ = m.auditLogRepo.Create(c.Request.Context(), log)
+			// Use background context since we're in a goroutine
+			ctx := context.Background()
+			_ = m.auditLogRepo.Create(ctx, log)
 		}()
 	}
 }
 
 func shouldSkipAudit(path string) bool {
+	// Only skip health check endpoint
 	skipPaths := []string{
 		"/api/health",
-		"/api/protected",
-		"/api/stats/dashboard",
-		"/api/stats/sla",
 	}
 
 	for _, skip := range skipPaths {
@@ -119,11 +120,24 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 	var resourceType string
 	var resourceID *uint
 
-	// Determine action based on HTTP method
+	// Determine action based on HTTP method and path
 	switch method {
 	case "POST":
 		if strings.Contains(path, "/login") {
 			action = domain.AuditActionLogin
+		} else if strings.Contains(path, "/register") {
+			action = domain.AuditActionCreate
+			resourceType = "auth"
+		} else if strings.Contains(path, "/summarize") {
+			action = domain.AuditActionUpdate
+		} else if strings.Contains(path, "/assign") {
+			action = domain.AuditActionUpdate
+		} else if strings.Contains(path, "/publish") {
+			action = domain.AuditActionUpdate
+		} else if strings.Contains(path, "/unpublish") {
+			action = domain.AuditActionUpdate
+		} else if strings.Contains(path, "/ai-suggestion") {
+			action = domain.AuditActionCreate
 		} else {
 			action = domain.AuditActionCreate
 		}
@@ -135,8 +149,20 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 		action = domain.AuditActionDelete
 	}
 
-	// Determine resource type from path
-	if strings.Contains(path, "/incidents") {
+	// Determine resource type from path (check more specific paths first)
+	if strings.Contains(path, "/attachments") {
+		resourceType = "attachment"
+	} else if strings.Contains(path, "/comments") {
+		resourceType = "comment"
+	} else if strings.Contains(path, "/timeline") {
+		resourceType = "timeline"
+	} else if strings.Contains(path, "/activities") {
+		resourceType = "activity"
+	} else if strings.Contains(path, "/post-mortems") {
+		resourceType = "post_mortem"
+	} else if strings.Contains(path, "/action-items") {
+		resourceType = "action_item"
+	} else if strings.Contains(path, "/incidents") {
 		resourceType = "incident"
 	} else if strings.Contains(path, "/users") {
 		resourceType = "user"
@@ -144,10 +170,16 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 		resourceType = "tag"
 	} else if strings.Contains(path, "/templates") {
 		resourceType = "template"
-	} else if strings.Contains(path, "/post-mortems") {
-		resourceType = "post_mortem"
-	} else if strings.Contains(path, "/action-items") {
-		resourceType = "action_item"
+	} else if strings.Contains(path, "/notifications") {
+		resourceType = "notification"
+	} else if strings.Contains(path, "/reports") {
+		resourceType = "report"
+	} else if strings.Contains(path, "/stats") {
+		resourceType = "stats"
+	} else if strings.Contains(path, "/export") {
+		resourceType = "export"
+	} else if strings.Contains(path, "/audit-logs") {
+		resourceType = "audit_log"
 	} else if strings.Contains(path, "/auth") {
 		resourceType = "auth"
 	}
@@ -158,6 +190,21 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 		if parsedID, err := strconv.ParseUint(idParam, 10, 32); err == nil {
 			id := uint(parsedID)
 			resourceID = &id
+		}
+	}
+
+	// For nested routes, try to get incident ID or other parent IDs
+	if resourceID == nil {
+		// Check for incident ID in path segments
+		pathParts := strings.Split(path, "/")
+		for i, part := range pathParts {
+			if part == "incidents" && i+1 < len(pathParts) {
+				if parsedID, err := strconv.ParseUint(pathParts[i+1], 10, 32); err == nil {
+					id := uint(parsedID)
+					resourceID = &id
+					break
+				}
+			}
 		}
 	}
 
