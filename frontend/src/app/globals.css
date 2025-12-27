@@ -45,10 +45,12 @@
   /* Status Colors */
   --success: #10b981;
   --success-light: #d1fae5;
+  --success-dark: #047857;
   --warning: #f59e0b;
   --warning-light: #fef3c7;
   --error: #dc2626;
   --error-light: #fee2e2;
+  --error-dark: #b91c1c;
   --info: #0ea5e9;
   --info-light: #e0f2fe;
 

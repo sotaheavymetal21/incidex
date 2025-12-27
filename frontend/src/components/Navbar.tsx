@@ -112,23 +112,11 @@ export default function Navbar() {
                 }}
               >
                 <img
-                  src="/incidex_i_logo.jpg"
+                  src="/incidex_full_logo.jpg"
                   alt="Incidex"
-                  className="h-9 w-9 rounded-lg"
+                  className="h-9 rounded-lg"
                   style={{ boxShadow: '0 0 10px var(--primary-glow)' }}
                 />
-                <span
-                  className="ml-2 text-xl font-bold"
-                  style={{
-                    color: 'var(--foreground)',
-                    fontFamily: 'var(--font-display)',
-                    background: 'linear-gradient(135deg, var(--foreground) 0%, var(--primary) 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                  }}
-                >
-                  Incidex
-                </span>
               </button>
             </div>
 

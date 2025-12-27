@@ -92,6 +92,8 @@ function IncidentsPageContent() {
     }
 
     if (token) {
+      // Scroll to top when filters or pagination change
+      window.scrollTo(0, 0);
       fetchIncidents();
     }
   }, [token, authLoading, pagination.page, search, severity, status, selectedTagIds]);

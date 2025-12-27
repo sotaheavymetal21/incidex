@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { incidentApi, tagApi, userApi } from '@/lib/api';
+import { incidentApi, tagApi, userApi, templateApi } from '@/lib/api';
 import { Severity, Status, User } from '@/types/incident';
 import { Tag } from '@/types/tag';
 
-export default function CreateIncidentPage() {
+function CreateIncidentForm() {
   const { token, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -41,8 +42,14 @@ export default function CreateIncidentPage() {
         .toISOString()
         .slice(0, 16);
       setDetectedAt(localDateTime);
+
+      // Load template data if template ID is provided
+      const templateId = searchParams.get('template');
+      if (templateId) {
+        fetchTemplate(parseInt(templateId));
+      }
     }
-  }, [token]);
+  }, [token, searchParams]);
 
   const fetchTags = async () => {
     try {
@@ -59,6 +66,22 @@ export default function CreateIncidentPage() {
       setUsers(fetchedUsers);
     } catch (err) {
       console.error('Failed to fetch users:', err);
+    }
+  };
+
+  const fetchTemplate = async (templateId: number) => {
+    try {
+      const template = await templateApi.getById(token!, templateId);
+      // Set form values from template
+      setTitle(template.title);
+      setDescription(template.description);
+      setSeverity(template.severity as Severity);
+      setImpactScope(template.impact_scope || '');
+      // Set tag IDs from template
+      setSelectedTagIds(template.tags.map(tag => tag.id));
+    } catch (err) {
+      console.error('Failed to fetch template:', err);
+      setError('テンプレートの読み込みに失敗しました');
     }
   };
 
@@ -419,5 +442,17 @@ export default function CreateIncidentPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateIncidentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div style={{ color: 'var(--secondary)' }}>Loading...</div>
+      </div>
+    }>
+      <CreateIncidentForm />
+    </Suspense>
   );
 }

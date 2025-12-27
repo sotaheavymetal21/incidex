@@ -169,31 +169,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 relative" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 animate-slideDown">
-          <h1
-            className="text-4xl font-bold mb-2"
-            style={{
-              color: 'var(--foreground)',
-              fontFamily: 'var(--font-display)',
-              background: 'linear-gradient(135deg, var(--foreground) 0%, var(--primary) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}
-          >
-            ダッシュボード
-          </h1>
-          <p
-            className="text-base"
-            style={{
-              color: 'var(--foreground-secondary)',
-              fontFamily: 'var(--font-body)'
-            }}
-          >
-            インシデント管理の概要と統計
-          </p>
-        </div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div
@@ -963,19 +938,13 @@ export default function DashboardPage() {
                   >
                     検出日時
                   </th>
-                  <th
-                    className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider"
-                    style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}
-                  >
-                    アクション
-                  </th>
                 </tr>
               </thead>
               <tbody>
                 {stats.recent_incidents.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-6 py-8 text-center"
                       style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}
                     >
@@ -986,7 +955,8 @@ export default function DashboardPage() {
                   stats.recent_incidents.map((incident, index) => (
                     <tr
                       key={incident.id}
-                      className="transition-all duration-200"
+                      onClick={() => router.push(`/incidents/${incident.id}`)}
+                      className="transition-all duration-200 cursor-pointer"
                       style={{ borderTop: '1px solid var(--border)' }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'var(--primary-light)';
@@ -1036,29 +1006,6 @@ export default function DashboardPage() {
                         >
                           {new Date(incident.detected_at).toLocaleString('ja-JP')}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => router.push(`/incidents/${incident.id}`)}
-                          className="text-sm font-semibold px-4 py-2 rounded-lg transition-all"
-                          style={{
-                            color: 'var(--primary)',
-                            background: 'var(--primary-light)',
-                            fontFamily: 'var(--font-body)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--primary)';
-                            e.currentTarget.style.color = 'white';
-                            e.currentTarget.style.boxShadow = '0 0 10px var(--primary-glow)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--primary-light)';
-                            e.currentTarget.style.color = 'var(--primary)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        >
-                          詳細 →
-                        </button>
                       </td>
                     </tr>
                   ))
