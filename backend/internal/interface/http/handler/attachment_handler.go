@@ -162,18 +162,26 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	role, exists := c.Get("role")
+	roleValue, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user role not found"})
 		return
 	}
+
+	// Convert role string to domain.Role
+	roleStr, ok := roleValue.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid role type"})
+		return
+	}
+	role := domain.Role(roleStr)
 
 	// Delete attachment
 	if err := h.attachmentUsecase.DeleteAttachment(
 		c.Request.Context(),
 		uint(attachmentID),
 		userIDUint,
-		role.(domain.Role),
+		role,
 	); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
