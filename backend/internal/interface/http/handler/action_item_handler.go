@@ -81,7 +81,7 @@ func (h *ActionItemHandler) Create(c *gin.Context) {
 		req.RelatedLinks,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -110,7 +110,7 @@ func (h *ActionItemHandler) GetByID(c *gin.Context) {
 
 	item, err := h.actionItemUsecase.GetActionItemByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *ActionItemHandler) GetByPostMortemID(c *gin.Context) {
 
 	items, err := h.actionItemUsecase.GetActionItemsByPostMortemID(c.Request.Context(), uint(postMortemID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -203,7 +203,7 @@ func (h *ActionItemHandler) GetAll(c *gin.Context) {
 		pagination,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -263,7 +263,7 @@ func (h *ActionItemHandler) Update(c *gin.Context) {
 		req.RelatedLinks,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -298,7 +298,7 @@ func (h *ActionItemHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userRoleStr, ok := userRole.(string)
+	userRoleTyped, ok := userRole.(domain.Role)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
 		return
@@ -306,11 +306,11 @@ func (h *ActionItemHandler) Delete(c *gin.Context) {
 
 	err = h.actionItemUsecase.DeleteActionItem(
 		c.Request.Context(),
-		domain.Role(userRoleStr),
+		userRoleTyped,
 		uint(id),
 	)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

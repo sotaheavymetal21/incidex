@@ -67,7 +67,7 @@ func (h *ExportHandler) ExportIncidentsCSV(c *gin.Context) {
 
 	incidents, _, err := h.incidentUsecase.GetAllIncidents(c.Request.Context(), filters, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (h *ExportHandler) ExportIncidentPDF(c *gin.Context) {
 	// Get incident
 	incident, err := h.incidentUsecase.GetIncidentByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Incident not found"})
+		HandleError(c, err)
 		return
 	}
 
@@ -253,7 +253,7 @@ func (h *ExportHandler) ExportSummaryPDF(c *gin.Context) {
 
 	incidents, _, err := h.incidentUsecase.GetAllIncidents(c.Request.Context(), filters, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

@@ -20,7 +20,7 @@ func NewUserHandler(u usecase.UserUsecase) *UserHandler {
 func (h *UserHandler) GetAll(c *gin.Context) {
 	users, err := h.userUsecase.GetAllUsers(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -37,7 +37,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 
 	user, err := h.userUsecase.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 
 	user, err := h.userUsecase.CreateUser(c.Request.Context(), req.Email, req.Password, req.Name, req.Role)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 	user, err := h.userUsecase.Update(c.Request.Context(), uint(id), req.Name, req.Email, req.Role)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 	}
 
 	if err := h.userUsecase.UpdatePassword(c.Request.Context(), uint(id), req.OldPassword, req.NewPassword); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 	}
 
 	if err := h.userUsecase.AdminResetPassword(c.Request.Context(), uint(id), req.NewPassword); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.userUsecase.Delete(c.Request.Context(), uint(id)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -208,7 +208,7 @@ func (h *UserHandler) ToggleActive(c *gin.Context) {
 	}
 
 	if err := h.userUsecase.ToggleActive(c.Request.Context(), currentUserID, uint(id), req.IsActive); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

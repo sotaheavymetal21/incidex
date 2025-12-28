@@ -87,7 +87,7 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 		req.TagIDs,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *IncidentHandler) GetAll(c *gin.Context) {
 
 	incidents, paginationResult, err := h.incidentUsecase.GetAllIncidents(c.Request.Context(), filters, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *IncidentHandler) GetByID(c *gin.Context) {
 
 	incident, err := h.incidentUsecase.GetIncidentByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Incident not found"})
+		HandleError(c, err)
 		return
 	}
 
@@ -205,6 +205,12 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		return
 	}
 
+	userRole, ok := role.(domain.Role)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+		return
+	}
+
 	// Parse detected_at
 	detectedAt, err := time.Parse(time.RFC3339, req.DetectedAt)
 	if err != nil {
@@ -226,7 +232,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 	incident, err := h.incidentUsecase.UpdateIncident(
 		c.Request.Context(),
 		userIDUint,
-		domain.Role(role.(string)),
+		userRole,
 		uint(id),
 		req.Title,
 		req.Description,
@@ -239,11 +245,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		req.TagIDs,
 	)
 	if err != nil {
-		if err.Error() == "permission denied: you can only edit your own incidents" || err.Error() == "permission denied: viewers cannot edit incidents" {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -265,12 +267,14 @@ func (h *IncidentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.incidentUsecase.DeleteIncident(c.Request.Context(), domain.Role(role.(string)), uint(id)); err != nil {
-		if err.Error() == "permission denied: only admins can delete incidents" {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	userRole, ok := role.(domain.Role)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+		return
+	}
+
+	if err := h.incidentUsecase.DeleteIncident(c.Request.Context(), userRole, uint(id)); err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -292,7 +296,11 @@ func (h *IncidentHandler) RegenerateSummary(c *gin.Context) {
 		return
 	}
 
-	userRole := domain.Role(role.(string))
+	userRole, ok := role.(domain.Role)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+		return
+	}
 	if userRole == domain.RoleViewer {
 		c.JSON(http.StatusForbidden, gin.H{"error": "permission denied: viewers cannot regenerate summaries"})
 		return
@@ -300,7 +308,7 @@ func (h *IncidentHandler) RegenerateSummary(c *gin.Context) {
 
 	summary, err := h.incidentUsecase.RegenerateSummary(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -335,15 +343,15 @@ func (h *IncidentHandler) AssignIncident(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDValue.(float64)
+	userID, ok := userIDValue.(uint)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
 		return
 	}
 
-	incident, err := h.incidentUsecase.AssignIncident(c.Request.Context(), uint(userID), uint(id), req.AssigneeID)
+	incident, err := h.incidentUsecase.AssignIncident(c.Request.Context(), userID, uint(id), req.AssigneeID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

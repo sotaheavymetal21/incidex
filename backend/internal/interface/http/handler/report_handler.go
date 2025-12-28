@@ -64,7 +64,7 @@ func (h *ReportHandler) GetMonthlyReport(c *gin.Context) {
 
 	report, err := h.reportUsecase.GetMonthlyReport(c.Request.Context(), year, month)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -109,7 +109,7 @@ func (h *ReportHandler) GetCustomReport(c *gin.Context) {
 
 	report, err := h.reportUsecase.GetCustomReport(c.Request.Context(), startDate, endDate)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *ReportHandler) GetMonthlyReportPDF(c *gin.Context) {
 
 	incidents, _, err := h.incidentUsecase.GetAllIncidents(c.Request.Context(), filters, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

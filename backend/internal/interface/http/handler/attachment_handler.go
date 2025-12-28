@@ -73,7 +73,7 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 		fileReader,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (h *AttachmentHandler) GetByIncidentID(c *gin.Context) {
 
 	attachments, err := h.attachmentUsecase.GetAttachmentsByIncidentID(c.Request.Context(), uint(incidentID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -110,14 +110,14 @@ func (h *AttachmentHandler) Download(c *gin.Context) {
 	// Get attachment metadata
 	attachment, err := h.attachmentUsecase.GetAttachment(c.Request.Context(), uint(attachmentID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "attachment not found"})
+		HandleError(c, err)
 		return
 	}
 
 	// Download file from storage
 	reader, err := h.attachmentUsecase.DownloadAttachment(c.Request.Context(), uint(attachmentID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 	defer reader.Close()
@@ -168,13 +168,11 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Convert role string to domain.Role
-	roleStr, ok := roleValue.(string)
+	role, ok := roleValue.(domain.Role)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid role type"})
 		return
 	}
-	role := domain.Role(roleStr)
 
 	// Delete attachment
 	if err := h.attachmentUsecase.DeleteAttachment(
@@ -183,7 +181,7 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 		userIDUint,
 		role,
 	); err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

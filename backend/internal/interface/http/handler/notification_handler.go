@@ -43,7 +43,7 @@ func (h *NotificationHandler) GetMyNotificationSetting(c *gin.Context) {
 
 	setting, err := h.notificationUsecase.GetSettingByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -81,13 +81,13 @@ func (h *NotificationHandler) UpdateMyNotificationSetting(c *gin.Context) {
 	}
 
 	if err := h.notificationUsecase.UpdateSetting(userID, &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
 	setting, err := h.notificationUsecase.GetSettingByUserID(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *NotificationHandler) GetUserNotificationSetting(c *gin.Context) {
 
 	setting, err := h.notificationUsecase.GetSettingByUserID(uint(userID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

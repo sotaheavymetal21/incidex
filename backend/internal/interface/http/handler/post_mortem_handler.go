@@ -82,7 +82,7 @@ func (h *PostMortemHandler) Create(c *gin.Context) {
 		req.FiveWhysAnalysis,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *PostMortemHandler) GetByID(c *gin.Context) {
 
 	pm, err := h.postMortemUsecase.GetPostMortemByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *PostMortemHandler) GetByIncidentID(c *gin.Context) {
 
 	pm, err := h.postMortemUsecase.GetPostMortemByIncidentID(c.Request.Context(), uint(incidentID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (h *PostMortemHandler) GetAll(c *gin.Context) {
 		pagination,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -259,7 +259,7 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userRoleStr, ok := userRole.(string)
+	userRoleTyped, ok := userRole.(domain.Role)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
 		return
@@ -268,7 +268,7 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 	pm, err := h.postMortemUsecase.UpdatePostMortem(
 		c.Request.Context(),
 		userIDUint,
-		domain.Role(userRoleStr),
+		userRoleTyped,
 		uint(id),
 		req.RootCause,
 		req.ImpactAnalysis,
@@ -278,7 +278,7 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 		req.FiveWhysAnalysis,
 	)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -325,7 +325,7 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 		return
 	}
 
-	userRoleStr, ok := userRole.(string)
+	userRoleTyped, ok := userRole.(domain.Role)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
 		return
@@ -334,11 +334,11 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 	pm, err := h.postMortemUsecase.PublishPostMortem(
 		c.Request.Context(),
 		userIDUint,
-		domain.Role(userRoleStr),
+		userRoleTyped,
 		uint(id),
 	)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -385,7 +385,7 @@ func (h *PostMortemHandler) Unpublish(c *gin.Context) {
 		return
 	}
 
-	userRoleStr, ok := userRole.(string)
+	userRoleTyped, ok := userRole.(domain.Role)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
 		return
@@ -394,11 +394,11 @@ func (h *PostMortemHandler) Unpublish(c *gin.Context) {
 	pm, err := h.postMortemUsecase.UnpublishPostMortem(
 		c.Request.Context(),
 		userIDUint,
-		domain.Role(userRoleStr),
+		userRoleTyped,
 		uint(id),
 	)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -433,7 +433,7 @@ func (h *PostMortemHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userRoleStr, ok := userRole.(string)
+	userRoleTyped, ok := userRole.(domain.Role)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
 		return
@@ -441,11 +441,11 @@ func (h *PostMortemHandler) Delete(c *gin.Context) {
 
 	err = h.postMortemUsecase.DeletePostMortem(
 		c.Request.Context(),
-		domain.Role(userRoleStr),
+		userRoleTyped,
 		uint(id),
 	)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -477,7 +477,7 @@ func (h *PostMortemHandler) GenerateAISuggestion(c *gin.Context) {
 		uint(incidentID),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

@@ -67,7 +67,7 @@ func (h *AuditLogHandler) GetAll(c *gin.Context) {
 
 	logs, total, err := h.auditLogUsecase.GetAll(c.Request.Context(), filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -95,7 +95,7 @@ func (h *AuditLogHandler) GetByID(c *gin.Context) {
 
 	log, err := h.auditLogUsecase.GetByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

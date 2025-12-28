@@ -95,7 +95,7 @@ func (h *IncidentTemplateHandler) Create(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (h *IncidentTemplateHandler) GetAll(c *gin.Context) {
 
 	templates, err := h.templateUsecase.GetAllTemplates(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *IncidentTemplateHandler) GetByID(c *gin.Context) {
 
 	template, err := h.templateUsecase.GetTemplateByID(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		HandleError(c, err)
 		return
 	}
 
@@ -227,7 +227,7 @@ func (h *IncidentTemplateHandler) Update(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -279,7 +279,7 @@ func (h *IncidentTemplateHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.templateUsecase.DeleteTemplate(c.Request.Context(), userID, role, uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -338,7 +338,7 @@ func (h *IncidentTemplateHandler) CreateIncidentFromTemplate(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

@@ -61,7 +61,7 @@ func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
 	}
 
 	if err := h.activityUsecase.AddComment(uint(incidentID), userIDUint, req.Comment); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *IncidentActivityHandler) GetActivities(c *gin.Context) {
 
 	activities, err := h.activityUsecase.GetActivities(uint(incidentID), limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
 		req.Description,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

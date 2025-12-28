@@ -33,7 +33,7 @@ func (h *StatsHandler) GetDashboardStats(c *gin.Context) {
 
 	stats, err := h.statsUsecase.GetDashboardStats(period)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *StatsHandler) GetDashboardStats(c *gin.Context) {
 func (h *StatsHandler) GetSLAMetrics(c *gin.Context) {
 	metrics, err := h.statsUsecase.GetSLAMetrics()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *StatsHandler) GetSLAMetrics(c *gin.Context) {
 func (h *StatsHandler) GetTagStats(c *gin.Context) {
 	tagStats, err := h.statsUsecase.GetTagStats()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
