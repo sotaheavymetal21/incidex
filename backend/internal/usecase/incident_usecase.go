@@ -10,7 +10,10 @@ import (
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/ai"
 	"incidex/internal/infrastructure/notification"
+	"incidex/internal/pkg/logger"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type IncidentUsecase interface {
@@ -60,7 +63,7 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 	var tags []domain.Tag
 	if len(tagIDs) > 0 {
 		for _, tagID := range tagIDs {
-			tag, err := u.tagRepo.FindByID(tagID)
+			tag, err := u.tagRepo.FindByID(ctx, tagID)
 			if err != nil {
 				return nil, fmt.Errorf("tag with ID %d not found", tagID)
 			}
@@ -74,7 +77,7 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		aiSummary, err := u.aiService.GenerateIncidentSummary(title, description, string(severity), impactScope)
 		if err != nil {
 			// Log error but don't fail the incident creation
-			fmt.Printf("Failed to generate AI summary: %v\n", err)
+			logger.Log.Warn("Failed to generate AI summary", zap.Error(err))
 		} else {
 			summary = aiSummary
 		}
@@ -114,7 +117,7 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 	}
 	if err := u.activityRepo.Create(activity); err != nil {
 		// Log error but don't fail the incident creation
-		fmt.Printf("Failed to log creation activity: %v\n", err)
+		logger.Log.Error("Failed to log creation activity", zap.Error(err))
 	}
 
 	// Send notification
@@ -122,7 +125,7 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		creator, err := u.userRepo.FindByID(ctx, creatorID)
 		if err == nil {
 			if notifyErr := u.notificationService.NotifyIncidentCreated(incident, creator); notifyErr != nil {
-				fmt.Printf("Failed to send notification: %v\n", notifyErr)
+				logger.Log.Error("Failed to send notification", zap.Error(notifyErr))
 			}
 		}
 	}
@@ -132,7 +135,7 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		cacheKey := fmt.Sprintf("incident:summary:%d", incident.ID)
 		if err := u.cacheRepo.Set(ctx, cacheKey, summary, 0); err != nil {
 			// Log error but don't fail the request if caching fails
-			fmt.Printf("Warning: Failed to cache summary for incident %d: %v\n", incident.ID, err)
+			logger.Log.Warn("Failed to cache summary", zap.Uint("incident_id", incident.ID), zap.Error(err))
 		}
 	}
 
@@ -156,13 +159,13 @@ func (u *incidentUsecase) GetAllIncidents(ctx context.Context, filters domain.In
 			}
 			var cached CachedSearchResult
 			if unmarshalErr := json.Unmarshal([]byte(cachedData), &cached); unmarshalErr == nil {
-				fmt.Printf("Cache hit for search (key: %s)\n", cacheKey)
+				logger.Log.Debug("Cache hit for search", zap.String("cache_key", cacheKey))
 				return cached.Incidents, cached.Result, nil
 			}
 		}
 	}
 
-	fmt.Printf("Cache miss for search, querying database...\n")
+	logger.Log.Debug("Cache miss for search, querying database")
 
 	// Get from database
 	incidents, result, err := u.incidentRepo.FindAll(ctx, filters, pagination)
@@ -182,7 +185,7 @@ func (u *incidentUsecase) GetAllIncidents(ctx context.Context, filters domain.In
 		}
 		if cachedJSON, marshalErr := json.Marshal(cached); marshalErr == nil {
 			if setErr := u.cacheRepo.Set(ctx, cacheKey, string(cachedJSON), 3*time.Minute); setErr != nil {
-				fmt.Printf("Warning: Failed to cache search results: %v\n", setErr)
+				logger.Log.Warn("Failed to cache search results", zap.Error(setErr))
 			}
 		}
 	}
@@ -228,7 +231,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 	var tags []domain.Tag
 	if len(tagIDs) > 0 {
 		for _, tagID := range tagIDs {
-			tag, err := u.tagRepo.FindByID(tagID)
+			tag, err := u.tagRepo.FindByID(ctx, tagID)
 			if err != nil {
 				return nil, fmt.Errorf("tag with ID %d not found", tagID)
 			}
@@ -346,7 +349,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 	for _, activity := range activities {
 		if err := u.activityRepo.Create(activity); err != nil {
 			// Log error but don't fail the update
-			fmt.Printf("Failed to log activity: %v\n", err)
+			logger.Log.Error("Failed to log activity", zap.Error(err))
 		}
 	}
 
@@ -361,7 +364,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 				assignee, err := u.userRepo.FindByID(ctx, *assigneeID)
 				if err == nil && updater != nil {
 					if notifyErr := u.notificationService.NotifyAssigned(incident, assignee, updater); notifyErr != nil {
-						fmt.Printf("Failed to send assignee notification: %v\n", notifyErr)
+						logger.Log.Error("Failed to send assignee notification", zap.Error(notifyErr))
 					}
 				}
 			}
@@ -372,13 +375,13 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 			oldStatusStr := string(incident.Status)
 			newStatusStr := string(status)
 			if notifyErr := u.notificationService.NotifyStatusChange(incident, oldStatusStr, newStatusStr); notifyErr != nil {
-				fmt.Printf("Failed to send status change notification: %v\n", notifyErr)
+				logger.Log.Error("Failed to send status change notification", zap.Error(notifyErr))
 			}
 
 			// Notify resolved
 			if status == domain.StatusResolved && incident.Status != domain.StatusResolved && updater != nil {
 				if notifyErr := u.notificationService.NotifyResolved(incident, updater); notifyErr != nil {
-					fmt.Printf("Failed to send resolved notification: %v\n", notifyErr)
+					logger.Log.Error("Failed to send resolved notification", zap.Error(notifyErr))
 				}
 			}
 		}
@@ -388,7 +391,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 	if summaryChanged {
 		cacheKey := fmt.Sprintf("incident:summary:%d", incident.ID)
 		if err := u.cacheRepo.Delete(ctx, cacheKey); err != nil {
-			fmt.Printf("Warning: Failed to delete summary cache for incident %d: %v\n", incident.ID, err)
+			logger.Log.Warn("Failed to delete summary cache", zap.Uint("incident_id", incident.ID), zap.Error(err))
 		}
 	}
 
@@ -414,7 +417,7 @@ func (u *incidentUsecase) DeleteIncident(ctx context.Context, userRole domain.Ro
 	// Delete summary cache
 	cacheKey := fmt.Sprintf("incident:summary:%d", id)
 	if err := u.cacheRepo.Delete(ctx, cacheKey); err != nil {
-		fmt.Printf("Warning: Failed to delete cache for incident %d: %v\n", id, err)
+		logger.Log.Warn("Failed to delete cache for incident", zap.Uint("incident_id", uint(id)), zap.Error(err))
 	}
 
 	// Invalidate caches
@@ -458,7 +461,7 @@ func (u *incidentUsecase) RegenerateSummary(ctx context.Context, id uint) (strin
 	cacheKey := fmt.Sprintf("incident:summary:%d", id)
 	if err := u.cacheRepo.Set(ctx, cacheKey, summary, 0); err != nil {
 		// Log error but don't fail the request if caching fails
-		fmt.Printf("Warning: Failed to cache summary for incident %d: %v\n", id, err)
+		logger.Log.Warn("Failed to cache summary for incident", zap.Uint("incident_id", uint(id)), zap.Error(err))
 	}
 
 	return summary, nil
@@ -535,7 +538,7 @@ func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incid
 	}
 	if err := u.activityRepo.Create(activity); err != nil {
 		// Log error but don't fail the operation
-		fmt.Printf("Failed to create activity log: %v\n", err)
+		logger.Log.Error("Failed to create activity log", zap.Error(err))
 	}
 
 	// Reload incident with relationships
@@ -573,7 +576,7 @@ func (u *incidentUsecase) invalidateStatsCache(ctx context.Context) {
 
 	for _, pattern := range patterns {
 		if err := u.cacheRepo.DeleteByPattern(ctx, pattern); err != nil {
-			fmt.Printf("Warning: Failed to invalidate cache pattern %s: %v\n", pattern, err)
+			logger.Log.Warn("Failed to invalidate cache pattern", zap.String("pattern", pattern), zap.Error(err))
 		}
 	}
 }
@@ -582,7 +585,7 @@ func (u *incidentUsecase) invalidateStatsCache(ctx context.Context) {
 func (u *incidentUsecase) invalidateSearchCache(ctx context.Context) {
 	pattern := "search:incidents:*"
 	if err := u.cacheRepo.DeleteByPattern(ctx, pattern); err != nil {
-		fmt.Printf("Warning: Failed to invalidate search cache: %v\n", err)
+		logger.Log.Warn("Failed to invalidate search cache", zap.Error(err))
 	}
 }
 

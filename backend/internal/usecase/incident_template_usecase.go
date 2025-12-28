@@ -40,7 +40,7 @@ func (u *IncidentTemplateUsecase) CreateTemplate(ctx context.Context, userID uin
 	var tags []domain.Tag
 	if len(tagIDs) > 0 {
 		for _, tagID := range tagIDs {
-			tag, err := u.tagRepo.FindByID(tagID)
+			tag, err := u.tagRepo.FindByID(ctx, tagID)
 			if err != nil {
 				return nil, fmt.Errorf("tag with ID %d not found", tagID)
 			}
@@ -100,7 +100,7 @@ func (u *IncidentTemplateUsecase) UpdateTemplate(ctx context.Context, userID uin
 	var tags []domain.Tag
 	if len(tagIDs) > 0 {
 		for _, tagID := range tagIDs {
-			tag, err := u.tagRepo.FindByID(tagID)
+			tag, err := u.tagRepo.FindByID(ctx, tagID)
 			if err != nil {
 				return nil, fmt.Errorf("tag with ID %d not found", tagID)
 			}
