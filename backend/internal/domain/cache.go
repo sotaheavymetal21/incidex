@@ -2,13 +2,7 @@ package domain
 
 import (
 	"context"
-	"errors"
 	"time"
-)
-
-var (
-	// ErrNotFound is returned when a cache key is not found
-	ErrNotFound = errors.New("cache key not found")
 )
 
 // CacheRepository defines the interface for caching operations

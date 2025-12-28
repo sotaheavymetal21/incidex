@@ -24,7 +24,7 @@ func NewRedisCache(client *redis.Client) domain.CacheRepository {
 func (r *redisCache) Get(ctx context.Context, key string) (string, error) {
 	val, err := r.client.Get(ctx, key).Result()
 	if err == redis.Nil {
-		return "", domain.ErrNotFound
+		return "", domain.ErrNotFound("Cache key")
 	}
 	return val, err
 }
@@ -57,7 +57,7 @@ func (r *redisCache) Exists(ctx context.Context, key string) (bool, error) {
 type noOpCache struct{}
 
 func (n *noOpCache) Get(ctx context.Context, key string) (string, error) {
-	return "", domain.ErrNotFound
+	return "", domain.ErrNotFound("Cache key")
 }
 
 func (n *noOpCache) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
