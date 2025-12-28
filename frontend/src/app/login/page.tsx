@@ -52,7 +52,7 @@ export default function LoginPage() {
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-12 animate-fadeIn">
           <div
-            className="mb-6 p-6 rounded-3xl shadow-2xl relative overflow-hidden"
+            className="mb-4 p-6 rounded-3xl shadow-2xl relative overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, var(--surface) 0%, var(--primary-light) 100%)',
               boxShadow: '0 0 40px var(--primary-glow), 0 20px 40px rgba(0,0,0,0.1)'
@@ -72,16 +72,6 @@ export default function LoginPage() {
               }}
             />
           </div>
-          <h1
-            className="text-3xl font-bold mb-2"
-            style={{
-              color: 'var(--foreground)',
-              fontFamily: 'var(--font-display)',
-              textShadow: '0 2px 10px rgba(16, 185, 129, 0.1)'
-            }}
-          >
-            Incidex
-          </h1>
           <p
             className="text-base font-medium tracking-wide"
             style={{
