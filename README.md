@@ -247,6 +247,82 @@ incidex/
 
 ---
 
+## 🗃️ データベースマイグレーション
+
+Incidexでは、データベースマイグレーションに [goose](https://github.com/pressly/goose) を使用しています。
+
+### マイグレーションの実行
+
+#### Docker環境（推奨）
+
+```bash
+# マイグレーションを実行（最新の状態にアップデート）
+make migrate-docker-up
+
+# マイグレーションのステータスを確認
+make migrate-docker-status
+
+# 最後のマイグレーションをロールバック
+make migrate-docker-down
+```
+
+#### ローカル開発環境
+
+```bash
+# マイグレーションを実行（最新の状態にアップデート）
+make migrate-up
+
+# マイグレーションのステータスを確認
+make migrate-status
+
+# 最後のマイグレーションをロールバック
+make migrate-down
+
+# すべてのマイグレーションをリセット（注意: すべてのデータが削除されます）
+make migrate-reset
+```
+
+**注意**: ローカル環境では、デフォルトで `postgres://user:password@localhost:5432/incidex?sslmode=disable` に接続します。異なる接続文字列を使用する場合は、`MIGRATE_DB_URL` 環境変数を設定してください。
+
+```bash
+# カスタムデータベースURLでマイグレーションを実行
+MIGRATE_DB_URL="postgres://user:pass@host:5432/dbname?sslmode=disable" make migrate-up
+```
+
+### 新しいマイグレーションの作成
+
+```bash
+# 新しいマイグレーションファイルを作成
+make migrate-create name=add_new_feature
+
+# 作成されたファイル: backend/migrations/YYYYMMDDHHMMSS_add_new_feature.sql
+```
+
+作成されたファイルには、`-- +goose Up` と `-- +goose Down` セクションがあります。Up セクションにマイグレーション処理を、Down セクションにロールバック処理を記述してください。
+
+### マイグレーションファイルの構造
+
+マイグレーションファイルは `backend/migrations/` ディレクトリに配置されます：
+
+```
+backend/migrations/
+├── 20250101000000_create_initial_tables.sql    # 初期テーブル作成
+├── 20250101000001_add_fulltext_search.sql      # 全文検索機能の追加
+└── legacy/                                      # 旧マイグレーションファイル（参考用）
+    ├── 001_add_fulltext_search.sql
+    └── run_migrations.sh
+```
+
+### マイグレーションのベストプラクティス
+
+1. **バックアップ**: 本番環境でのマイグレーション実行前に必ずデータベースのバックアップを取得してください
+2. **テスト**: 開発環境でマイグレーションを十分にテストしてから本番環境に適用してください
+3. **ロールバック**: Down マイグレーションは常に Up の逆操作を実装してください
+4. **原子性**: 1つのマイグレーションファイルには、関連する変更のみを含めてください
+5. **コメント**: 複雑なマイグレーションには、適切なコメントを付けてください
+
+---
+
 ## 🔐 セキュリティ
 
 セキュリティに関する重要な情報は [`SECURITY.md`](./SECURITY.md) に記載されています。
