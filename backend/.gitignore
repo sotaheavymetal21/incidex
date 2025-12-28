@@ -1,0 +1,12 @@
+# Air temporary files
+tmp/
+build-errors.log
+
+# Built binaries
+main
+server
+seeder
+
+# Test coverage
+*.out
+coverage.html
