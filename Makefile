@@ -4,7 +4,7 @@
 	backend-build backend-test backend-fmt \
 	frontend-build frontend-start frontend-lint \
 	setup setup-backend setup-frontend \
-	seed seed-docker docker-build docker-rebuild \
+	seed seed-force seed-docker docker-build docker-rebuild \
 	migrate-up migrate-down migrate-status migrate-create migrate-reset migrate-docker-up migrate-docker-down migrate-docker-status
 
 up:
@@ -35,17 +35,17 @@ docker-rebuild:
 dev:
 	make -j 2 backend-dev frontend-dev
 
-# ローカル開発環境の起動（インフラ + フロントエンド + バックエンド）
+# ローカル開発環境の起動（インフラ + Backendコンテナ + フロントエンド + バックエンド）
 local-dev: local-up
 	@echo "Starting local development environment..."
-	@echo "Infrastructure services are running in Docker"
+	@echo "Infrastructure services (including backend container) are running in Docker"
 	@echo "Starting backend and frontend..."
 	@make -j 2 backend-dev frontend-dev
 
-# インフラサービスのみ起動（DB, Redis, MinIO）
+# インフラサービスのみ起動（DB, Redis, MinIO, Backend）
 local-up:
-	@echo "Starting infrastructure services (PostgreSQL, Redis, MinIO)..."
-	@docker compose up -d db redis minio
+	@echo "Starting infrastructure services (PostgreSQL, Redis, MinIO, Backend)..."
+	@docker compose up -d db redis minio backend
 	@echo "Waiting for services to be ready..."
 	@sleep 3
 	@echo "Infrastructure services are ready!"
@@ -53,11 +53,11 @@ local-up:
 # インフラサービスの停止
 local-down:
 	@echo "Stopping infrastructure services..."
-	@docker compose stop db redis minio
+	@docker compose stop db redis minio backend
 
 # インフラサービスのログ確認
 local-logs:
-	@docker compose logs -f db redis minio
+	@docker compose logs -f db redis minio backend
 
 # 初回セットアップ（依存関係インストール + インフラ起動 + シードデータ投入）
 local-setup: setup local-up
@@ -97,26 +97,35 @@ setup-frontend:
 	cd frontend && npm install
 
 # ローカルでGoのシードコマンドを実行（データベースに直接接続）
-# TEST_USER_PASSWORD環境変数が必須です
+# TEST_USER_PASSWORD環境変数が設定されていない場合は、デフォルトパスワード（admin1234）が使用されます
 seed:
-	@if [ -z "$$TEST_USER_PASSWORD" ]; then \
-		echo "ERROR: TEST_USER_PASSWORD environment variable is required"; \
-		echo "Usage: TEST_USER_PASSWORD=your_password make seed"; \
-		exit 1; \
-	fi
 	@echo "Seeding database with test data using Go seeder..."
-	@cd backend && TEST_USER_PASSWORD=$$TEST_USER_PASSWORD go run cmd/seed/main.go
+	@cd backend && go run cmd/seed/main.go
+
+# データベースをクリアしてからシードを実行（既存データを削除）
+seed-reset:
+	@echo "WARNING: This will delete all existing data!"
+	@read -p "Are you sure? (yes/no): " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		echo "Clearing database tables..."; \
+		cd backend && go run -tags reset cmd/seed/main.go || \
+		psql postgres://user:password@localhost:5432/incidex?sslmode=disable -c "TRUNCATE TABLE users, tags, incidents, incident_activities, attachments, notification_settings, incident_templates, post_mortems, action_items, audit_logs CASCADE;" || \
+		echo "Please manually clear the database tables or use: make seed-force"; \
+		make seed; \
+	else \
+		echo "Seed reset cancelled"; \
+	fi
+
+# 強制的にシードを実行（既存データを無視）
+seed-force:
+	@echo "Force seeding database (will skip existing data check)..."
+	@cd backend && FORCE_SEED=true go run cmd/seed/main.go
 
 # Dockerコンテナ内でシードコマンドを実行
-# TEST_USER_PASSWORD環境変数が必須です
+# TEST_USER_PASSWORD環境変数が設定されていない場合は、ランダムなパスワードが自動生成されます
 seed-docker:
-	@if [ -z "$$TEST_USER_PASSWORD" ]; then \
-		echo "ERROR: TEST_USER_PASSWORD environment variable is required"; \
-		echo "Usage: TEST_USER_PASSWORD=your_password make seed-docker"; \
-		exit 1; \
-	fi
 	@echo "Seeding database using Docker container..."
-	@docker compose exec -e TEST_USER_PASSWORD=$$TEST_USER_PASSWORD backend ./seeder
+	@docker compose exec backend ./seeder
 
 # Database Migration Commands (Local)
 # DATABASE_URLが設定されていない場合はデフォルト値を使用（.envファイルの設定に合わせる）
