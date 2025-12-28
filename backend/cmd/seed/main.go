@@ -7,6 +7,7 @@ import (
 	"incidex/internal/domain"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -26,11 +27,30 @@ func main() {
 	log.Println("Migrations completed successfully")
 
 	// Run seed
-	if err := db.Seed(dbConn); err != nil {
+	password, err := db.Seed(dbConn)
+	if err != nil {
 		log.Fatalf("Failed to seed database: %v", err)
 	}
 
 	fmt.Println("\n✅ Database seeding completed successfully!")
+
+	// Display password and user information if password was generated
+	if password != "" {
+		separator := strings.Repeat("=", 50)
+		fmt.Println("\n" + separator)
+		fmt.Println("📋 Test User Accounts")
+		fmt.Println(separator)
+		fmt.Println("All test users use the same password:")
+		fmt.Printf("  Password: %s\n", password)
+		fmt.Println("\nTest Users:")
+		fmt.Println("  - admin@example.com (Admin)")
+		fmt.Println("  - editor1@example.com (Editor)")
+		fmt.Println("  - editor2@example.com (Editor)")
+		fmt.Println("  - viewer1@example.com (Viewer)")
+		fmt.Println("  - viewer2@example.com (Viewer)")
+		fmt.Println("\n💡 Tip: Set TEST_USER_PASSWORD environment variable to use a custom password.")
+		fmt.Println(separator)
+	}
 
 	os.Exit(0)
 }

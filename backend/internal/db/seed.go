@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"incidex/internal/domain"
 	"log"
 	"os"
@@ -13,92 +12,128 @@ import (
 )
 
 // Seed populates the database with test data
-func Seed(db *gorm.DB) error {
+func Seed(db *gorm.DB) (string, error) {
 	log.Println("Starting database seeding...")
+
+	// Check if force seed is enabled
+	forceSeed := os.Getenv("FORCE_SEED") == "true"
+
 	// Check if data already exists
 	var userCount int64
 	db.Model(&domain.User{}).Count(&userCount)
-	if userCount > 0 {
+	if userCount > 0 && !forceSeed {
 		log.Println("Database already contains data. Skipping seed.")
-		return nil
+		log.Println("To force seed, set FORCE_SEED=true environment variable or use 'make seed-force'")
+		return "", nil
+	}
+
+	if forceSeed && userCount > 0 {
+		log.Println("FORCE_SEED enabled. Clearing existing users...")
+		if err := db.Exec("DELETE FROM users").Error; err != nil {
+			log.Printf("Warning: Failed to clear users: %v", err)
+		}
 	}
 
 	ctx := context.Background()
 
 	// Create users
-	users, err := seedUsers(db, ctx)
+	users, password, err := seedUsers(db, ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Create tags
 	tags, err := seedTags(db)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Create incidents
 	if err := seedIncidents(db, ctx, users, tags); err != nil {
-		return err
+		return "", err
 	}
 
 	log.Println("Database seeding completed successfully!")
-	return nil
+	return password, nil
 }
 
-func seedUsers(db *gorm.DB, ctx context.Context) ([]*domain.User, error) {
+func seedUsers(db *gorm.DB, ctx context.Context) ([]*domain.User, string, error) {
 	log.Println("Seeding users...")
 
 	users := []*domain.User{
 		{
-			Email: "admin@example.com",
-			Name:  "管理者ユーザー",
-			Role:  domain.RoleAdmin,
+			Email:          "admin@example.com",
+			Name:           "管理者ユーザー",
+			Role:           domain.RoleAdmin,
+			EmployeeNumber: "EMP-001",
+			Department:     "管理部",
 		},
 		{
-			Email: "editor1@example.com",
-			Name:  "編集者 太郎",
-			Role:  domain.RoleEditor,
+			Email:          "editor1@example.com",
+			Name:           "編集者 太郎",
+			Role:           domain.RoleEditor,
+			EmployeeNumber: "EMP-002",
+			Department:     "開発部",
 		},
 		{
-			Email: "editor2@example.com",
-			Name:  "編集者 花子",
-			Role:  domain.RoleEditor,
+			Email:          "editor2@example.com",
+			Name:           "編集者 花子",
+			Role:           domain.RoleEditor,
+			EmployeeNumber: "EMP-003",
+			Department:     "開発部",
 		},
 		{
-			Email: "viewer1@example.com",
-			Name:  "閲覧者 一郎",
-			Role:  domain.RoleViewer,
+			Email:          "viewer1@example.com",
+			Name:           "閲覧者 一郎",
+			Role:           domain.RoleViewer,
+			EmployeeNumber: "EMP-004",
+			Department:     "営業部",
 		},
 		{
-			Email: "viewer2@example.com",
-			Name:  "閲覧者 二郎",
-			Role:  domain.RoleViewer,
+			Email:          "viewer2@example.com",
+			Name:           "閲覧者 二郎",
+			Role:           domain.RoleViewer,
+			EmployeeNumber: "EMP-005",
+			Department:     "営業部",
 		},
 	}
 
 	// Get test user password from environment variable
-	// TEST_USER_PASSWORD環境変数が必須です
+	// If not set, use default password for local development
+	const defaultTestPassword = "admin1234"
 	testUserPassword := os.Getenv("TEST_USER_PASSWORD")
+	passwordGenerated := false
 	if testUserPassword == "" {
-		return nil, fmt.Errorf("TEST_USER_PASSWORD environment variable is required")
+		testUserPassword = defaultTestPassword
+		passwordGenerated = true
+		log.Println("========================================")
+		log.Println("ℹ️  TEST_USER_PASSWORD not set. Using default password for local development:")
+		log.Printf("   Password: %s", testUserPassword)
+		log.Println("========================================")
+		log.Println("ℹ️  All test users will use this password.")
+		log.Println("   You can set TEST_USER_PASSWORD environment variable to use a custom password.")
+		log.Println("========================================")
 	}
 
 	// Hash password for all test users
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(testUserPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	for _, user := range users {
 		user.PasswordHash = string(hashedPassword)
 		if err := db.WithContext(ctx).Create(user).Error; err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		log.Printf("Created user: %s (%s)", user.Email, user.Role)
 	}
 
-	return users, nil
+	// Return password only if it was generated (not from environment variable)
+	if passwordGenerated {
+		return users, testUserPassword, nil
+	}
+	return users, "", nil
 }
 
 func seedTags(db *gorm.DB) ([]*domain.Tag, error) {
