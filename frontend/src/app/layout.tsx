@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function RootLayout({
   children,
@@ -20,12 +21,14 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className="antialiased" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-        <AuthProvider>
-          <Navbar />
-          <main>
-            {children}
-          </main>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <Navbar />
+            <main>
+              {children}
+            </main>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
