@@ -113,7 +113,7 @@ func (u *IncidentActivityUsecase) AddTimelineEvent(incidentID uint, userID uint,
 		}
 	}
 	if !isValid {
-		return nil, fmt.Errorf("invalid event type: %s", eventType)
+		return nil, domain.ErrValidation("invalid event type: " + string(eventType))
 	}
 
 	activity := &domain.IncidentActivity{

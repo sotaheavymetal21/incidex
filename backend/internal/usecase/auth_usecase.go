@@ -37,6 +37,11 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password string
 		return nil, domain.ErrConflict("Email already exists")
 	}
 
+	// Validate password strength
+	if err := domain.ValidatePasswordStrength(password); err != nil {
+		return nil, domain.ErrValidation(err.Error())
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, domain.ErrInternal("Failed to hash password", err)

@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/ai"
@@ -56,13 +55,13 @@ func (u *postMortemUsecase) CreatePostMortem(
 	// Check if incident exists
 	incident, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
-		return nil, fmt.Errorf("incident not found: %w", err)
+		return nil, domain.ErrNotFound("incident")
 	}
 
 	// Check if post-mortem already exists for this incident
 	existingPM, _ := u.postMortemRepo.FindByIncidentID(ctx, incidentID)
 	if existingPM != nil {
-		return nil, errors.New("post-mortem already exists for this incident")
+		return nil, domain.ErrConflict("Post-mortem already exists for this incident")
 	}
 
 	// Marshal Five Whys analysis to JSON
@@ -70,7 +69,7 @@ func (u *postMortemUsecase) CreatePostMortem(
 	if fiveWhys != nil {
 		fiveWhysBytes, err := json.Marshal(fiveWhys)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal five whys: %w", err)
+			return nil, domain.ErrInternal("Failed to marshal five whys", err)
 		}
 		fiveWhysJSON = string(fiveWhysBytes)
 	}
@@ -140,7 +139,7 @@ func (u *postMortemUsecase) UpdatePostMortem(
 
 	// Check permissions
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
-		return nil, errors.New("you can only update your own post-mortems")
+		return nil, domain.ErrForbidden("You can only update your own post-mortems")
 	}
 
 	// Marshal Five Whys analysis to JSON
@@ -148,7 +147,7 @@ func (u *postMortemUsecase) UpdatePostMortem(
 	if fiveWhys != nil {
 		fiveWhysBytes, err := json.Marshal(fiveWhys)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal five whys: %w", err)
+			return nil, domain.ErrInternal("Failed to marshal five whys", err)
 		}
 		fiveWhysJSON = string(fiveWhysBytes)
 	}
@@ -183,12 +182,12 @@ func (u *postMortemUsecase) PublishPostMortem(
 
 	// Check if already published
 	if pm.Status == domain.PMStatusPublished {
-		return nil, errors.New("post-mortem is already published")
+		return nil, domain.ErrValidation("Post-mortem is already published")
 	}
 
 	// Check permissions
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
-		return nil, errors.New("you can only publish your own post-mortems")
+		return nil, domain.ErrForbidden("You can only publish your own post-mortems")
 	}
 
 	// Update status
@@ -218,12 +217,12 @@ func (u *postMortemUsecase) UnpublishPostMortem(
 
 	// Check if already draft
 	if pm.Status == domain.PMStatusDraft {
-		return nil, errors.New("post-mortem is already in draft status")
+		return nil, domain.ErrValidation("Post-mortem is already in draft status")
 	}
 
 	// Check permissions (only author or admin can unpublish)
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
-		return nil, errors.New("you can only unpublish your own post-mortems")
+		return nil, domain.ErrForbidden("You can only unpublish your own post-mortems")
 	}
 
 	// Update status back to draft
@@ -241,7 +240,7 @@ func (u *postMortemUsecase) UnpublishPostMortem(
 func (u *postMortemUsecase) DeletePostMortem(ctx context.Context, userRole domain.Role, id uint) error {
 	// Only admin can delete
 	if userRole != domain.RoleAdmin {
-		return errors.New("only admin can delete post-mortems")
+		return domain.ErrForbidden("Only admin can delete post-mortems")
 	}
 
 	return u.postMortemRepo.Delete(ctx, id)
@@ -257,19 +256,19 @@ func (u *postMortemUsecase) GetAllPostMortems(
 
 func (u *postMortemUsecase) GenerateAIRootCauseSuggestion(ctx context.Context, incidentID uint) (string, error) {
 	if u.aiService == nil {
-		return "", errors.New("AI service is not configured")
+		return "", domain.ErrInternal("AI service is not configured", nil)
 	}
 
 	// Get incident
 	incident, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
-		return "", fmt.Errorf("incident not found: %w", err)
+		return "", domain.ErrNotFound("incident")
 	}
 
 	// Get timeline
 	timeline, err := u.activityRepo.FindByIncidentID(incidentID, 100)
 	if err != nil {
-		return "", fmt.Errorf("failed to get timeline: %w", err)
+		return "", domain.ErrInternal("Failed to get timeline", err)
 	}
 
 	// Generate suggestion
@@ -279,7 +278,7 @@ func (u *postMortemUsecase) GenerateAIRootCauseSuggestion(ctx context.Context, i
 		timeline,
 	)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate AI suggestion: %w", err)
+		return "", domain.ErrInternal("Failed to generate AI suggestion", err)
 	}
 
 	return suggestion, nil

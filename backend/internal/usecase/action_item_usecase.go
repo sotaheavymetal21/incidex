@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"incidex/internal/domain"
 	"time"
 )
@@ -44,12 +42,12 @@ func (u *actionItemUsecase) CreateActionItem(
 	// Check if post-mortem exists
 	_, err := u.postMortemRepo.FindByID(ctx, postMortemID)
 	if err != nil {
-		return nil, fmt.Errorf("post-mortem not found: %w", err)
+		return nil, domain.ErrNotFound("Post-mortem").WithError(err)
 	}
 
 	// Validate priority
 	if priority != domain.PriorityHigh && priority != domain.PriorityMedium && priority != domain.PriorityLow {
-		return nil, errors.New("invalid priority")
+		return nil, domain.ErrValidation("Invalid priority value")
 	}
 
 	// Create action item
@@ -65,7 +63,7 @@ func (u *actionItemUsecase) CreateActionItem(
 	}
 
 	if err := u.actionItemRepo.Create(ctx, item); err != nil {
-		return nil, err
+		return nil, domain.ErrDatabase("Failed to create action item", err)
 	}
 
 	// Reload with relations
@@ -93,17 +91,17 @@ func (u *actionItemUsecase) UpdateActionItem(
 	// Get existing action item
 	item, err := u.actionItemRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrNotFound("Action item").WithError(err)
 	}
 
 	// Validate priority
 	if priority != domain.PriorityHigh && priority != domain.PriorityMedium && priority != domain.PriorityLow {
-		return nil, errors.New("invalid priority")
+		return nil, domain.ErrValidation("Invalid priority value")
 	}
 
 	// Validate status
 	if status != domain.ActionStatusPending && status != domain.ActionStatusInProgress && status != domain.ActionStatusCompleted {
-		return nil, errors.New("invalid status")
+		return nil, domain.ErrValidation("Invalid status value")
 	}
 
 	// Track old status
@@ -130,7 +128,7 @@ func (u *actionItemUsecase) UpdateActionItem(
 	}
 
 	if err := u.actionItemRepo.Update(ctx, item); err != nil {
-		return nil, err
+		return nil, domain.ErrDatabase("Failed to update action item", err)
 	}
 
 	// Reload with relations
@@ -140,10 +138,15 @@ func (u *actionItemUsecase) UpdateActionItem(
 func (u *actionItemUsecase) DeleteActionItem(ctx context.Context, userRole domain.Role, id uint) error {
 	// Only admin can delete
 	if userRole != domain.RoleAdmin {
-		return errors.New("only admin can delete action items")
+		return domain.ErrForbidden("Only admin can delete action items")
 	}
 
-	return u.actionItemRepo.Delete(ctx, id)
+	err := u.actionItemRepo.Delete(ctx, id)
+	if err != nil {
+		return domain.ErrDatabase("Failed to delete action item", err)
+	}
+
+	return nil
 }
 
 func (u *actionItemUsecase) GetAllActionItems(

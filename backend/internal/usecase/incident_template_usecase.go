@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"incidex/internal/domain"
 	"time"
@@ -33,7 +32,7 @@ func NewIncidentTemplateUsecase(
 func (u *IncidentTemplateUsecase) CreateTemplate(ctx context.Context, userID uint, name, description, title, content string, severity domain.Severity, impactScope string, isPublic bool, tagIDs []uint) (*domain.IncidentTemplate, error) {
 	// Validate severity
 	if !isValidSeverity(severity) {
-		return nil, errors.New("invalid severity")
+		return nil, domain.ErrValidation("invalid severity")
 	}
 
 	// Fetch tags
@@ -42,7 +41,7 @@ func (u *IncidentTemplateUsecase) CreateTemplate(ctx context.Context, userID uin
 		for _, tagID := range tagIDs {
 			tag, err := u.tagRepo.FindByID(ctx, tagID)
 			if err != nil {
-				return nil, fmt.Errorf("tag with ID %d not found", tagID)
+				return nil, domain.ErrNotFound(fmt.Sprintf("Tag with ID %d", tagID))
 			}
 			tags = append(tags, *tag)
 		}
@@ -88,12 +87,12 @@ func (u *IncidentTemplateUsecase) UpdateTemplate(ctx context.Context, userID uin
 
 	// Check permissions: Only creator or admin can edit
 	if userRole != domain.RoleAdmin && template.CreatorID != userID {
-		return nil, errors.New("permission denied: only template creator or admin can edit")
+		return nil, domain.ErrForbidden("only template creator or admin can edit")
 	}
 
 	// Validate severity
 	if !isValidSeverity(severity) {
-		return nil, errors.New("invalid severity")
+		return nil, domain.ErrValidation("invalid severity")
 	}
 
 	// Fetch tags
@@ -102,7 +101,7 @@ func (u *IncidentTemplateUsecase) UpdateTemplate(ctx context.Context, userID uin
 		for _, tagID := range tagIDs {
 			tag, err := u.tagRepo.FindByID(ctx, tagID)
 			if err != nil {
-				return nil, fmt.Errorf("tag with ID %d not found", tagID)
+				return nil, domain.ErrNotFound(fmt.Sprintf("Tag with ID %d", tagID))
 			}
 			tags = append(tags, *tag)
 		}
@@ -136,7 +135,7 @@ func (u *IncidentTemplateUsecase) DeleteTemplate(ctx context.Context, userID uin
 
 	// Check permissions: Only creator or admin can delete
 	if userRole != domain.RoleAdmin && template.CreatorID != userID {
-		return errors.New("permission denied: only template creator or admin can delete")
+		return domain.ErrForbidden("only template creator or admin can delete")
 	}
 
 	return u.templateRepo.Delete(ctx, id)

@@ -542,7 +542,19 @@ func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incid
 	}
 
 	// Reload incident with relationships
-	return u.incidentRepo.FindByID(ctx, incidentID)
+	reloadedIncident, err := u.incidentRepo.FindByID(ctx, incidentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Debug log
+	logger.Log.Info("AssignIncident response",
+		zap.Uint("incident_id", incidentID),
+		zap.Any("assignee_id", reloadedIncident.AssigneeID),
+		zap.Any("assignee", reloadedIncident.Assignee),
+	)
+
+	return reloadedIncident, nil
 }
 
 // Helper functions

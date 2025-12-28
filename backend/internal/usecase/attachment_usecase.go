@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/storage"
@@ -45,18 +44,18 @@ func (u *attachmentUsecase) UploadAttachment(ctx context.Context, incidentID, us
 	// Validate incident exists
 	_, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
-		return nil, errors.New("incident not found")
+		return nil, domain.ErrNotFound("Incident")
 	}
 
 	// Validate file size (max 50MB)
 	const maxFileSize = 50 * 1024 * 1024 // 50MB
 	if fileSize > maxFileSize {
-		return nil, errors.New("file size exceeds maximum allowed size of 50MB")
+		return nil, domain.ErrValidation("file size exceeds maximum allowed size of 50MB")
 	}
 
 	// Validate file extension
 	if !isAllowedFileType(fileName) {
-		return nil, errors.New("file type not allowed")
+		return nil, domain.ErrValidation("file type not allowed")
 	}
 
 	// Generate unique storage key
@@ -65,7 +64,7 @@ func (u *attachmentUsecase) UploadAttachment(ctx context.Context, incidentID, us
 
 	// Upload to MinIO
 	if err := u.storage.Upload(ctx, storageKey, reader, fileSize, mimeType); err != nil {
-		return nil, fmt.Errorf("failed to upload file: %w", err)
+		return nil, domain.ErrInternal("failed to upload file", err)
 	}
 
 	// Create attachment record
@@ -82,7 +81,7 @@ func (u *attachmentUsecase) UploadAttachment(ctx context.Context, incidentID, us
 	if err := u.attachmentRepo.Create(attachment); err != nil {
 		// Attempt to delete the uploaded file if database insert fails
 		_ = u.storage.Delete(ctx, storageKey)
-		return nil, fmt.Errorf("failed to create attachment record: %w", err)
+		return nil, domain.ErrInternal("failed to create attachment record", err)
 	}
 
 	// Reload to get user relation
@@ -103,12 +102,12 @@ func (u *attachmentUsecase) GetAttachment(ctx context.Context, id uint) (*domain
 func (u *attachmentUsecase) DownloadAttachment(ctx context.Context, id uint) (io.ReadCloser, error) {
 	attachment, err := u.attachmentRepo.FindByID(id)
 	if err != nil {
-		return nil, errors.New("attachment not found")
+		return nil, domain.ErrNotFound("Attachment")
 	}
 
 	reader, err := u.storage.Download(ctx, attachment.StorageKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to download file: %w", err)
+		return nil, domain.ErrInternal("failed to download file", err)
 	}
 
 	return reader, nil
@@ -118,12 +117,12 @@ func (u *attachmentUsecase) DownloadAttachment(ctx context.Context, id uint) (io
 func (u *attachmentUsecase) DeleteAttachment(ctx context.Context, id, userID uint, userRole domain.Role) error {
 	attachment, err := u.attachmentRepo.FindByID(id)
 	if err != nil {
-		return errors.New("attachment not found")
+		return domain.ErrNotFound("Attachment")
 	}
 
 	// Check permissions: Only admin or the uploader can delete
 	if userRole != domain.RoleAdmin && attachment.UserID != userID {
-		return errors.New("permission denied: you can only delete your own attachments")
+		return domain.ErrForbidden("you can only delete your own attachments")
 	}
 
 	// Delete from MinIO
