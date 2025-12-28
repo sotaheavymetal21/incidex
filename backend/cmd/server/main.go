@@ -16,6 +16,7 @@ import (
 	"incidex/internal/usecase"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -30,9 +31,18 @@ func main() {
 	// Initialize Database
 	dbConn := db.Connect(cfg.DatabaseURL)
 
-	// Auto Migration
-	if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}, &domain.PostMortem{}, &domain.ActionItem{}, &domain.AuditLog{}); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+	// Auto Migration (非推奨: gooseマイグレーションを使用してください)
+	// 開発環境で自動マイグレーションを使用する場合は、環境変数 USE_AUTO_MIGRATE=true を設定してください
+	// 本番環境では必ず `make migrate-up` または `make migrate-docker-up` を使用してください
+	if os.Getenv("USE_AUTO_MIGRATE") == "true" {
+		log.Println("WARNING: Using AutoMigrate. This is not recommended for production.")
+		log.Println("Please use 'make migrate-up' or 'make migrate-docker-up' for proper database migrations.")
+		if err := dbConn.AutoMigrate(&domain.User{}, &domain.Tag{}, &domain.Incident{}, &domain.IncidentActivity{}, &domain.Attachment{}, &domain.NotificationSetting{}, &domain.IncidentTemplate{}, &domain.PostMortem{}, &domain.ActionItem{}, &domain.AuditLog{}); err != nil {
+			log.Fatalf("Failed to migrate database: %v", err)
+		}
+	} else {
+		log.Println("INFO: AutoMigrate is disabled. Using goose migrations.")
+		log.Println("Run 'make migrate-up' or 'make migrate-docker-up' to apply database migrations.")
 	}
 
 	// Initialize MinIO Storage
