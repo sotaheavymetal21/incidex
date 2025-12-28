@@ -16,6 +16,8 @@ type Config struct {
 	MinioSecretKey string
 	JWTSecret      string
 	AppEnv         string
+	// CORS configuration
+	CORSAllowedOrigins []string
 	// Initial admin user (created on first startup if no users exist)
 	InitialAdminEmail    string
 	InitialAdminPassword string
@@ -40,6 +42,7 @@ func Load() *Config {
 		MinioSecretKey:       getEnv("MINIO_SECRET_KEY", defaultMinioSecretKey),
 		JWTSecret:            getEnv("JWT_SECRET", defaultJWTSecret),
 		AppEnv:               getEnv("APP_ENV", "development"),
+		CORSAllowedOrigins:   parseCORSOrigins(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
 		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", ""),
 		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		InitialAdminName:     getEnv("INITIAL_ADMIN_NAME", ""),
@@ -60,6 +63,25 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// parseCORSOrigins parses a comma-separated string into a slice of origins
+func parseCORSOrigins(origins string) []string {
+	if origins == "" {
+		return []string{}
+	}
+
+	parts := strings.Split(origins, ",")
+	result := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
 }
 
 func isProduction(env string) bool {
