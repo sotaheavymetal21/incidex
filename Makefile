@@ -4,7 +4,8 @@
 	backend-build backend-test backend-fmt \
 	frontend-build frontend-start frontend-lint \
 	setup setup-backend setup-frontend \
-	seed seed-docker docker-build docker-rebuild
+	seed seed-docker docker-build docker-rebuild \
+	migrate-up migrate-down migrate-status migrate-create migrate-reset migrate-docker-up migrate-docker-down migrate-docker-status
 
 up:
 	docker compose up -d
@@ -116,3 +117,50 @@ seed-docker:
 	fi
 	@echo "Seeding database using Docker container..."
 	@docker compose exec -e TEST_USER_PASSWORD=$$TEST_USER_PASSWORD backend ./seeder
+
+# Database Migration Commands (Local)
+# DATABASE_URLが設定されていない場合はデフォルト値を使用（.envファイルの設定に合わせる）
+MIGRATE_DB_URL ?= postgres://user:password@localhost:5432/incidex?sslmode=disable
+
+migrate-up:
+	@echo "Running database migrations..."
+	@cd backend && goose -dir migrations postgres "$(MIGRATE_DB_URL)" up
+
+migrate-down:
+	@echo "Rolling back last migration..."
+	@cd backend && goose -dir migrations postgres "$(MIGRATE_DB_URL)" down
+
+migrate-status:
+	@echo "Checking migration status..."
+	@cd backend && goose -dir migrations postgres "$(MIGRATE_DB_URL)" status
+
+migrate-create:
+	@if [ -z "$(name)" ]; then \
+		echo "ERROR: Migration name is required"; \
+		echo "Usage: make migrate-create name=your_migration_name"; \
+		exit 1; \
+	fi
+	@echo "Creating new migration: $(name)..."
+	@cd backend && goose -dir migrations create $(name) sql
+
+migrate-reset:
+	@echo "WARNING: This will reset ALL migrations!"
+	@read -p "Are you sure? (yes/no): " confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		cd backend && goose -dir migrations postgres "$(MIGRATE_DB_URL)" reset; \
+	else \
+		echo "Migration reset cancelled"; \
+	fi
+
+# Database Migration Commands (Docker)
+migrate-docker-up:
+	@echo "Running database migrations in Docker..."
+	@docker compose exec backend goose -dir migrations postgres "postgres://user:password@db:5432/incidex?sslmode=disable" up
+
+migrate-docker-down:
+	@echo "Rolling back last migration in Docker..."
+	@docker compose exec backend goose -dir migrations postgres "postgres://user:password@db:5432/incidex?sslmode=disable" down
+
+migrate-docker-status:
+	@echo "Checking migration status in Docker..."
+	@docker compose exec backend goose -dir migrations postgres "postgres://user:password@db:5432/incidex?sslmode=disable" status
