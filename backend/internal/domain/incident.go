@@ -47,7 +47,7 @@ type Incident struct {
 	SLAViolated              bool       `gorm:"default:false;index" json:"sla_violated"`       // SLA違反フラグ
 
 	// Relations
-	Assignee   *User       `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
+	Assignee   *User       `gorm:"foreignKey:AssigneeID" json:"assignee"`
 	Assignees  []User      `gorm:"many2many:incident_assignees;" json:"assignees,omitempty"`
 	Creator    *User       `gorm:"foreignKey:CreatorID" json:"creator,omitempty"`
 	Tags       []Tag       `gorm:"many2many:incident_tags" json:"tags,omitempty"`
