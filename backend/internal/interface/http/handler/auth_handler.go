@@ -24,13 +24,13 @@ type RegisterRequest struct {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleValidationError(c, err)
 		return
 	}
 
 	user, err := h.authUsecase.Register(c.Request.Context(), req.Name, req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}) // Simplified error handling
+		HandleError(c, err)
 		return
 	}
 
@@ -45,13 +45,13 @@ type LoginRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleValidationError(c, err)
 		return
 	}
 
 	token, user, err := h.authUsecase.Login(c.Request.Context(), req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"incidex/internal/domain"
 	"time"
 
@@ -32,15 +31,15 @@ func NewAuthUsecase(userRepo domain.UserRepository, jwtSecret string, jwtExpiry 
 func (u *authUsecase) Register(ctx context.Context, name, email, password string) (*domain.User, error) {
 	existingUser, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrDatabase("Failed to check existing user", err)
 	}
 	if existingUser != nil {
-		return nil, errors.New("email already exists")
+		return nil, domain.ErrConflict("Email already exists")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrInternal("Failed to hash password", err)
 	}
 
 	user := &domain.User{
@@ -52,7 +51,7 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password string
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
-		return nil, err
+		return nil, domain.ErrDatabase("Failed to create user", err)
 	}
 
 	return user, nil
@@ -61,19 +60,19 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password string
 func (u *authUsecase) Login(ctx context.Context, email, password string) (string, *domain.User, error) {
 	user, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", nil, err
+		return "", nil, domain.ErrDatabase("Failed to find user", err)
 	}
 	if user == nil {
-		return "", nil, errors.New("invalid credentials")
+		return "", nil, domain.ErrUnauthorized("Invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", nil, errors.New("invalid credentials")
+		return "", nil, domain.ErrUnauthorized("Invalid credentials")
 	}
 
 	// Check if user is active
 	if !user.IsActive {
-		return "", nil, errors.New("account is disabled")
+		return "", nil, domain.ErrForbidden("Account is disabled")
 	}
 
 	// Generate JWT
@@ -85,7 +84,7 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (string
 
 	tokenString, err := token.SignedString(u.jwtSecret)
 	if err != nil {
-		return "", nil, err
+		return "", nil, domain.ErrInternal("Failed to generate token", err)
 	}
 
 	return tokenString, user, nil

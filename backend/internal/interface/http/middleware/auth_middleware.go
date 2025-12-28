@@ -45,11 +45,30 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			// Convert user_id from float64 to uint
-			if userIDFloat, ok := claims["user_id"].(float64); ok {
-				c.Set("userID", uint(userIDFloat))
+			// Validate and extract user_id
+			userIDFloat, ok := claims["user_id"].(float64)
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user_id in token"})
+				return
 			}
-			c.Set("role", claims["role"])
+			c.Set("userID", uint(userIDFloat))
+
+			// Validate and extract role
+			roleStr, ok := claims["role"].(string)
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid role in token"})
+				return
+			}
+
+			// Verify role is valid
+			userRole := domain.Role(roleStr)
+			switch userRole {
+			case domain.RoleAdmin, domain.RoleEditor, domain.RoleViewer:
+				c.Set("role", userRole)
+			default:
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid role value in token"})
+				return
+			}
 		}
 
 		c.Next()
@@ -65,7 +84,7 @@ func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
 			return
 		}
 
-		userRole, ok := roleValue.(string)
+		userRole, ok := roleValue.(domain.Role)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid role format"})
 			return
@@ -73,7 +92,7 @@ func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
 
 		// Check if user's role is in the allowed roles
 		for _, allowedRole := range allowedRoles {
-			if domain.Role(userRole) == allowedRole {
+			if userRole == allowedRole {
 				c.Next()
 				return
 			}
