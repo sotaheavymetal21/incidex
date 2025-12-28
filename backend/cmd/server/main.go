@@ -13,6 +13,7 @@ import (
 	"incidex/internal/interface/http/handler"
 	"incidex/internal/interface/http/middleware"
 	"incidex/internal/interface/http/router"
+	"incidex/internal/pkg/logger"
 	"incidex/internal/usecase"
 	"log"
 	"net/http"
@@ -21,11 +22,21 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 func main() {
+	// Initialize Logger
+	env := logger.GetEnv()
+	if err := logger.InitLogger(env); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+
+	logger.Log.Info("Starting Incidex server", zap.String("environment", env))
+
 	cfg := config.Load()
 
 	// Initialize Database
