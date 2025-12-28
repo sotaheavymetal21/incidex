@@ -29,13 +29,13 @@ type UpdateTagRequest struct {
 func (h *TagHandler) Create(c *gin.Context) {
 	var req CreateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleValidationError(c, err)
 		return
 	}
 
 	tag, err := h.tagUsecase.CreateTag(c.Request.Context(), req.Name, req.Color)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (h *TagHandler) Create(c *gin.Context) {
 func (h *TagHandler) GetAll(c *gin.Context) {
 	tags, err := h.tagUsecase.GetAllTags(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -56,19 +56,19 @@ func (h *TagHandler) Update(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		HandleValidationError(c, err)
 		return
 	}
 
 	var req UpdateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		HandleValidationError(c, err)
 		return
 	}
 
 	tag, err := h.tagUsecase.UpdateTag(c.Request.Context(), uint(id), req.Name, req.Color)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 
@@ -79,12 +79,12 @@ func (h *TagHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		HandleValidationError(c, err)
 		return
 	}
 
 	if err := h.tagUsecase.DeleteTag(c.Request.Context(), uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		HandleError(c, err)
 		return
 	}
 

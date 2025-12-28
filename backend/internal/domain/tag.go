@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 )
 
@@ -15,9 +16,9 @@ type Tag struct {
 
 // TagRepository defines the interface for tag data access.
 type TagRepository interface {
-	Create(tag *Tag) error
-	FindAll() ([]*Tag, error)
-	FindByID(id uint) (*Tag, error)
-	Update(tag *Tag) error
-	Delete(id uint) error
+	Create(ctx context.Context, tag *Tag) error
+	FindAll(ctx context.Context) ([]*Tag, error)
+	FindByID(ctx context.Context, id uint) (*Tag, error)
+	Update(ctx context.Context, tag *Tag) error
+	Delete(ctx context.Context, id uint) error
 }
