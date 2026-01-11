@@ -30,7 +30,6 @@ type Incident struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
 	Title       string    `gorm:"size:500;not null;index" json:"title"`
 	Description string    `gorm:"type:text;not null" json:"description"`
-	Summary     string    `gorm:"size:300" json:"summary"`
 	Severity    Severity  `gorm:"size:20;not null;index" json:"severity"`
 	Status      Status    `gorm:"size:20;not null;default:'open';index" json:"status"`
 	ImpactScope string    `gorm:"size:500" json:"impact_scope"`

@@ -7,20 +7,19 @@ import (
 
 // PostMortem represents a post-mortem analysis for an incident.
 type PostMortem struct {
-	ID                    uint       `gorm:"primaryKey" json:"id"`
-	IncidentID            uint       `gorm:"uniqueIndex;not null" json:"incident_id"` // 1対1の関係
-	AuthorID              uint       `gorm:"not null;index" json:"author_id"`
-	RootCause             string     `gorm:"type:text" json:"root_cause"`
-	ImpactAnalysis        string     `gorm:"type:text" json:"impact_analysis"`
-	WhatWentWell          string     `gorm:"type:text" json:"what_went_well"`
-	WhatWentWrong         string     `gorm:"type:text" json:"what_went_wrong"`
-	LessonsLearned        string     `gorm:"type:text" json:"lessons_learned"`
-	FiveWhysAnalysis      string     `gorm:"type:json" json:"five_whys_analysis"`         // JSON形式で保存
-	AIRootCauseSuggestion string     `gorm:"type:text" json:"ai_root_cause_suggestion"`
-	Status                PMStatus   `gorm:"size:20;not null;default:'draft';index" json:"status"`
-	CreatedAt             time.Time  `gorm:"index" json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
-	PublishedAt           *time.Time `json:"published_at"`
+	ID               uint       `gorm:"primaryKey" json:"id"`
+	IncidentID       uint       `gorm:"uniqueIndex;not null" json:"incident_id"` // 1対1の関係
+	AuthorID         uint       `gorm:"not null;index" json:"author_id"`
+	RootCause        string     `gorm:"type:text" json:"root_cause"`
+	ImpactAnalysis   string     `gorm:"type:text" json:"impact_analysis"`
+	WhatWentWell     string     `gorm:"type:text" json:"what_went_well"`
+	WhatWentWrong    string     `gorm:"type:text" json:"what_went_wrong"`
+	LessonsLearned   string     `gorm:"type:text" json:"lessons_learned"`
+	FiveWhysAnalysis string     `gorm:"type:json" json:"five_whys_analysis"` // JSON形式で保存
+	Status           PMStatus   `gorm:"size:20;not null;default:'draft';index" json:"status"`
+	CreatedAt        time.Time  `gorm:"index" json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	PublishedAt      *time.Time `json:"published_at"`
 
 	// Relations
 	Incident    *Incident    `gorm:"foreignKey:IncidentID" json:"incident,omitempty"`
