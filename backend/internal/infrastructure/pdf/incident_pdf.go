@@ -229,29 +229,6 @@ func (s *IncidentPDFService) addDescriptionSection(m core.Maroto, incident *doma
 			),
 		),
 	)
-
-	// Add AI summary if exists
-	if incident.Summary != "" {
-		m.AddRows(
-			row.New(4),
-			row.New(8).Add(
-				col.New(12).Add(
-					text.New("AI要約", props.Text{
-						Size:  12,
-						Style: fontstyle.Bold,
-					}),
-				),
-			),
-			row.New(0).Add(
-				col.New(12).Add(
-					text.New(incident.Summary, props.Text{
-						Size:  10,
-						Color: &props.Color{Red: 50, Green: 50, Blue: 150},
-					}),
-				),
-			),
-		)
-	}
 }
 
 func (s *IncidentPDFService) addTagsSection(m core.Maroto, tags []domain.Tag) {

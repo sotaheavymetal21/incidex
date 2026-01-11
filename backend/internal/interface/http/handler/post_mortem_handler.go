@@ -451,35 +451,3 @@ func (h *PostMortemHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Post-mortem deleted successfully"})
 }
-
-// GenerateAISuggestion godoc
-// @Summary Generate AI root cause suggestion
-// @Description Generate AI root cause suggestion for an incident
-// @Tags post-mortems
-// @Accept json
-// @Produce json
-// @Param incidentId path int true "Incident ID"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /api/post-mortems/incident/{incidentId}/ai-suggestion [post]
-// @Security BearerAuth
-func (h *PostMortemHandler) GenerateAISuggestion(c *gin.Context) {
-	idStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
-		return
-	}
-
-	suggestion, err := h.postMortemUsecase.GenerateAIRootCauseSuggestion(
-		c.Request.Context(),
-		uint(incidentID),
-	)
-	if err != nil {
-		HandleError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"suggestion": suggestion})
-}
