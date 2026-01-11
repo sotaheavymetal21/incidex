@@ -48,7 +48,6 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				incidents.GET("/:id", incidentHandler.GetByID)
 				incidents.PUT("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Update)
 				incidents.DELETE("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Delete)
-				incidents.POST("/:id/summarize", middleware.RequireEditorOrAdmin(), incidentHandler.RegenerateSummary)
 				incidents.POST("/:id/assign", middleware.RequireEditorOrAdmin(), incidentHandler.AssignIncident)
 
 				// Incident activity routes
@@ -64,7 +63,6 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 
 				// Post-mortem routes under incidents
 				incidents.GET("/:id/postmortem", postMortemHandler.GetByIncidentID)
-				incidents.POST("/:id/postmortem/ai-suggestion", middleware.RequireEditorOrAdmin(), postMortemHandler.GenerateAISuggestion)
 			}
 
 			// User routes (admin only)
@@ -94,7 +92,6 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			{
 				export.GET("/incidents", exportHandler.ExportIncidentsCSV)
 				export.GET("/incidents/:id/pdf", exportHandler.ExportIncidentPDF)
-				export.GET("/summary/pdf", exportHandler.ExportSummaryPDF)
 			}
 
 			// Notification routes

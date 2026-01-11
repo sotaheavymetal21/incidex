@@ -5,7 +5,6 @@ import (
 	"incidex/internal/config"
 	"incidex/internal/db"
 	"incidex/internal/domain"
-	"incidex/internal/infrastructure/ai"
 	"incidex/internal/infrastructure/cache"
 	"incidex/internal/infrastructure/notification"
 	"incidex/internal/infrastructure/persistence"
@@ -97,13 +96,8 @@ func main() {
 	notificationUsecase := usecase.NewNotificationUsecase(notificationRepo)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase)
 
-	// AI Service
-	aiService := ai.NewOpenAIService()
-
 	// Incidents
 	incidentRepo := persistence.NewIncidentRepository(dbConn)
-	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, notificationService, aiService, cacheRepo)
-	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
 
 	// Users
 	userUsecase := usecase.NewUserUsecase(userRepo)
@@ -117,9 +111,6 @@ func main() {
 	activityUsecase := usecase.NewIncidentActivityUsecase(activityRepo, incidentRepo, userRepo, notificationService)
 	activityHandler := handler.NewIncidentActivityHandler(activityUsecase)
 
-	// Export
-	exportHandler := handler.NewExportHandler(incidentUsecase)
-
 	// Attachments
 	attachmentRepo := persistence.NewAttachmentRepository(dbConn)
 	attachmentUsecase := usecase.NewAttachmentUsecase(attachmentRepo, incidentRepo, minioStorage)
@@ -132,8 +123,15 @@ func main() {
 
 	// Post-mortems
 	postMortemRepo := persistence.NewPostMortemRepository(dbConn)
-	postMortemUsecase := usecase.NewPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo, aiService)
+	postMortemUsecase := usecase.NewPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
 	postMortemHandler := handler.NewPostMortemHandler(postMortemUsecase)
+
+	// Initialize IncidentUsecase after PostMortemRepo is available
+	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, notificationService, cacheRepo)
+	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
+
+	// Export
+	exportHandler := handler.NewExportHandler(incidentUsecase)
 
 	// Action items
 	actionItemRepo := persistence.NewActionItemRepository(dbConn)

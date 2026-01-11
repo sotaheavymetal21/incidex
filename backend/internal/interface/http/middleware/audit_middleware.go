@@ -28,8 +28,8 @@ func NewAuditMiddleware(auditLogRepo domain.AuditLogRepository, userRepo domain.
 // AuditLog middleware records API calls for auditing purposes
 func (m *AuditMiddleware) Log() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip audit logging for certain paths
-		if shouldSkipAudit(c.Request.URL.Path) {
+		// Skip audit logging for certain paths and methods
+		if shouldSkipAudit(c.Request.URL.Path, c.Request.Method) {
 			c.Next()
 			return
 		}
@@ -97,14 +97,23 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 	}
 }
 
-func shouldSkipAudit(path string) bool {
-	// Only skip health check endpoint
+func shouldSkipAudit(path string, method string) bool {
+	// Skip all GET requests (read-only operations)
+	// Only audit create/update/delete operations
+	if method == "GET" {
+		return true
+	}
+
+	// Skip specific endpoints regardless of method
 	skipPaths := []string{
 		"/api/health",
+		"/api/stats",        // Statistics are read-only
+		"/api/export",       // Export operations are read-only
+		"/api/audit-logs",   // Don't audit the audit log queries
 	}
 
 	for _, skip := range skipPaths {
-		if path == skip {
+		if strings.HasPrefix(path, skip) {
 			return true
 		}
 	}
