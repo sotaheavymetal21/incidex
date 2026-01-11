@@ -61,7 +61,7 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 			} else {
 				// Fall back to LIKE search
 				searchPattern := "%" + strings.ToLower(filters.Search) + "%"
-				query = query.Where("LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(summary) LIKE ?",
+				query = query.Where("LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(impact_scope) LIKE ?",
 					searchPattern, searchPattern, searchPattern)
 			}
 		}
