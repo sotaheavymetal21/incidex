@@ -3,9 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"incidex/internal/domain"
-	"incidex/internal/infrastructure/ai"
 	"time"
 )
 
@@ -18,7 +16,6 @@ type PostMortemUsecase interface {
 	UnpublishPostMortem(ctx context.Context, userID uint, userRole domain.Role, id uint) (*domain.PostMortem, error)
 	DeletePostMortem(ctx context.Context, userRole domain.Role, id uint) error
 	GetAllPostMortems(ctx context.Context, filters domain.PostMortemFilters, pagination domain.Pagination) ([]*domain.PostMortem, *domain.PaginationResult, error)
-	GenerateAIRootCauseSuggestion(ctx context.Context, incidentID uint) (string, error)
 }
 
 type postMortemUsecase struct {
@@ -26,7 +23,6 @@ type postMortemUsecase struct {
 	incidentRepo   domain.IncidentRepository
 	activityRepo   domain.IncidentActivityRepository
 	userRepo       domain.UserRepository
-	aiService      *ai.OpenAIService
 }
 
 func NewPostMortemUsecase(
@@ -34,14 +30,12 @@ func NewPostMortemUsecase(
 	incidentRepo domain.IncidentRepository,
 	activityRepo domain.IncidentActivityRepository,
 	userRepo domain.UserRepository,
-	aiService *ai.OpenAIService,
 ) PostMortemUsecase {
 	return &postMortemUsecase{
 		postMortemRepo: postMortemRepo,
 		incidentRepo:   incidentRepo,
 		activityRepo:   activityRepo,
 		userRepo:       userRepo,
-		aiService:      aiService,
 	}
 }
 
@@ -53,7 +47,7 @@ func (u *postMortemUsecase) CreatePostMortem(
 	fiveWhys *domain.FiveWhysAnalysis,
 ) (*domain.PostMortem, error) {
 	// Check if incident exists
-	incident, err := u.incidentRepo.FindByID(ctx, incidentID)
+	_, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
 		return nil, domain.ErrNotFound("incident")
 	}
@@ -74,37 +68,17 @@ func (u *postMortemUsecase) CreatePostMortem(
 		fiveWhysJSON = string(fiveWhysBytes)
 	}
 
-	// Generate AI root cause suggestion
-	var aiSuggestion string
-	if u.aiService != nil {
-		timeline, err := u.activityRepo.FindByIncidentID(incidentID, 100)
-		if err == nil {
-			suggestion, err := u.aiService.GeneratePostMortemRootCauseSuggestion(
-				incident.Title,
-				incident.Description,
-				timeline,
-			)
-			if err != nil {
-				// Log error but don't fail the creation
-				fmt.Printf("Failed to generate AI root cause suggestion: %v\n", err)
-			} else {
-				aiSuggestion = suggestion
-			}
-		}
-	}
-
 	// Create post-mortem
 	pm := &domain.PostMortem{
-		IncidentID:            incidentID,
-		AuthorID:              authorID,
-		RootCause:             rootCause,
-		ImpactAnalysis:        impactAnalysis,
-		WhatWentWell:          whatWentWell,
-		WhatWentWrong:         whatWentWrong,
-		LessonsLearned:        lessonsLearned,
-		FiveWhysAnalysis:      fiveWhysJSON,
-		AIRootCauseSuggestion: aiSuggestion,
-		Status:                domain.PMStatusDraft,
+		IncidentID:       incidentID,
+		AuthorID:         authorID,
+		RootCause:        rootCause,
+		ImpactAnalysis:   impactAnalysis,
+		WhatWentWell:     whatWentWell,
+		WhatWentWrong:    whatWentWrong,
+		LessonsLearned:   lessonsLearned,
+		FiveWhysAnalysis: fiveWhysJSON,
+		Status:           domain.PMStatusDraft,
 	}
 
 	if err := u.postMortemRepo.Create(ctx, pm); err != nil {
@@ -252,34 +226,4 @@ func (u *postMortemUsecase) GetAllPostMortems(
 	pagination domain.Pagination,
 ) ([]*domain.PostMortem, *domain.PaginationResult, error) {
 	return u.postMortemRepo.FindAll(ctx, filters, pagination)
-}
-
-func (u *postMortemUsecase) GenerateAIRootCauseSuggestion(ctx context.Context, incidentID uint) (string, error) {
-	if u.aiService == nil {
-		return "", domain.ErrInternal("AI service is not configured", nil)
-	}
-
-	// Get incident
-	incident, err := u.incidentRepo.FindByID(ctx, incidentID)
-	if err != nil {
-		return "", domain.ErrNotFound("incident")
-	}
-
-	// Get timeline
-	timeline, err := u.activityRepo.FindByIncidentID(incidentID, 100)
-	if err != nil {
-		return "", domain.ErrInternal("Failed to get timeline", err)
-	}
-
-	// Generate suggestion
-	suggestion, err := u.aiService.GeneratePostMortemRootCauseSuggestion(
-		incident.Title,
-		incident.Description,
-		timeline,
-	)
-	if err != nil {
-		return "", domain.ErrInternal("Failed to generate AI suggestion", err)
-	}
-
-	return suggestion, nil
 }

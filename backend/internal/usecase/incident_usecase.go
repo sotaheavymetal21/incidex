@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"incidex/internal/domain"
-	"incidex/internal/infrastructure/ai"
 	"incidex/internal/infrastructure/notification"
 	"incidex/internal/pkg/logger"
 	"time"
@@ -22,7 +21,6 @@ type IncidentUsecase interface {
 	GetIncidentByID(ctx context.Context, id uint) (*domain.Incident, error)
 	UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, resolvedAt *time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error)
 	DeleteIncident(ctx context.Context, userRole domain.Role, id uint) error
-	RegenerateSummary(ctx context.Context, id uint) (string, error)
 	AssignIncident(ctx context.Context, userID uint, incidentID uint, assigneeID *uint) (*domain.Incident, error)
 }
 
@@ -31,19 +29,19 @@ type incidentUsecase struct {
 	tagRepo             domain.TagRepository
 	userRepo            domain.UserRepository
 	activityRepo        domain.IncidentActivityRepository
+	postMortemRepo      domain.PostMortemRepository
 	notificationService *notification.NotificationService
-	aiService           *ai.OpenAIService
 	cacheRepo           domain.CacheRepository
 }
 
-func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository, notificationService *notification.NotificationService, aiService *ai.OpenAIService, cacheRepo domain.CacheRepository) IncidentUsecase {
+func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.TagRepository, userRepo domain.UserRepository, activityRepo domain.IncidentActivityRepository, postMortemRepo domain.PostMortemRepository, notificationService *notification.NotificationService, cacheRepo domain.CacheRepository) IncidentUsecase {
 	return &incidentUsecase{
 		incidentRepo:        incidentRepo,
 		tagRepo:             tagRepo,
 		userRepo:            userRepo,
 		activityRepo:        activityRepo,
+		postMortemRepo:      postMortemRepo,
 		notificationService: notificationService,
-		aiService:           aiService,
 		cacheRepo:           cacheRepo,
 	}
 }
@@ -71,18 +69,6 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		}
 	}
 
-	// Generate AI summary
-	var summary string
-	if u.aiService != nil {
-		aiSummary, err := u.aiService.GenerateIncidentSummary(title, description, string(severity), impactScope)
-		if err != nil {
-			// Log error but don't fail the incident creation
-			logger.Log.Warn("Failed to generate AI summary", zap.Error(err))
-		} else {
-			summary = aiSummary
-		}
-	}
-
 	// Set default SLA based on severity
 	slaHours := domain.GetDefaultSLAHours(severity)
 
@@ -90,7 +76,6 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 	incident := &domain.Incident{
 		Title:                    title,
 		Description:              description,
-		Summary:                  summary,
 		Severity:                 severity,
 		Status:                   status,
 		ImpactScope:              impactScope,
@@ -127,15 +112,6 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 			if notifyErr := u.notificationService.NotifyIncidentCreated(incident, creator); notifyErr != nil {
 				logger.Log.Error("Failed to send notification", zap.Error(notifyErr))
 			}
-		}
-	}
-
-	// Cache the summary if generated (TTL = 0 means no expiration)
-	if summary != "" {
-		cacheKey := fmt.Sprintf("incident:summary:%d", incident.ID)
-		if err := u.cacheRepo.Set(ctx, cacheKey, summary, 0); err != nil {
-			// Log error but don't fail the request if caching fails
-			logger.Log.Warn("Failed to cache summary", zap.Uint("incident_id", incident.ID), zap.Error(err))
 		}
 	}
 
@@ -315,12 +291,6 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		})
 	}
 
-	// Check if summary-affecting fields changed
-	summaryChanged := incident.Title != title ||
-		incident.Description != description ||
-		incident.Severity != severity ||
-		incident.ImpactScope != impactScope
-
 	// Update incident fields
 	incident.Title = title
 	incident.Description = description
@@ -387,14 +357,6 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		}
 	}
 
-	// Delete summary cache if summary-affecting fields changed
-	if summaryChanged {
-		cacheKey := fmt.Sprintf("incident:summary:%d", incident.ID)
-		if err := u.cacheRepo.Delete(ctx, cacheKey); err != nil {
-			logger.Log.Warn("Failed to delete summary cache", zap.Uint("incident_id", incident.ID), zap.Error(err))
-		}
-	}
-
 	// Invalidate caches
 	u.invalidateStatsCache(ctx)
 	u.invalidateSearchCache(ctx)
@@ -414,57 +376,11 @@ func (u *incidentUsecase) DeleteIncident(ctx context.Context, userRole domain.Ro
 		return err
 	}
 
-	// Delete summary cache
-	cacheKey := fmt.Sprintf("incident:summary:%d", id)
-	if err := u.cacheRepo.Delete(ctx, cacheKey); err != nil {
-		logger.Log.Warn("Failed to delete cache for incident", zap.Uint("incident_id", uint(id)), zap.Error(err))
-	}
-
 	// Invalidate caches
 	u.invalidateStatsCache(ctx)
 	u.invalidateSearchCache(ctx)
 
 	return u.incidentRepo.Delete(ctx, id)
-}
-
-func (u *incidentUsecase) RegenerateSummary(ctx context.Context, id uint) (string, error) {
-	// Fetch incident
-	incident, err := u.incidentRepo.FindByID(ctx, id)
-	if err != nil {
-		return "", err
-	}
-
-	// Generate AI summary
-	var summary string
-	if u.aiService != nil {
-		aiSummary, err := u.aiService.GenerateIncidentSummary(
-			incident.Title,
-			incident.Description,
-			string(incident.Severity),
-			incident.ImpactScope,
-		)
-		if err != nil {
-			return "", fmt.Errorf("failed to generate summary: %w", err)
-		}
-		summary = aiSummary
-	} else {
-		return "", errors.New("AI service is not configured")
-	}
-
-	// Update incident summary
-	incident.Summary = summary
-	if err := u.incidentRepo.Update(ctx, incident); err != nil {
-		return "", err
-	}
-
-	// Cache the summary (TTL = 0 means no expiration)
-	cacheKey := fmt.Sprintf("incident:summary:%d", id)
-	if err := u.cacheRepo.Set(ctx, cacheKey, summary, 0); err != nil {
-		// Log error but don't fail the request if caching fails
-		logger.Log.Warn("Failed to cache summary for incident", zap.Uint("incident_id", uint(id)), zap.Error(err))
-	}
-
-	return summary, nil
 }
 
 func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incidentID uint, assigneeID *uint) (*domain.Incident, error) {
