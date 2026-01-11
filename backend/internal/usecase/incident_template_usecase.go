@@ -162,7 +162,6 @@ func (u *IncidentTemplateUsecase) CreateIncidentFromTemplate(ctx context.Context
 	incident := &domain.Incident{
 		Title:                    template.Title,
 		Description:              template.Content,
-		Summary:                  "", // AI summary will be generated if configured
 		Severity:                 template.Severity,
 		Status:                   domain.StatusOpen,
 		ImpactScope:              template.ImpactScope,
