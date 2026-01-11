@@ -22,8 +22,7 @@ BEGIN
   NEW.search_vector :=
     setweight(to_tsvector('simple', COALESCE(NEW.title, '')), 'A') ||
     setweight(to_tsvector('simple', COALESCE(NEW.description, '')), 'B') ||
-    setweight(to_tsvector('simple', COALESCE(NEW.summary, '')), 'C') ||
-    setweight(to_tsvector('simple', COALESCE(NEW.impact_scope, '')), 'D');
+    setweight(to_tsvector('simple', COALESCE(NEW.impact_scope, '')), 'C');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -41,11 +40,10 @@ UPDATE incidents
 SET search_vector =
   setweight(to_tsvector('simple', COALESCE(title, '')), 'A') ||
   setweight(to_tsvector('simple', COALESCE(description, '')), 'B') ||
-  setweight(to_tsvector('simple', COALESCE(summary, '')), 'C') ||
-  setweight(to_tsvector('simple', COALESCE(impact_scope, '')), 'D');
+  setweight(to_tsvector('simple', COALESCE(impact_scope, '')), 'C');
 
 -- Add comments for documentation
-COMMENT ON COLUMN incidents.search_vector IS 'Full-text search vector combining title, description, summary, and impact_scope';
+COMMENT ON COLUMN incidents.search_vector IS 'Full-text search vector combining title, description, and impact_scope';
 COMMENT ON INDEX idx_incidents_search_vector IS 'GIN index for full-text search performance';
 COMMENT ON FUNCTION update_incidents_search_vector() IS 'Trigger function to automatically update search_vector on incidents';
 
