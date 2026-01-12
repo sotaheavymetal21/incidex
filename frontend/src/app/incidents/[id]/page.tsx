@@ -29,7 +29,6 @@ export default function IncidentDetailPage() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
   const [showTimelineEventForm, setShowTimelineEventForm] = useState(false);
   const [entryType, setEntryType] = useState<'comment' | 'event'>('comment');
   const [timelineEventType, setTimelineEventType] = useState<'detected' | 'investigation_started' | 'root_cause_identified' | 'mitigation' | 'timeline_resolved' | 'other'>('other');
@@ -218,25 +217,6 @@ export default function IncidentDetailPage() {
       alert(err.message || 'Failed to delete incident');
     } finally {
       setDeleting(false);
-    }
-  };
-
-  const handleRegenerateSummary = async () => {
-    if (!confirm('AI要約を再生成しますか？')) {
-      return;
-    }
-
-    setRegeneratingSummary(true);
-    try {
-      const result = await incidentApi.regenerateSummary(token!, parseInt(id));
-      // Update incident summary
-      if (incident) {
-        setIncident({ ...incident, summary: result.summary });
-      }
-    } catch (err: any) {
-      alert(err.message || '要約の再生成に失敗しました');
-    } finally {
-      setRegeneratingSummary(false);
     }
   };
 
@@ -624,88 +604,6 @@ export default function IncidentDetailPage() {
                 </p>
               </div>
 
-              {/* Summary Section */}
-              <div
-                className="rounded-2xl p-6 border animate-scaleIn"
-                style={{
-                  background: 'var(--surface)',
-                  borderColor: 'var(--border)',
-                  boxShadow: 'var(--shadow-lg)',
-                  animationDelay: '0.2s'
-                }}
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h2
-                    className="text-xl font-bold"
-                    style={{
-                      color: 'var(--foreground)',
-                      fontFamily: 'var(--font-display)'
-                    }}
-                  >
-                    AI要約
-                  </h2>
-                  {canEdit() && (
-                    <button
-                      onClick={handleRegenerateSummary}
-                      disabled={regeneratingSummary}
-                      className="px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50"
-                      style={{
-                        background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
-                        fontFamily: 'var(--font-body)',
-                        boxShadow: '0 4px 12px var(--primary-glow)'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!regeneratingSummary) {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
-                      }}
-                    >
-                      {regeneratingSummary ? '再生成中...' : '要約を再生成'}
-                    </button>
-                  )}
-                </div>
-                {incident.summary ? (
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
-                    {incident.summary}
-                  </p>
-                ) : (
-                  <div>
-                    <p className="text-sm italic mb-3" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
-                      AI要約がまだ生成されていません
-                    </p>
-                    {canEdit() && (
-                      <button
-                        onClick={handleRegenerateSummary}
-                        disabled={regeneratingSummary}
-                        className="px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50"
-                        style={{
-                          background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
-                          fontFamily: 'var(--font-body)',
-                          boxShadow: '0 4px 12px var(--primary-glow)'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!regeneratingSummary) {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 8px 20px var(--primary-glow)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px var(--primary-glow)';
-                        }}
-                      >
-                        {regeneratingSummary ? '生成中...' : '要約を生成'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Tags Section */}
               <div
                 className="rounded-2xl p-6 border animate-scaleIn"
@@ -713,7 +611,7 @@ export default function IncidentDetailPage() {
                   background: 'var(--surface)',
                   borderColor: 'var(--border)',
                   boxShadow: 'var(--shadow-lg)',
-                  animationDelay: '0.3s'
+                  animationDelay: '0.2s'
                 }}
               >
                 <h2

@@ -13,7 +13,6 @@ import { DashboardStats, TrendPeriod, SLAMetrics, TagStats } from '../types/stat
 import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '../types/activity';
 import { Attachment } from '../types/attachment';
 import { NotificationSetting } from '../types/notification';
-import { UserLLMSetting, CreateOrUpdateLLMSettingRequest, LLMRuntimeConfig } from '../types/llm';
 import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
 import { PostMortem, CreatePostMortemRequest, UpdatePostMortemRequest } from '../types/postmortem';
 import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '../types/actionitem';
@@ -132,12 +131,6 @@ export const incidentApi = {
     apiRequest<void>(`/incidents/${id}`, {
       method: 'DELETE',
       token
-    }),
-  regenerateSummary: (token: string, id: number, llmConfig: LLMRuntimeConfig) =>
-    apiRequest<{ summary: string; generated_at: string }>(`/incidents/${id}/summarize`, {
-      method: 'POST',
-      token,
-      body: llmConfig,
     }),
   assignIncident: (token: string, id: number, assigneeId: number | null) =>
     apiRequest<Incident>(`/incidents/${id}/assign`, {
@@ -556,10 +549,10 @@ export const reportApi = {
 
 export const llmSettingApi = {
   getMySetting: (token: string) =>
-    apiRequest<UserLLMSetting>('/llm-settings', { token }),
+    apiRequest<any>('/llm-settings', { token }),
 
-  createOrUpdate: (token: string, data: CreateOrUpdateLLMSettingRequest) =>
-    apiRequest<UserLLMSetting>('/llm-settings', {
+  createOrUpdate: (token: string, data: any) =>
+    apiRequest<any>('/llm-settings', {
       method: 'PUT',
       token,
       body: data,
