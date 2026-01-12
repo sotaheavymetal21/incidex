@@ -400,7 +400,7 @@ export default function DashboardPage() {
                 }
               }}
             >
-              📊 分布グラフ
+              分布グラフ
             </button>
             <button
               onClick={() => setGraphType('timeseries')}
@@ -426,7 +426,7 @@ export default function DashboardPage() {
                 }
               }}
             >
-              📈 時系列グラフ
+              時系列グラフ
             </button>
             <button
               onClick={() => setGraphType('bar')}
@@ -452,7 +452,7 @@ export default function DashboardPage() {
                 }
               }}
             >
-              📊 棒グラフ
+              棒グラフ
             </button>
           </div>
         </div>
