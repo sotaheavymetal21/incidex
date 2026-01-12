@@ -11,6 +11,40 @@ import (
 	"gorm.io/gorm"
 )
 
+// clearAllTables deletes all data from all tables in the correct order
+func clearAllTables(db *gorm.DB) error {
+	log.Println("Clearing all existing data from database...")
+
+	// Delete in order to respect foreign key constraints
+	tables := []string{
+		"incident_tags",
+		"incident_assignees",
+		"template_tags",
+		"incident_activities",
+		"attachments",
+		"action_items",
+		"post_mortems",
+		"notification_settings",
+		"audit_logs",
+		"incidents",
+		"incident_templates",
+		"tags",
+		"users",
+	}
+
+	for _, table := range tables {
+		if err := db.Exec("DELETE FROM " + table).Error; err != nil {
+			// Continue even if table doesn't exist or delete fails
+			log.Printf("Warning: Failed to clear table %s: %v", table, err)
+		} else {
+			log.Printf("Cleared table: %s", table)
+		}
+	}
+
+	log.Println("All tables cleared successfully")
+	return nil
+}
+
 // Seed populates the database with test data
 func Seed(db *gorm.DB) (string, error) {
 	log.Println("Starting database seeding...")
@@ -28,9 +62,9 @@ func Seed(db *gorm.DB) (string, error) {
 	}
 
 	if forceSeed && userCount > 0 {
-		log.Println("FORCE_SEED enabled. Clearing existing users...")
-		if err := db.Exec("DELETE FROM users").Error; err != nil {
-			log.Printf("Warning: Failed to clear users: %v", err)
+		log.Println("FORCE_SEED enabled. Clearing all existing data...")
+		if err := clearAllTables(db); err != nil {
+			log.Printf("Warning: Failed to clear all tables: %v", err)
 		}
 	}
 
@@ -166,15 +200,32 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 	log.Println("Seeding incidents...")
 
 	now := time.Now()
-	yesterday := now.Add(-24 * time.Hour)
-	twoDaysAgo := now.Add(-48 * time.Hour)
-	threeDaysAgo := now.Add(-72 * time.Hour)
-	fourDaysAgo := now.Add(-96 * time.Hour)
-	fiveDaysAgo := now.Add(-120 * time.Hour)
-	oneWeekAgo := now.Add(-7 * 24 * time.Hour)
-	resolvedTime := now.Add(-2 * time.Hour)
-	resolvedYesterday := yesterday.Add(-3 * time.Hour)
-	resolvedTwoDaysAgo := twoDaysAgo.Add(-1 * time.Hour)
+
+	// Fixed dates for incidents (spread across past 90 days)
+	// For resolved incidents, we define both detected and resolved times
+	det3 := now.Add(-15 * 24 * time.Hour)  // 15 days ago
+	res3 := det3.Add(8 * time.Hour)         // Resolved 8 hours after
+
+	det8 := now.Add(-45 * 24 * time.Hour)  // 45 days ago
+	res8 := det8.Add(12 * time.Hour)        // Resolved 12 hours after
+
+	det9 := now.Add(-22 * 24 * time.Hour)  // 22 days ago
+	res9 := det9.Add(6 * time.Hour)         // Resolved 6 hours after
+
+	det11 := now.Add(-67 * 24 * time.Hour) // 67 days ago
+	res11 := det11.Add(24 * time.Hour)      // Resolved 24 hours after
+
+	det16 := now.Add(-38 * 24 * time.Hour) // 38 days ago
+	res16 := det16.Add(18 * time.Hour)      // Resolved 18 hours after
+
+	det21 := now.Add(-52 * 24 * time.Hour) // 52 days ago
+	res21 := det21.Add(14 * time.Hour)      // Resolved 14 hours after
+
+	det26 := now.Add(-81 * 24 * time.Hour) // 81 days ago
+	res26 := det26.Add(36 * time.Hour)      // Resolved 36 hours after
+
+	det28 := now.Add(-74 * 24 * time.Hour) // 74 days ago
+	res28 := det28.Add(20 * time.Hour)      // Resolved 20 hours after
 
 	incidents := []*domain.Incident{
 		{
@@ -183,7 +234,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityCritical,
 			Status:      domain.StatusInvestigating,
 			ImpactScope: "全ユーザー（推定5000人）に影響",
-			DetectedAt:  now.Add(-3 * time.Hour),
+			DetectedAt:  now.Add(-3 * 24 * time.Hour),  // 3 days ago
 			CreatorID:   users[1].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -193,7 +244,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusOpen,
 			ImpactScope: "検索機能を使用する約30%のユーザーに影響",
-			DetectedAt:  now.Add(-5 * time.Hour),
+			DetectedAt:  now.Add(-7 * 24 * time.Hour),  // 7 days ago
 			CreatorID:   users[2].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -203,8 +254,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusResolved,
 			ImpactScope: "約50名のユーザーから報告あり",
-			DetectedAt:  yesterday,
-			ResolvedAt:  &resolvedTime,
+			DetectedAt:  det3,
+			ResolvedAt:  &res3,
 			CreatorID:   users[3].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -214,7 +265,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "Firefox利用者（全体の約15%）に影響",
-			DetectedAt:  twoDaysAgo,
+			DetectedAt:  now.Add(-12 * 24 * time.Hour), // 12 days ago
 			CreatorID:   users[4].ID,
 			AssigneeID:  &users[2].ID,
 		},
@@ -224,7 +275,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusInvestigating,
 			ImpactScope: "現時点でユーザーへの直接的な影響なし",
-			DetectedAt:  now.Add(-1 * time.Hour),
+			DetectedAt:  now.Add(-1 * 24 * time.Hour),  // 1 day ago
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -234,7 +285,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "メンテナンス時間中は一部機能が制限される可能性",
-			DetectedAt:  now,
+			DetectedAt:  now.Add(-5 * 24 * time.Hour),  // 5 days ago
 			CreatorID:   users[1].ID,
 		},
 		{
@@ -243,7 +294,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusOpen,
 			ImpactScope: "画像アップロードを試みる約10%のユーザーに影響",
-			DetectedAt:  yesterday,
+			DetectedAt:  now.Add(-18 * 24 * time.Hour), // 18 days ago
 			CreatorID:   users[2].ID,
 		},
 		{
@@ -252,8 +303,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusClosed,
 			ImpactScope: "全ユーザーのメール通知機能に影響",
-			DetectedAt:  oneWeekAgo,
-			ResolvedAt:  &yesterday,
+			DetectedAt:  det8,
+			ResolvedAt:  &res8,
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -264,8 +315,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusResolved,
 			ImpactScope: "全ユーザーに影響（視覚的な不具合）",
-			DetectedAt:  twoDaysAgo,
-			ResolvedAt:  &resolvedYesterday,
+			DetectedAt:  det9,
+			ResolvedAt:  &res9,
 			CreatorID:   users[1].ID,
 			AssigneeID:  &users[2].ID,
 		},
@@ -275,7 +326,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityCritical,
 			Status:      domain.StatusInvestigating,
 			ImpactScope: "全サービスの安定性に影響",
-			DetectedAt:  threeDaysAgo,
+			DetectedAt:  now.Add(-28 * 24 * time.Hour), // 28 days ago
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -285,8 +336,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityCritical,
 			Status:      domain.StatusResolved,
 			ImpactScope: "決済機能を使用した約5名のユーザーに影響",
-			DetectedAt:  fiveDaysAgo,
-			ResolvedAt:  &resolvedTwoDaysAgo,
+			DetectedAt:  det11,
+			ResolvedAt:  &res11,
 			CreatorID:   users[2].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -296,7 +347,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusOpen,
 			ImpactScope: "検索機能利用者に影響",
-			DetectedAt:  yesterday,
+			DetectedAt:  now.Add(-25 * 24 * time.Hour), // 25 days ago
 			CreatorID:   users[3].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -306,7 +357,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusOpen,
 			ImpactScope: "iOS 18ユーザー約200名に影響",
-			DetectedAt:  now.Add(-6 * time.Hour),
+			DetectedAt:  now.Add(-9 * 24 * time.Hour),  // 9 days ago
 			CreatorID:   users[4].ID,
 			AssigneeID:  &users[2].ID,
 		},
@@ -316,7 +367,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "開発環境のみ（本番環境への影響なし）",
-			DetectedAt:  now,
+			DetectedAt:  now.Add(-2 * 24 * time.Hour),  // 2 days ago
 			CreatorID:   users[1].ID,
 		},
 		{
@@ -325,7 +376,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusInvestigating,
 			ImpactScope: "データ保護に影響（緊急時の復旧リスク）",
-			DetectedAt:  threeDaysAgo,
+			DetectedAt:  now.Add(-4 * 24 * time.Hour),  // 4 days ago
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -335,8 +386,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusResolved,
 			ImpactScope: "ディスク容量に影響",
-			DetectedAt:  fourDaysAgo,
-			ResolvedAt:  &resolvedTwoDaysAgo,
+			DetectedAt:  det16,
+			ResolvedAt:  &res16,
 			CreatorID:   users[1].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -346,7 +397,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusOpen,
 			ImpactScope: "API頻繁利用者約30名に影響",
-			DetectedAt:  yesterday,
+			DetectedAt:  now.Add(-33 * 24 * time.Hour), // 33 days ago
 			CreatorID:   users[2].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -356,7 +407,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusInvestigating,
 			ImpactScope: "レポート機能で古いデータが表示",
-			DetectedAt:  now.Add(-4 * time.Hour),
+			DetectedAt:  now.Add(-10 * 24 * time.Hour), // 10 days ago
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -366,7 +417,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusOpen,
 			ImpactScope: "大容量ファイル利用者約15%に影響",
-			DetectedAt:  twoDaysAgo,
+			DetectedAt:  now.Add(-41 * 24 * time.Hour), // 41 days ago
 			CreatorID:   users[3].ID,
 		},
 		{
@@ -375,7 +426,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusOpen,
 			ImpactScope: "約100名のユーザーから報告",
-			DetectedAt:  yesterday,
+			DetectedAt:  now.Add(-20 * 24 * time.Hour), // 20 days ago
 			CreatorID:   users[4].ID,
 			AssigneeID:  &users[2].ID,
 		},
@@ -385,8 +436,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusResolved,
 			ImpactScope: "管理者ユーザー約10名に影響",
-			DetectedAt:  threeDaysAgo,
-			ResolvedAt:  &resolvedYesterday,
+			DetectedAt:  det21,
+			ResolvedAt:  &res21,
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -396,7 +447,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "モバイルユーザーの約5%に影響",
-			DetectedAt:  twoDaysAgo,
+			DetectedAt:  now.Add(-48 * 24 * time.Hour), // 48 days ago
 			CreatorID:   users[2].ID,
 		},
 		{
@@ -405,7 +456,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusInvestigating,
 			ImpactScope: "外部連携機能利用者に影響",
-			DetectedAt:  yesterday,
+			DetectedAt:  now.Add(-14 * 24 * time.Hour), // 14 days ago
 			CreatorID:   users[1].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -415,7 +466,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityHigh,
 			Status:      domain.StatusOpen,
 			ImpactScope: "パフォーマンス全体に影響",
-			DetectedAt:  now.Add(-2 * time.Hour),
+			DetectedAt:  now.Add(-6 * 24 * time.Hour),  // 6 days ago
 			CreatorID:   users[0].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -425,7 +476,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "CSVエクスポート機能利用者に影響",
-			DetectedAt:  threeDaysAgo,
+			DetectedAt:  now.Add(-55 * 24 * time.Hour), // 55 days ago
 			CreatorID:   users[3].ID,
 			AssigneeID:  &users[2].ID,
 		},
@@ -435,8 +486,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusResolved,
 			ImpactScope: "バッチ処理のタイミングに影響",
-			DetectedAt:  oneWeekAgo,
-			ResolvedAt:  &resolvedTwoDaysAgo,
+			DetectedAt:  det26,
+			ResolvedAt:  &res26,
 			CreatorID:   users[1].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -446,7 +497,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityMedium,
 			Status:      domain.StatusOpen,
 			ImpactScope: "Webhook利用中の連携先に影響",
-			DetectedAt:  yesterday,
+			DetectedAt:  now.Add(-36 * 24 * time.Hour), // 36 days ago
 			CreatorID:   users[2].ID,
 			AssigneeID:  &users[1].ID,
 		},
@@ -456,8 +507,8 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityCritical,
 			Status:      domain.StatusResolved,
 			ImpactScope: "パスワード忘れユーザー約20名に影響",
-			DetectedAt:  fourDaysAgo,
-			ResolvedAt:  &resolvedTwoDaysAgo,
+			DetectedAt:  det28,
+			ResolvedAt:  &res28,
 			CreatorID:   users[4].ID,
 			AssigneeID:  &users[0].ID,
 		},
@@ -467,7 +518,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "運用チームの作業効率に影響",
-			DetectedAt:  twoDaysAgo,
+			DetectedAt:  now.Add(-60 * 24 * time.Hour), // 60 days ago
 			CreatorID:   users[0].ID,
 		},
 		{
@@ -476,7 +527,7 @@ func seedIncidents(db *gorm.DB, ctx context.Context, users []*domain.User, tags 
 			Severity:    domain.SeverityLow,
 			Status:      domain.StatusOpen,
 			ImpactScope: "海外ユーザー約50名に影響",
-			DetectedAt:  fiveDaysAgo,
+			DetectedAt:  now.Add(-88 * 24 * time.Hour), // 88 days ago
 			CreatorID:   users[3].ID,
 			AssigneeID:  &users[2].ID,
 		},
