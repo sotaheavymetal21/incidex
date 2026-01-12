@@ -393,22 +393,39 @@ func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incid
 		return nil, errors.New("incident not found")
 	}
 
+	// Validate that assignee exists if assigneeID is provided
+	if assigneeID != nil {
+		assignee, err := u.userRepo.FindByID(ctx, *assigneeID)
+		if err != nil {
+			logger.Log.Error("Failed to find assignee", zap.Uint("assignee_id", *assigneeID), zap.Error(err))
+			return nil, domain.ErrInternal("Failed to validate assignee", err)
+		}
+		if assignee == nil {
+			logger.Log.Warn("Assignee user not found", zap.Uint("assignee_id", *assigneeID))
+			return nil, domain.ErrNotFound(fmt.Sprintf("User with ID %d", *assigneeID))
+		}
+	}
+
 	// Store old assignee for activity log
 	var oldAssigneeID *uint
 	if incident.AssigneeID != nil {
 		oldAssigneeID = incident.AssigneeID
 	}
 
-	// Update assignee
-	incident.AssigneeID = assigneeID
-	if err := u.incidentRepo.Update(ctx, incident); err != nil {
+	// Update assignee - only update the AssigneeID field
+	if err := u.incidentRepo.UpdateAssignee(ctx, incidentID, assigneeID); err != nil {
 		return nil, err
 	}
 
 	// Get user info for activity log
 	user, err := u.userRepo.FindByID(ctx, userID)
 	if err != nil {
-		return nil, err
+		logger.Log.Error("Failed to find user", zap.Uint("user_id", userID), zap.Error(err))
+		return nil, domain.ErrInternal("Failed to find user", err)
+	}
+	if user == nil {
+		logger.Log.Error("User not found - invalid token", zap.Uint("user_id", userID))
+		return nil, domain.ErrUnauthorized("Your session is invalid. Please log in again")
 	}
 
 	// Create activity log for assignment change

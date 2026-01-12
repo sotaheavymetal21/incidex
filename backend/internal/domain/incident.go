@@ -149,6 +149,7 @@ type IncidentRepository interface {
 	FindAll(ctx context.Context, filters IncidentFilters, pagination Pagination) ([]*Incident, *PaginationResult, error)
 	FindByID(ctx context.Context, id uint) (*Incident, error)
 	Update(ctx context.Context, incident *Incident) error
+	UpdateAssignee(ctx context.Context, incidentID uint, assigneeID *uint) error
 	Delete(ctx context.Context, id uint) error
 
 	// Stats methods

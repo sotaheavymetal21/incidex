@@ -133,6 +133,10 @@ func (r *incidentRepository) Update(ctx context.Context, incident *domain.Incide
 	return r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: false}).Save(incident).Error
 }
 
+func (r *incidentRepository) UpdateAssignee(ctx context.Context, incidentID uint, assigneeID *uint) error {
+	return r.db.WithContext(ctx).Model(&domain.Incident{}).Where("id = ?", incidentID).Update("assignee_id", assigneeID).Error
+}
+
 func (r *incidentRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&domain.Incident{}, id).Error
 }
