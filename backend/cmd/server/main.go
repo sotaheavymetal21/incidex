@@ -106,11 +106,6 @@ func main() {
 	attachmentUsecase := usecase.NewAttachmentUsecase(attachmentRepo, incidentRepo, minioStorage)
 	attachmentHandler := handler.NewAttachmentHandler(attachmentUsecase)
 
-	// Templates
-	templateRepo := persistence.NewIncidentTemplateRepository(dbConn)
-	templateUsecase := usecase.NewIncidentTemplateUsecase(templateRepo, tagRepo, incidentRepo, userRepo)
-	templateHandler := handler.NewIncidentTemplateHandler(templateUsecase)
-
 	// Post-mortems
 	postMortemRepo := persistence.NewPostMortemRepository(dbConn)
 	postMortemUsecase := usecase.NewPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
@@ -163,7 +158,7 @@ func main() {
 	})
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, templateHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

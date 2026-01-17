@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, templateHandler *handler.IncidentTemplateHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler) {
 	api := r.Group("/api")
 	{
 		// Auth routes
@@ -100,17 +100,6 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				notifications.GET("/settings", notificationHandler.GetMyNotificationSetting)
 				notifications.PUT("/settings", notificationHandler.UpdateMyNotificationSetting)
 				notifications.GET("/settings/:id", notificationHandler.GetUserNotificationSetting)
-			}
-
-			// Template routes
-			templates := protected.Group("/templates")
-			{
-				templates.POST("", middleware.RequireEditorOrAdmin(), templateHandler.Create)
-				templates.GET("", templateHandler.GetAll)
-				templates.GET("/:id", templateHandler.GetByID)
-				templates.PUT("/:id", middleware.RequireEditorOrAdmin(), templateHandler.Update)
-				templates.DELETE("/:id", middleware.RequireEditorOrAdmin(), templateHandler.Delete)
-				templates.POST("/create-incident", middleware.RequireEditorOrAdmin(), templateHandler.CreateIncidentFromTemplate)
 			}
 
 			// Post-mortem routes
