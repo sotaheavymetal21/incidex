@@ -7,8 +7,6 @@ export type Permission =
   | 'delete_incidents'
   | 'view_tags'
   | 'manage_tags'
-  | 'view_templates'
-  | 'manage_templates'
   | 'view_postmortems'
   | 'manage_postmortems'
   | 'view_users'
@@ -24,8 +22,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     'delete_incidents',
     'view_tags',
     'manage_tags',
-    'view_templates',
-    'manage_templates',
     'view_postmortems',
     'manage_postmortems',
     'view_users',
@@ -40,8 +36,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     'delete_incidents',
     'view_tags',
     'manage_tags',
-    'view_templates',
-    'manage_templates',
     'view_postmortems',
     'manage_postmortems',
     'view_stats',
@@ -50,7 +44,6 @@ const rolePermissions: Record<Role, Permission[]> = {
   viewer: [
     'view_incidents',
     'view_tags',
-    'view_templates',
     'view_postmortems',
     'view_stats',
   ],

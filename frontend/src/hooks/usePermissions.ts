@@ -44,9 +44,6 @@ export function usePermissions() {
     canViewTags: checkPermission('view_tags'),
     canManageTags: checkPermission('manage_tags'),
 
-    canViewTemplates: checkPermission('view_templates'),
-    canManageTemplates: checkPermission('manage_templates'),
-
     canViewPostMortems: checkPermission('view_postmortems'),
     canManagePostMortems: checkPermission('manage_postmortems'),
 
