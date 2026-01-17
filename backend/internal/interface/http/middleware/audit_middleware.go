@@ -98,9 +98,10 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 }
 
 func shouldSkipAudit(path string, method string) bool {
-	// Skip all GET requests (read-only operations)
-	// Only audit create/update/delete operations
-	if method == "GET" {
+	// Skip GET and OPTIONS requests
+	// GET: read-only operations don't need auditing
+	// OPTIONS: CORS preflight requests are browser-automated, not user actions
+	if method == "GET" || method == "OPTIONS" {
 		return true
 	}
 
