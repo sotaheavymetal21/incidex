@@ -13,7 +13,6 @@ import { DashboardStats, TrendPeriod, SLAMetrics, TagStats } from '../types/stat
 import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '../types/activity';
 import { Attachment } from '../types/attachment';
 import { NotificationSetting } from '../types/notification';
-import { IncidentTemplate, CreateTemplateRequest, UpdateTemplateRequest, CreateIncidentFromTemplateRequest } from '../types/template';
 import { PostMortem, CreatePostMortemRequest, UpdatePostMortemRequest } from '../types/postmortem';
 import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '../types/actionitem';
 import { User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest } from '../types/user';
@@ -314,41 +313,6 @@ export const notificationApi = {
   getUserSettings: (token: string, userId: number) =>
     apiRequest<NotificationSetting>(`/notifications/settings/${userId}`, {
       token,
-    }),
-};
-
-export const templateApi = {
-  getAll: (token: string) =>
-    apiRequest<IncidentTemplate[]>('/templates', { token }),
-
-  getById: (token: string, id: number) =>
-    apiRequest<IncidentTemplate>(`/templates/${id}`, { token }),
-
-  create: (token: string, data: CreateTemplateRequest) =>
-    apiRequest<IncidentTemplate>('/templates', {
-      method: 'POST',
-      token,
-      body: data,
-    }),
-
-  update: (token: string, id: number, data: UpdateTemplateRequest) =>
-    apiRequest<IncidentTemplate>(`/templates/${id}`, {
-      method: 'PUT',
-      token,
-      body: data,
-    }),
-
-  delete: (token: string, id: number) =>
-    apiRequest<{ message: string }>(`/templates/${id}`, {
-      method: 'DELETE',
-      token,
-    }),
-
-  createIncidentFromTemplate: (token: string, data: CreateIncidentFromTemplateRequest) =>
-    apiRequest<Incident>('/templates/create-incident', {
-      method: 'POST',
-      token,
-      body: data,
     }),
 };
 
