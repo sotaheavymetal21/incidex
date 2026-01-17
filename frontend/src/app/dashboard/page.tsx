@@ -115,6 +115,7 @@ export default function DashboardPage() {
     name: SEVERITY_LABELS[key] || key,
     value,
     color: SEVERITY_COLORS[key as keyof typeof SEVERITY_COLORS],
+    key, // Keep the original key for filtering
   }));
 
   const statusData = Object.entries(stats.by_status).map(([key, value]) => ({
@@ -620,6 +621,7 @@ export default function DashboardPage() {
                   <YAxis
                     stroke="var(--foreground)"
                     style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                    allowDecimals={false}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend
@@ -660,10 +662,10 @@ export default function DashboardPage() {
                 重要度別件数
               </h2>
               <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
-                深刻度ごとのインシデント数
+                クリックして詳細を表示
               </p>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={severityData}>
+                <BarChart data={severityData} style={{ cursor: 'pointer' }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
                     dataKey="name"
@@ -674,6 +676,7 @@ export default function DashboardPage() {
                   <YAxis
                     stroke="var(--foreground)"
                     style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                    allowDecimals={false}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar
@@ -681,9 +684,11 @@ export default function DashboardPage() {
                     name="件数"
                     radius={[8, 8, 0, 0]}
                     animationDuration={800}
+                    onClick={(data) => router.push(`/incidents?severity=${data.key}`)}
+                    style={{ cursor: 'pointer' }}
                   >
                     {severityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80 transition-opacity" />
                     ))}
                   </Bar>
                 </BarChart>
@@ -706,10 +711,10 @@ export default function DashboardPage() {
                 ステータス別件数
               </h2>
               <p className="text-sm mb-6" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
-                ステータスごとのインシデント数
+                クリックして詳細を表示
               </p>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={statusData}>
+                <BarChart data={statusData} style={{ cursor: 'pointer' }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
                     dataKey="name"
@@ -720,6 +725,7 @@ export default function DashboardPage() {
                   <YAxis
                     stroke="var(--foreground)"
                     style={{ fontSize: '12px', fontFamily: 'var(--font-body)' }}
+                    allowDecimals={false}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar
@@ -727,9 +733,11 @@ export default function DashboardPage() {
                     name="件数"
                     radius={[8, 8, 0, 0]}
                     animationDuration={800}
+                    onClick={(data) => router.push(`/incidents?status=${data.key}`)}
+                    style={{ cursor: 'pointer' }}
                   >
                     {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80 transition-opacity" />
                     ))}
                   </Bar>
                 </BarChart>
@@ -802,6 +810,7 @@ export default function DashboardPage() {
               />
               <YAxis
                 tick={{ fontSize: 12, fontFamily: 'var(--font-body)', fill: 'var(--foreground-secondary)' }}
+                allowDecimals={false}
               />
               <Tooltip content={<CustomTooltip />} />
               <Line
