@@ -45,10 +45,12 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 }
 
 type CreateUserRequest struct {
-	Email    string      `json:"email" binding:"required,email"`
-	Password string      `json:"password" binding:"required,min=6"`
-	Name     string      `json:"name" binding:"required"`
-	Role     domain.Role `json:"role" binding:"required"`
+	Email          string      `json:"email" binding:"required,email"`
+	Password       string      `json:"password" binding:"required,min=6"`
+	Name           string      `json:"name" binding:"required"`
+	Role           domain.Role `json:"role" binding:"required"`
+	EmployeeNumber string      `json:"employee_number"`
+	Department     string      `json:"department"`
 }
 
 func (h *UserHandler) Create(c *gin.Context) {
@@ -64,7 +66,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.CreateUser(c.Request.Context(), req.Email, req.Password, req.Name, req.Role)
+	user, err := h.userUsecase.CreateUser(c.Request.Context(), req.Email, req.Password, req.Name, req.Role, req.EmployeeNumber, req.Department)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -74,9 +76,11 @@ func (h *UserHandler) Create(c *gin.Context) {
 }
 
 type UpdateUserRequest struct {
-	Name  string      `json:"name" binding:"required"`
-	Email string      `json:"email" binding:"required,email"`
-	Role  domain.Role `json:"role" binding:"required"`
+	Name           string      `json:"name" binding:"required"`
+	Email          string      `json:"email" binding:"required,email"`
+	Role           domain.Role `json:"role" binding:"required"`
+	EmployeeNumber string      `json:"employee_number"`
+	Department     string      `json:"department"`
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
@@ -99,7 +103,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.Update(c.Request.Context(), uint(id), req.Name, req.Email, req.Role)
+	user, err := h.userUsecase.Update(c.Request.Context(), uint(id), req.Name, req.Email, req.Role, req.EmployeeNumber, req.Department)
 	if err != nil {
 		HandleError(c, err)
 		return
