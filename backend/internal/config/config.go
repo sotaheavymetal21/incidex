@@ -16,6 +16,10 @@ type Config struct {
 	MinioSecretKey string
 	JWTSecret      string
 	AppEnv         string
+	// Database logging configuration
+	// Options: "silent", "error", "warn", "info"
+	// Default: "warn" for production, "info" for development
+	DBLogLevel string
 	// CORS configuration
 	CORSAllowedOrigins []string
 	// Initial admin user (created on first startup if no users exist)
@@ -33,6 +37,7 @@ const (
 )
 
 func Load() *Config {
+	appEnv := getEnv("APP_ENV", "development")
 	cfg := &Config{
 		Port:                 getEnv("PORT", "8080"),
 		DatabaseURL:          getEnv("DATABASE_URL", defaultDatabaseURL),
@@ -41,7 +46,8 @@ func Load() *Config {
 		MinioAccessKey:       getEnv("MINIO_ACCESS_KEY", defaultMinioAccessKey),
 		MinioSecretKey:       getEnv("MINIO_SECRET_KEY", defaultMinioSecretKey),
 		JWTSecret:            getEnv("JWT_SECRET", defaultJWTSecret),
-		AppEnv:               getEnv("APP_ENV", "development"),
+		AppEnv:               appEnv,
+		DBLogLevel:           getEnv("DB_LOG_LEVEL", getDefaultDBLogLevel(appEnv)),
 		CORSAllowedOrigins:   parseCORSOrigins(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
 		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", ""),
 		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
@@ -90,6 +96,13 @@ func isProduction(env string) bool {
 
 func isDevelopment(env string) bool {
 	return strings.ToLower(env) == "development" || strings.ToLower(env) == "dev"
+}
+
+func getDefaultDBLogLevel(env string) string {
+	if isProduction(env) {
+		return "warn" // Production: only log errors and slow queries
+	}
+	return "info" // Development: log all queries (with masked sensitive data)
 }
 
 func validateProductionConfig(cfg *Config) {
