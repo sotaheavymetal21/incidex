@@ -73,15 +73,15 @@ function CreateIncidentForm() {
 
     // Validation
     if (!title.trim()) {
-      setError('Title is required');
+      setError('タイトルは必須です');
       return;
     }
     if (!description.trim()) {
-      setError('Description is required');
+      setError('説明は必須です');
       return;
     }
     if (!detectedAt) {
-      setError('Detected At is required');
+      setError('検出日時は必須です');
       return;
     }
 
@@ -101,7 +101,7 @@ function CreateIncidentForm() {
       const incident = await incidentApi.create(token!, data);
       router.push(`/incidents/${incident.id}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create incident');
+      setError(err.message || 'インシデントの作成に失敗しました');
     } finally {
       setLoading(false);
     }
@@ -126,9 +126,9 @@ function CreateIncidentForm() {
             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary)'}
           >
-            ← Back to List
+            ← 一覧に戻る
           </button>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>Create New Incident</h1>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>新規インシデント作成</h1>
         </div>
 
         {error && (
@@ -141,7 +141,7 @@ function CreateIncidentForm() {
           {/* Title */}
           <div className="mb-5">
             <label htmlFor="title" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Title <span style={{ color: 'var(--error)' }}>*</span>
+              タイトル <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="text"
@@ -170,7 +170,7 @@ function CreateIncidentForm() {
           {/* Description */}
           <div className="mb-5">
             <label htmlFor="description" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Description <span style={{ color: 'var(--error)' }}>*</span>
+              説明 <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <textarea
               id="description"
@@ -198,7 +198,7 @@ function CreateIncidentForm() {
           {/* Severity */}
           <div className="mb-5">
             <label htmlFor="severity" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Severity（重要度） <span style={{ color: 'var(--error)' }}>*</span>
+              重要度 <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <select
               id="severity"
@@ -233,7 +233,7 @@ function CreateIncidentForm() {
           {/* Impact Scope */}
           <div className="mb-5">
             <label htmlFor="impactScope" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Impact Scope
+              影響範囲
             </label>
             <input
               type="text"
@@ -261,7 +261,7 @@ function CreateIncidentForm() {
           {/* Detected At */}
           <div className="mb-5">
             <label htmlFor="detectedAt" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Detected At <span style={{ color: 'var(--error)' }}>*</span>
+              検出日時 <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="datetime-local"
@@ -289,7 +289,7 @@ function CreateIncidentForm() {
           {/* Assignee */}
           <div className="mb-5">
             <label htmlFor="assignee" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Assignee
+              担当者
             </label>
             <select
               id="assignee"
@@ -310,7 +310,7 @@ function CreateIncidentForm() {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <option value="">Unassigned</option>
+              <option value="">未割り当て</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name} ({user.email})
@@ -321,7 +321,7 @@ function CreateIncidentForm() {
 
           {/* Tags */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>Tags</label>
+            <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>タグ</label>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <button
@@ -363,7 +363,7 @@ function CreateIncidentForm() {
               onMouseEnter={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-hover)')}
               onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
             >
-              {loading ? 'Creating...' : 'Create Incident'}
+              {loading ? '作成中...' : 'インシデントを作成'}
             </button>
             <button
               type="button"
@@ -379,7 +379,7 @@ function CreateIncidentForm() {
                 e.currentTarget.style.borderColor = 'var(--border)';
               }}
             >
-              Cancel
+              キャンセル
             </button>
           </div>
         </form>
