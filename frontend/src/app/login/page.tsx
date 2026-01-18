@@ -79,7 +79,6 @@ export default function LoginPage() {
               fontFamily: 'var(--font-display)'
             }}
           >
-            Secure • Smart • Compliant
           </p>
         </div>
 
@@ -267,7 +266,7 @@ export default function LoginPage() {
             fontFamily: 'var(--font-body)'
           }}
         >
-          © 2025 Incidex. All rights reserved.
+          © 2026 Incidex. All rights reserved.
         </p>
       </div>
 
