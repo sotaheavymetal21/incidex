@@ -48,7 +48,8 @@ go.work.sum
 # Claude AI / Cursor IDE settings
 .claude/
 .cursor/
-CLAUDE.md
+.claude.json
+.claude.md
 .coderabbit.yaml
 .coderabbit.yml
 
