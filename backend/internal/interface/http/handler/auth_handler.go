@@ -16,9 +16,11 @@ func NewAuthHandler(authUsecase usecase.AuthUsecase) *AuthHandler {
 }
 
 type RegisterRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Name           string `json:"name" binding:"required"`
+	Email          string `json:"email" binding:"required,email"`
+	Password       string `json:"password" binding:"required,min=6"`
+	EmployeeNumber string `json:"employee_number" binding:"required"`
+	Department     string `json:"department" binding:"required"`
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -28,7 +30,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.authUsecase.Register(c.Request.Context(), req.Name, req.Email, req.Password)
+	user, err := h.authUsecase.Register(c.Request.Context(), req.Name, req.Email, req.Password, req.EmployeeNumber, req.Department)
 	if err != nil {
 		HandleError(c, err)
 		return
