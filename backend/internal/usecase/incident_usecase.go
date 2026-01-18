@@ -19,7 +19,7 @@ type IncidentUsecase interface {
 	CreateIncident(ctx context.Context, creatorID uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error)
 	GetAllIncidents(ctx context.Context, filters domain.IncidentFilters, pagination domain.Pagination) ([]*domain.Incident, *domain.PaginationResult, error)
 	GetIncidentByID(ctx context.Context, id uint) (*domain.Incident, error)
-	UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, resolvedAt *time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error)
+	UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error)
 	DeleteIncident(ctx context.Context, userRole domain.Role, id uint) error
 	AssignIncident(ctx context.Context, userID uint, incidentID uint, assigneeID *uint) (*domain.Incident, error)
 }
@@ -173,7 +173,7 @@ func (u *incidentUsecase) GetIncidentByID(ctx context.Context, id uint) (*domain
 	return u.incidentRepo.FindByID(ctx, id)
 }
 
-func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, resolvedAt *time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error) {
+func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error) {
 	// Fetch existing incident
 	incident, err := u.incidentRepo.FindByID(ctx, id)
 	if err != nil {
@@ -198,9 +198,20 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		return nil, errors.New("invalid status")
 	}
 
-	// Validate resolved_at > detected_at
-	if resolvedAt != nil && resolvedAt.Before(detectedAt) {
-		return nil, errors.New("resolved_at must be after detected_at")
+	// Auto-set resolved_at based on status change
+	var resolvedAt *time.Time
+	if status == domain.StatusResolved || status == domain.StatusClosed {
+		// Set resolved_at to current time if status changed to resolved/closed
+		if incident.Status != domain.StatusResolved && incident.Status != domain.StatusClosed {
+			now := time.Now()
+			resolvedAt = &now
+		} else {
+			// Keep existing resolved_at if already resolved/closed
+			resolvedAt = incident.ResolvedAt
+		}
+	} else {
+		// Clear resolved_at if status is not resolved/closed
+		resolvedAt = nil
 	}
 
 	// Fetch tags if tag IDs are provided
