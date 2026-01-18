@@ -14,11 +14,12 @@ const SEVERITY_COLORS = {
   low: '#3b82f6',
 };
 
+// Status colors - must match CSS variables in globals.css (--status-*)
 const STATUS_COLORS = {
-  open: '#ef4444',
-  investigating: '#f59e0b',
-  resolved: '#10b981',
-  closed: '#64748b',
+  open: '#ef4444',        // --status-open
+  investigating: '#f59e0b', // --status-investigating
+  resolved: '#10b981',    // --status-resolved
+  closed: '#64748b',      // --status-closed
 };
 
 const SEVERITY_LABELS: Record<string, string> = {
