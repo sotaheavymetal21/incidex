@@ -133,20 +133,20 @@ export default function UsersPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.map((user) => (
-              <tr key={user.id} className={!user.is_active ? 'opacity-50 bg-gray-50' : ''}>
-                <td className="px-6 py-4 whitespace-nowrap">
+              <tr key={user.id} className={!user.is_active ? 'bg-gray-50' : ''}>
+                <td className={`px-6 py-4 whitespace-nowrap ${!user.is_active ? 'opacity-50' : ''}`}>
                   <div className="text-sm font-medium text-gray-900">{user.name}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className={`px-6 py-4 whitespace-nowrap ${!user.is_active ? 'opacity-50' : ''}`}>
                   <div className="text-sm text-gray-500">{user.email}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className={`px-6 py-4 whitespace-nowrap ${!user.is_active ? 'opacity-50' : ''}`}>
                   <div className="text-sm text-gray-500">{user.employee_number || '-'}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className={`px-6 py-4 whitespace-nowrap ${!user.is_active ? 'opacity-50' : ''}`}>
                   <div className="text-sm text-gray-500">{user.department || '-'}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className={`px-6 py-4 whitespace-nowrap ${!user.is_active ? 'opacity-50' : ''}`}>
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
@@ -157,12 +157,12 @@ export default function UsersPage() {
                       有効
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
                       無効
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${!user.is_active ? 'opacity-50' : ''}`}>
                   {new Date(user.created_at).toLocaleDateString('ja-JP')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
