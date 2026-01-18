@@ -137,7 +137,6 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 		reports := protected.Group("/reports")
 		{
 			reports.GET("/monthly", reportHandler.GetMonthlyReport)
-			reports.GET("/monthly/pdf", reportHandler.GetMonthlyReportPDF)
 			reports.GET("/custom", reportHandler.GetCustomReport)
 		}
 	}
