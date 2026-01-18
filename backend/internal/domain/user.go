@@ -21,8 +21,8 @@ type User struct {
 	Email          string     `gorm:"uniqueIndex;not null" json:"email"`
 	PasswordHash   string     `gorm:"not null" json:"-"`
 	Name           string     `gorm:"not null" json:"name"`
-	EmployeeNumber string     `gorm:"uniqueIndex" json:"employee_number,omitempty"`
-	Department     string     `json:"department,omitempty"`
+	EmployeeNumber *string    `gorm:"uniqueIndex" json:"employee_number,omitempty"`
+	Department     *string    `json:"department,omitempty"`
 	Role           Role       `gorm:"not null;default:'viewer'" json:"role"`
 	IsActive       bool       `gorm:"default:true;not null" json:"is_active"`
 	CreatedAt      time.Time  `json:"created_at"`

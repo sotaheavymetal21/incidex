@@ -37,8 +37,9 @@ func main() {
 
 	cfg := config.Load()
 
-	// Initialize Database
-	dbConn := db.Connect(cfg.DatabaseURL)
+	// Initialize Database with secure logging
+	isProduction := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
+	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, isProduction)
 
 	// Database migrations are managed by goose
 	// Run 'make migrate-up' (local) or 'make migrate-docker-up' (Docker) to apply migrations
@@ -132,7 +133,7 @@ func main() {
 	// Reports
 	reportRepo := persistence.NewReportRepository(dbConn)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
-	reportHandler := handler.NewReportHandler(reportUsecase, incidentUsecase)
+	reportHandler := handler.NewReportHandler(reportUsecase)
 
 	r := gin.Default()
 
