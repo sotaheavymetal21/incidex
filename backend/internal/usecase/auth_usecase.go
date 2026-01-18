@@ -10,7 +10,7 @@ import (
 )
 
 type AuthUsecase interface {
-	Register(ctx context.Context, name, email, password string) (*domain.User, error)
+	Register(ctx context.Context, name, email, password, employeeNumber, department string) (*domain.User, error)
 	Login(ctx context.Context, email, password string) (string, *domain.User, error)
 }
 
@@ -28,7 +28,12 @@ func NewAuthUsecase(userRepo domain.UserRepository, jwtSecret string, jwtExpiry 
 	}
 }
 
-func (u *authUsecase) Register(ctx context.Context, name, email, password string) (*domain.User, error) {
+func (u *authUsecase) Register(ctx context.Context, name, email, password, employeeNumber, department string) (*domain.User, error) {
+	// Validate user input
+	if err := domain.ValidateUserInput(name, email, employeeNumber, department); err != nil {
+		return nil, err
+	}
+
 	existingUser, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, domain.ErrDatabase("Failed to check existing user", err)
@@ -53,6 +58,13 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password string
 		PasswordHash: string(hashedPassword),
 		Role:         domain.RoleViewer, // Default role
 		IsActive:     true,
+	}
+	// Set optional fields only if not empty
+	if employeeNumber != "" {
+		user.EmployeeNumber = &employeeNumber
+	}
+	if department != "" {
+		user.Department = &department
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
