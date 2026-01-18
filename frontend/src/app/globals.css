@@ -54,6 +54,16 @@
   --info: #0ea5e9;
   --info-light: #e0f2fe;
 
+  /* Incident Status Colors (for consistency across dashboard and lists) */
+  --status-open: #ef4444;
+  --status-open-light: #fee2e2;
+  --status-investigating: #f59e0b;
+  --status-investigating-light: #fef3c7;
+  --status-resolved: #10b981;
+  --status-resolved-light: #d1fae5;
+  --status-closed: #64748b;
+  --status-closed-light: #f1f5f9;
+
   /* Neutral Palette */
   --gray-50: #f8fafc;
   --gray-100: #f1f5f9;
@@ -136,6 +146,16 @@
   --color-error-light: var(--error-light);
   --color-info: var(--info);
   --color-info-light: var(--info-light);
+
+  /* Incident Status */
+  --color-status-open: var(--status-open);
+  --color-status-open-light: var(--status-open-light);
+  --color-status-investigating: var(--status-investigating);
+  --color-status-investigating-light: var(--status-investigating-light);
+  --color-status-resolved: var(--status-resolved);
+  --color-status-resolved-light: var(--status-resolved-light);
+  --color-status-closed: var(--status-closed);
+  --color-status-closed-light: var(--status-closed-light);
 
   /* Grays */
   --color-gray-50: var(--gray-50);
