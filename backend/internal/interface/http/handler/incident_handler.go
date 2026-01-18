@@ -31,15 +31,14 @@ type CreateIncidentRequest struct {
 }
 
 type UpdateIncidentRequest struct {
-	Title       string   `json:"title" binding:"required,max=500"`
-	Description string   `json:"description" binding:"required"`
-	Severity    string   `json:"severity" binding:"required,oneof=critical high medium low"`
-	Status      string   `json:"status" binding:"required,oneof=open investigating resolved closed"`
-	ImpactScope string   `json:"impact_scope"`
-	DetectedAt  string   `json:"detected_at" binding:"required"`
-	ResolvedAt  *string  `json:"resolved_at"`
-	AssigneeID  *uint    `json:"assignee_id"`
-	TagIDs      []uint   `json:"tag_ids"`
+	Title       string  `json:"title" binding:"required,max=500"`
+	Description string  `json:"description" binding:"required"`
+	Severity    string  `json:"severity" binding:"required,oneof=critical high medium low"`
+	Status      string  `json:"status" binding:"required,oneof=open investigating resolved closed"`
+	ImpactScope string  `json:"impact_scope"`
+	DetectedAt  string  `json:"detected_at" binding:"required"`
+	AssigneeID  *uint   `json:"assignee_id"`
+	TagIDs      []uint  `json:"tag_ids"`
 }
 
 type IncidentListResponse struct {
@@ -218,17 +217,6 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Parse resolved_at if provided
-	var resolvedAt *time.Time
-	if req.ResolvedAt != nil && *req.ResolvedAt != "" {
-		parsed, err := time.Parse(time.RFC3339, *req.ResolvedAt)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resolved_at format (expected RFC3339)"})
-			return
-		}
-		resolvedAt = &parsed
-	}
-
 	incident, err := h.incidentUsecase.UpdateIncident(
 		c.Request.Context(),
 		userIDUint,
@@ -240,7 +228,6 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		domain.Status(req.Status),
 		req.ImpactScope,
 		detectedAt,
-		resolvedAt,
 		req.AssigneeID,
 		req.TagIDs,
 	)
