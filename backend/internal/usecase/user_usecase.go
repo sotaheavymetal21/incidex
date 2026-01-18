@@ -10,8 +10,8 @@ import (
 type UserUsecase interface {
 	GetByID(ctx context.Context, id uint) (*domain.User, error)
 	GetAllUsers(ctx context.Context) ([]*domain.User, error)
-	CreateUser(ctx context.Context, email, password, name string, role domain.Role) (*domain.User, error)
-	Update(ctx context.Context, id uint, name, email string, role domain.Role) (*domain.User, error)
+	CreateUser(ctx context.Context, email, password, name string, role domain.Role, employeeNumber, department string) (*domain.User, error)
+	Update(ctx context.Context, id uint, name, email string, role domain.Role, employeeNumber, department string) (*domain.User, error)
 	UpdatePassword(ctx context.Context, id uint, oldPassword, newPassword string) error
 	AdminResetPassword(ctx context.Context, id uint, newPassword string) error
 	Delete(ctx context.Context, id uint) error
@@ -57,7 +57,12 @@ func (u *userUsecase) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
 	return activeUsers, nil
 }
 
-func (u *userUsecase) CreateUser(ctx context.Context, email, password, name string, role domain.Role) (*domain.User, error) {
+func (u *userUsecase) CreateUser(ctx context.Context, email, password, name string, role domain.Role, employeeNumber, department string) (*domain.User, error) {
+	// Validate user input
+	if err := domain.ValidateUserInput(name, email, employeeNumber, department); err != nil {
+		return nil, err
+	}
+
 	// Validate password strength
 	if err := domain.ValidatePasswordStrength(password); err != nil {
 		return nil, domain.ErrValidation(err.Error())
@@ -80,11 +85,13 @@ func (u *userUsecase) CreateUser(ctx context.Context, email, password, name stri
 
 	// Create user
 	user := &domain.User{
-		Email:        email,
-		PasswordHash: string(hashedPassword),
-		Name:         name,
-		Role:         role,
-		IsActive:     true,
+		Email:          email,
+		PasswordHash:   string(hashedPassword),
+		Name:           name,
+		Role:           role,
+		EmployeeNumber: employeeNumber,
+		Department:     department,
+		IsActive:       true,
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
@@ -94,7 +101,12 @@ func (u *userUsecase) CreateUser(ctx context.Context, email, password, name stri
 	return user, nil
 }
 
-func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, role domain.Role) (*domain.User, error) {
+func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, role domain.Role, employeeNumber, department string) (*domain.User, error) {
+	// Validate user input
+	if err := domain.ValidateUserInput(name, email, employeeNumber, department); err != nil {
+		return nil, err
+	}
+
 	// Find existing user
 	user, err := u.userRepo.FindByID(ctx, id)
 	if err != nil {
@@ -122,6 +134,8 @@ func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, r
 	user.Name = name
 	user.Email = email
 	user.Role = role
+	user.EmployeeNumber = employeeNumber
+	user.Department = department
 
 	if err := u.userRepo.Update(ctx, user); err != nil {
 		return nil, err
