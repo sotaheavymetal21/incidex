@@ -19,7 +19,6 @@ function CreateIncidentForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState<Severity>('medium');
-  const [status, setStatus] = useState<Status>('open');
   const [impactScope, setImpactScope] = useState('');
   const [detectedAt, setDetectedAt] = useState('');
   const [assigneeId, setAssigneeId] = useState<number | ''>('');
@@ -92,7 +91,7 @@ function CreateIncidentForm() {
         title: title.trim(),
         description: description.trim(),
         severity,
-        status,
+        status: 'open' as Status,  // 新規作成時は常にopen
         impact_scope: impactScope.trim(),
         detected_at: new Date(detectedAt).toISOString(),
         assignee_id: assigneeId || undefined,
@@ -196,72 +195,39 @@ function CreateIncidentForm() {
             />
           </div>
 
-          {/* Severity and Status */}
-          <div className="grid grid-cols-2 gap-4 mb-5">
-            <div>
-              <label htmlFor="severity" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-                Severity（重要度） <span style={{ color: 'var(--error)' }}>*</span>
-              </label>
-              <select
-                id="severity"
-                value={severity}
-                onChange={(e) => setSeverity(e.target.value as Severity)}
-                required
-                className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
-                style={{
-                  background: 'var(--surface)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--foreground)'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--primary)';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <option value="low">🟢 Low - 軽微な問題（通常業務時間内で対応）</option>
-                <option value="medium">🟡 Medium - 機能劣化あり（4時間以内に対応開始）</option>
-                <option value="high">🟠 High - 主要機能に重大な影響（1時間以内に対応開始）</option>
-                <option value="critical">🔴 Critical - サービス停止・全体障害（即座に対応）</option>
-              </select>
-              <p className="mt-1.5 text-xs" style={{ color: 'var(--secondary)' }}>
-                詳細な基準は <a href="/docs/severity-guidelines.md" target="_blank" className="transition-colors" style={{ color: 'var(--primary)' }} onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}>Severityガイドライン</a> を参照してください
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="status" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-                Status <span style={{ color: 'var(--error)' }}>*</span>
-              </label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as Status)}
-                required
-                className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
-                style={{
-                  background: 'var(--surface)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--foreground)'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--primary)';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <option value="open">Open</option>
-                <option value="investigating">Investigating</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
+          {/* Severity */}
+          <div className="mb-5">
+            <label htmlFor="severity" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+              Severity（重要度） <span style={{ color: 'var(--error)' }}>*</span>
+            </label>
+            <select
+              id="severity"
+              value={severity}
+              onChange={(e) => setSeverity(e.target.value as Severity)}
+              required
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <option value="low">🟢 Low - 軽微な問題（通常業務時間内で対応）</option>
+              <option value="medium">🟡 Medium - 機能劣化あり（4時間以内に対応開始）</option>
+              <option value="high">🟠 High - 主要機能に重大な影響（1時間以内に対応開始）</option>
+              <option value="critical">🔴 Critical - サービス停止・全体障害（即座に対応）</option>
+            </select>
+            <p className="mt-1.5 text-xs" style={{ color: 'var(--secondary)' }}>
+              詳細な基準は <a href="/docs/severity-guidelines.md" target="_blank" className="transition-colors" style={{ color: 'var(--primary)' }} onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}>Severityガイドライン</a> を参照してください
+            </p>
           </div>
 
           {/* Impact Scope */}
