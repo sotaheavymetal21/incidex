@@ -55,11 +55,12 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 			testQuery := r.db.WithContext(ctx).Model(&domain.Incident{}).
 				Where("search_vector @@ to_tsquery('simple', ?)", tsquery)
 
-			if err := testQuery.Count(&testCount).Error; err == nil {
-				// Full-text search available, use it
+			testErr := testQuery.Count(&testCount).Error
+			if testErr == nil && testCount > 0 {
+				// Full-text search available and found results, use it
 				query = query.Where("search_vector @@ to_tsquery('simple', ?)", tsquery)
 			} else {
-				// Fall back to LIKE search
+				// Fall back to LIKE search (for non-English text like Japanese, or when no full-text results)
 				searchPattern := "%" + strings.ToLower(filters.Search) + "%"
 				query = query.Where("LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(impact_scope) LIKE ?",
 					searchPattern, searchPattern, searchPattern)
