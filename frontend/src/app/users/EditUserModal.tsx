@@ -117,102 +117,179 @@ export default function EditUserModal({ user, onClose, onSuccess }: EditUserModa
     }
   };
 
-  const inputClassName = (hasError: boolean) =>
-    `shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${
-      hasError ? 'border-red-500' : ''
-    }`;
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    e.currentTarget.style.borderColor = 'var(--primary)';
+    e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+  };
+
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>, hasError: boolean) => {
+    e.currentTarget.style.borderColor = hasError ? 'var(--error)' : 'var(--border)';
+    e.currentTarget.style.boxShadow = 'none';
+  };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-96">
-        <h2 className="text-xl font-bold mb-4">ユーザー情報編集</h2>
+    <div
+      className="fixed inset-0 overflow-y-auto h-full w-full flex items-center justify-center z-50"
+      style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="rounded-xl shadow-xl w-96 p-6 border-2 animate-scaleIn"
+        style={{
+          background: 'var(--surface)',
+          borderColor: 'var(--border)'
+        }}
+      >
+        <h2
+          className="text-xl font-bold mb-5"
+          style={{ color: 'var(--foreground)' }}
+        >
+          ユーザー情報編集
+        </h2>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div
+            className="px-4 py-3 rounded-lg mb-4 border-2"
+            style={{
+              background: 'var(--error-light)',
+              borderColor: 'var(--error)',
+              color: 'var(--error)'
+            }}
+          >
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              名前 <span className="text-red-500">*</span>
+            <label
+              className="block text-sm font-semibold mb-2"
+              style={{ color: 'var(--foreground)' }}
+            >
+              名前 <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
-              className={inputClassName(!!fieldErrors.name)}
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: fieldErrors.name ? 'var(--error)' : 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={handleInputFocus}
+              onBlur={(e) => handleInputBlur(e, !!fieldErrors.name)}
               maxLength={MAX_NAME_LENGTH}
               required
             />
             {fieldErrors.name && (
-              <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--error)' }}>{fieldErrors.name}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">{MAX_NAME_LENGTH}文字以内</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--secondary)' }}>{MAX_NAME_LENGTH}文字以内</p>
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              メールアドレス <span className="text-red-500">*</span>
+            <label
+              className="block text-sm font-semibold mb-2"
+              style={{ color: 'var(--foreground)' }}
+            >
+              メールアドレス <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => handleFieldChange('email', e.target.value)}
-              className={inputClassName(!!fieldErrors.email)}
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: fieldErrors.email ? 'var(--error)' : 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={handleInputFocus}
+              onBlur={(e) => handleInputBlur(e, !!fieldErrors.email)}
               maxLength={MAX_EMAIL_LENGTH}
               required
             />
             {fieldErrors.email && (
-              <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--error)' }}>{fieldErrors.email}</p>
             )}
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
+            <label
+              className="block text-sm font-semibold mb-2"
+              style={{ color: 'var(--foreground)' }}
+            >
               社員番号
             </label>
             <input
               type="text"
               value={formData.employee_number || ''}
               onChange={(e) => handleFieldChange('employee_number', e.target.value)}
-              className={inputClassName(!!fieldErrors.employee_number)}
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: fieldErrors.employee_number ? 'var(--error)' : 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={handleInputFocus}
+              onBlur={(e) => handleInputBlur(e, !!fieldErrors.employee_number)}
               maxLength={MAX_EMPLOYEE_NUMBER_LENGTH}
               placeholder="例: EMP-001"
             />
             {fieldErrors.employee_number && (
-              <p className="text-red-500 text-xs mt-1">{fieldErrors.employee_number}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--error)' }}>{fieldErrors.employee_number}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">英数字とハイフンのみ、{MAX_EMPLOYEE_NUMBER_LENGTH}文字以内</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--secondary)' }}>英数字とハイフンのみ、{MAX_EMPLOYEE_NUMBER_LENGTH}文字以内</p>
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
+            <label
+              className="block text-sm font-semibold mb-2"
+              style={{ color: 'var(--foreground)' }}
+            >
               所属部署
             </label>
             <input
               type="text"
               value={formData.department || ''}
               onChange={(e) => handleFieldChange('department', e.target.value)}
-              className={inputClassName(!!fieldErrors.department)}
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: fieldErrors.department ? 'var(--error)' : 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={handleInputFocus}
+              onBlur={(e) => handleInputBlur(e, !!fieldErrors.department)}
               maxLength={MAX_DEPARTMENT_LENGTH}
               placeholder="例: 開発部"
             />
             {fieldErrors.department && (
-              <p className="text-red-500 text-xs mt-1">{fieldErrors.department}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--error)' }}>{fieldErrors.department}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">{MAX_DEPARTMENT_LENGTH}文字以内</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--secondary)' }}>{MAX_DEPARTMENT_LENGTH}文字以内</p>
           </div>
 
           <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              権限 <span className="text-red-500">*</span>
+            <label
+              className="block text-sm font-semibold mb-2"
+              style={{ color: 'var(--foreground)' }}
+            >
+              権限 <span style={{ color: 'var(--error)' }}>*</span>
             </label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)'
+              }}
+              onFocus={handleInputFocus}
+              onBlur={(e) => handleInputBlur(e, false)}
               required
             >
               <option value="admin">管理者</option>
@@ -221,18 +298,34 @@ export default function EditUserModal({ user, onClose, onSuccess }: EditUserModa
             </select>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600"
+              className="flex-1 px-4 py-2.5 border-2 rounded-lg transition-all font-medium"
+              style={{
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+                background: 'var(--surface)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--secondary-light)';
+                e.currentTarget.style.borderColor = 'var(--secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--surface)';
+                e.currentTarget.style.borderColor = 'var(--border)';
+              }}
               disabled={loading}
             >
               キャンセル
             </button>
             <button
               type="submit"
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
+              className="flex-1 px-4 py-2.5 text-white rounded-lg shadow-lg transition-all font-medium disabled:opacity-50"
+              style={{ background: 'var(--primary)' }}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.background = 'var(--primary-hover)')}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--primary)'}
               disabled={loading}
             >
               {loading ? '保存中...' : '保存'}
