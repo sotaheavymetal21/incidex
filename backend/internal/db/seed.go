@@ -11,6 +11,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// stringPtr returns a pointer to the given string
+func stringPtr(s string) *string {
+	return &s
+}
+
 // clearAllTables deletes all data from all tables in the correct order
 func clearAllTables(db *gorm.DB) error {
 	log.Println("Clearing all existing data from database...")
@@ -99,36 +104,36 @@ func seedUsers(db *gorm.DB, ctx context.Context) ([]*domain.User, string, error)
 			Email:          "admin@example.com",
 			Name:           "管理者ユーザー",
 			Role:           domain.RoleAdmin,
-			EmployeeNumber: "EMP-001",
-			Department:     "管理部",
+			EmployeeNumber: stringPtr("EMP-001"),
+			Department:     stringPtr("管理部"),
 		},
 		{
 			Email:          "editor1@example.com",
 			Name:           "編集者 太郎",
 			Role:           domain.RoleEditor,
-			EmployeeNumber: "EMP-002",
-			Department:     "開発部",
+			EmployeeNumber: stringPtr("EMP-002"),
+			Department:     stringPtr("開発部"),
 		},
 		{
 			Email:          "editor2@example.com",
 			Name:           "編集者 花子",
 			Role:           domain.RoleEditor,
-			EmployeeNumber: "EMP-003",
-			Department:     "開発部",
+			EmployeeNumber: stringPtr("EMP-003"),
+			Department:     stringPtr("開発部"),
 		},
 		{
 			Email:          "viewer1@example.com",
 			Name:           "閲覧者 一郎",
 			Role:           domain.RoleViewer,
-			EmployeeNumber: "EMP-004",
-			Department:     "営業部",
+			EmployeeNumber: stringPtr("EMP-004"),
+			Department:     stringPtr("営業部"),
 		},
 		{
 			Email:          "viewer2@example.com",
 			Name:           "閲覧者 二郎",
 			Role:           domain.RoleViewer,
-			EmployeeNumber: "EMP-005",
-			Department:     "営業部",
+			EmployeeNumber: stringPtr("EMP-005"),
+			Department:     stringPtr("営業部"),
 		},
 	}
 
