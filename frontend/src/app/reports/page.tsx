@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { reportApi } from '../../lib/api';
 import { MonthlyReport } from '../../types/report';
@@ -10,18 +10,30 @@ export default function ReportsPage() {
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   // Date selection state
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [calendarYear, setCalendarYear] = useState(currentDate.getFullYear());
 
   useEffect(() => {
     if (token) {
       fetchReport();
     }
   }, [token, selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchReport = async () => {
     try {
@@ -36,37 +48,33 @@ export default function ReportsPage() {
     }
   };
 
-  const handlePreviousMonth = () => {
-    if (selectedMonth === 1) {
-      setSelectedMonth(12);
-      setSelectedYear(selectedYear - 1);
-    } else {
-      setSelectedMonth(selectedMonth - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (selectedMonth === 12) {
-      setSelectedMonth(1);
-      setSelectedYear(selectedYear + 1);
-    } else {
-      setSelectedMonth(selectedMonth + 1);
-    }
+  const handleMonthSelect = (month: number) => {
+    setSelectedYear(calendarYear);
+    setSelectedMonth(month);
+    setShowCalendar(false);
   };
 
   const formatMonth = (year: number, month: number) => {
     return `${year}年${month}月`;
   };
 
-  const handleDownloadPDF = async () => {
-    try {
-      setDownloadingPDF(true);
-      await reportApi.downloadMonthlyReportPDF(token!, selectedYear, selectedMonth);
-    } catch (err) {
-      alert('PDFのダウンロードに失敗しました: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setDownloadingPDF(false);
-    }
+  const months = [
+    '1月', '2月', '3月', '4月',
+    '5月', '6月', '7月', '8月',
+    '9月', '10月', '11月', '12月'
+  ];
+
+  const isCurrentMonth = (month: number) => {
+    return calendarYear === currentDate.getFullYear() && month === currentDate.getMonth() + 1;
+  };
+
+  const isSelectedMonth = (month: number) => {
+    return calendarYear === selectedYear && month === selectedMonth;
+  };
+
+  const isFutureMonth = (month: number) => {
+    return calendarYear > currentDate.getFullYear() ||
+      (calendarYear === currentDate.getFullYear() && month > currentDate.getMonth() + 1);
   };
 
   const getSeverityLabel = (severity: string) => {
@@ -148,7 +156,7 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      {/* Month Selector and PDF Download */}
+      {/* Month Selector */}
       <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-lg shadow">
         <button
           onClick={handlePreviousMonth}
@@ -156,32 +164,8 @@ export default function ReportsPage() {
         >
           ← 前月
         </button>
-        <div className="flex items-center gap-4">
-          <div className="text-xl font-semibold text-gray-900">
-            {formatMonth(selectedYear, selectedMonth)}
-          </div>
-          <button
-            onClick={handleDownloadPDF}
-            disabled={downloadingPDF}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md flex items-center gap-2"
-          >
-            {downloadingPDF ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                ダウンロード中...
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                PDFダウンロード
-              </>
-            )}
-          </button>
+        <div className="text-xl font-semibold text-gray-900">
+          {formatMonth(selectedYear, selectedMonth)}
         </div>
         <button
           onClick={handleNextMonth}
@@ -260,24 +244,22 @@ export default function ReportsPage() {
             {Object.entries(report.severity_breakdown).map(([severity, count]) => (
               <div key={severity} className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className={`w-3 h-3 rounded-full mr-3 ${
-                    severity === 'critical' ? 'bg-red-500' :
+                  <div className={`w-3 h-3 rounded-full mr-3 ${severity === 'critical' ? 'bg-red-500' :
                     severity === 'high' ? 'bg-orange-500' :
-                    severity === 'medium' ? 'bg-yellow-500' :
-                    'bg-green-500'
-                  }`}></div>
+                      severity === 'medium' ? 'bg-yellow-500' :
+                        'bg-green-500'
+                    }`}></div>
                   <span className="text-gray-700">{getSeverityLabel(severity)}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-gray-900 font-semibold mr-3">{count}</span>
                   <div className="w-32 bg-gray-200 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full ${
-                        severity === 'critical' ? 'bg-red-500' :
+                      className={`h-2 rounded-full ${severity === 'critical' ? 'bg-red-500' :
                         severity === 'high' ? 'bg-orange-500' :
-                        severity === 'medium' ? 'bg-yellow-500' :
-                        'bg-green-500'
-                      }`}
+                          severity === 'medium' ? 'bg-yellow-500' :
+                            'bg-green-500'
+                        }`}
                       style={{
                         width: `${(count / report.summary.total_incidents) * 100}%`,
                       }}
@@ -315,7 +297,7 @@ export default function ReportsPage() {
 
       {/* Top Tags */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">よく使われるタグ</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">タグ</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {report.top_tags.map((tag) => (
             <div key={tag.tag_id} className="bg-gray-50 p-4 rounded-lg">
