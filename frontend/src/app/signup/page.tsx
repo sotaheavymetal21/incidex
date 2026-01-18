@@ -9,15 +9,35 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [employeeNumber, setEmployeeNumber] = useState('');
+  const [department, setDepartment] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    try {
 
-      await authApi.register(name, email, password);
+    // Validate password strength
+    if (password.length < 8) {
+      setError('パスワードは8文字以上である必要があります');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('パスワードには大文字を含める必要があります');
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError('パスワードには小文字を含める必要があります');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError('パスワードには数字を含める必要があります');
+      return;
+    }
+
+    try {
+      await authApi.register(name, email, password, employeeNumber, department);
       // Automatically redirect to login or login directly
       router.push('/login');
     } catch (err: any) {
@@ -193,6 +213,76 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <label
+                    htmlFor="employeeNumber"
+                    className="block text-sm font-semibold mb-2"
+                    style={{
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                  >
+                    社員番号
+                  </label>
+                  <input
+                    id="employeeNumber"
+                    type="text"
+                    required
+                    className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
+                    style={{
+                      background: 'var(--gray-50)',
+                      border: '2px solid var(--border)',
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    placeholder="EMP-001"
+                    value={employeeNumber}
+                    onChange={(e) => setEmployeeNumber(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="department"
+                    className="block text-sm font-semibold mb-2"
+                    style={{
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                  >
+                    所属部署
+                  </label>
+                  <input
+                    id="department"
+                    type="text"
+                    required
+                    className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
+                    style={{
+                      background: 'var(--gray-50)',
+                      border: '2px solid var(--border)',
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    placeholder="開発部"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label
                     htmlFor="password"
                     className="block text-sm font-semibold mb-2"
                     style={{
@@ -206,6 +296,7 @@ export default function SignupPage() {
                     id="password"
                     type="password"
                     required
+                    minLength={8}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
@@ -225,6 +316,21 @@ export default function SignupPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                  <div
+                    className="mt-2 text-xs space-y-1"
+                    style={{
+                      color: 'var(--muted)',
+                      fontFamily: 'var(--font-body)'
+                    }}
+                  >
+                    <p className="font-medium" style={{ color: 'var(--foreground)' }}>パスワード要件:</p>
+                    <ul className="list-disc list-inside ml-1 space-y-0.5">
+                      <li>8文字以上</li>
+                      <li>大文字（A-Z）を含む</li>
+                      <li>小文字（a-z）を含む</li>
+                      <li>数字（0-9）を含む</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
@@ -302,7 +408,7 @@ export default function SignupPage() {
             fontFamily: 'var(--font-body)'
           }}
         >
-          © 2025 Incidex. All rights reserved.
+          © 2026 Incidex. All rights reserved.
         </p>
       </div>
 
