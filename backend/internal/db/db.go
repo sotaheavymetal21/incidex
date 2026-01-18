@@ -1,18 +1,23 @@
 package db
 
 import (
-	"log"
-
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func Connect(databaseURL string) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+// Connect establishes a database connection with secure logging
+func Connect(databaseURL string, zapLogger *zap.Logger, isProduction bool) *gorm.DB {
+	// Create secure logger that masks sensitive data
+	gormLogger := NewSecureLogger(zapLogger, isProduction)
+
+	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+		Logger: gormLogger,
+	})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		zapLogger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	log.Println("Details: Successfully connected to database")
+	zapLogger.Info("Successfully connected to database")
 	return db
 }
