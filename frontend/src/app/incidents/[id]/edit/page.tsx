@@ -25,7 +25,6 @@ export default function EditIncidentPage() {
   const [status, setStatus] = useState<Status>('open');
   const [impactScope, setImpactScope] = useState('');
   const [detectedAt, setDetectedAt] = useState('');
-  const [resolvedAt, setResolvedAt] = useState('');
   const [assigneeId, setAssigneeId] = useState<number | ''>('');
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
@@ -54,7 +53,6 @@ export default function EditIncidentPage() {
       setImpactScope(incident.impact_scope || '');
       // Convert ISO string to datetime-local format
       setDetectedAt(new Date(incident.detected_at).toISOString().slice(0, 16));
-      setResolvedAt(incident.resolved_at ? new Date(incident.resolved_at).toISOString().slice(0, 16) : '');
       setAssigneeId(incident.assignee_id || '');
       setSelectedTagIds(incident.tags.map((tag) => tag.id));
     } catch (err: any) {
@@ -105,10 +103,6 @@ export default function EditIncidentPage() {
       setError('Detected At is required');
       return;
     }
-    if (resolvedAt && new Date(resolvedAt) < new Date(detectedAt)) {
-      setError('Resolved At must be after Detected At');
-      return;
-    }
 
     setLoading(true);
     try {
@@ -119,7 +113,6 @@ export default function EditIncidentPage() {
         status,
         impact_scope: impactScope.trim(),
         detected_at: new Date(detectedAt).toISOString(),
-        resolved_at: resolvedAt ? new Date(resolvedAt).toISOString() : null,
         assignee_id: assigneeId || undefined,
         tag_ids: selectedTagIds,
       };
