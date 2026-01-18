@@ -85,13 +85,18 @@ func (u *userUsecase) CreateUser(ctx context.Context, email, password, name stri
 
 	// Create user
 	user := &domain.User{
-		Email:          email,
-		PasswordHash:   string(hashedPassword),
-		Name:           name,
-		Role:           role,
-		EmployeeNumber: employeeNumber,
-		Department:     department,
-		IsActive:       true,
+		Email:        email,
+		PasswordHash: string(hashedPassword),
+		Name:         name,
+		Role:         role,
+		IsActive:     true,
+	}
+	// Set optional fields only if not empty
+	if employeeNumber != "" {
+		user.EmployeeNumber = &employeeNumber
+	}
+	if department != "" {
+		user.Department = &department
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
@@ -134,8 +139,17 @@ func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, r
 	user.Name = name
 	user.Email = email
 	user.Role = role
-	user.EmployeeNumber = employeeNumber
-	user.Department = department
+	// Set optional fields only if not empty, otherwise nil
+	if employeeNumber != "" {
+		user.EmployeeNumber = &employeeNumber
+	} else {
+		user.EmployeeNumber = nil
+	}
+	if department != "" {
+		user.Department = &department
+	} else {
+		user.Department = nil
+	}
 
 	if err := u.userRepo.Update(ctx, user); err != nil {
 		return nil, err
