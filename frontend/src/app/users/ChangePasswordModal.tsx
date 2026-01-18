@@ -34,9 +34,21 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
       return;
     }
 
-    // Validate password length
-    if (formData.new_password.length < 6) {
-      setError('パスワードは6文字以上である必要があります');
+    // Validate password strength
+    if (formData.new_password.length < 8) {
+      setError('パスワードは8文字以上である必要があります');
+      return;
+    }
+    if (!/[A-Z]/.test(formData.new_password)) {
+      setError('パスワードには大文字を含める必要があります');
+      return;
+    }
+    if (!/[a-z]/.test(formData.new_password)) {
+      setError('パスワードには小文字を含める必要があります');
+      return;
+    }
+    if (!/[0-9]/.test(formData.new_password)) {
+      setError('パスワードには数字を含める必要があります');
       return;
     }
 
@@ -94,7 +106,7 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
           {isAdminReset && (
             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded p-3">
               <p className="text-sm text-yellow-800">
-                管理者として他のユーザーのパスワードをリセットします。現在のパスワードは不要です。
+                管理者として他のユーザーのパスワードをリセットします。
               </p>
             </div>
           )}
@@ -109,10 +121,18 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
               onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
-            <p className="text-xs text-gray-500 mt-1">最低6文字</p>
+            <div className="mt-2 text-xs text-gray-500 space-y-1">
+              <p className="font-medium text-gray-600">パスワード要件:</p>
+              <ul className="list-disc list-inside ml-1 space-y-0.5">
+                <li>8文字以上</li>
+                <li>大文字（A-Z）を含む</li>
+                <li>小文字（a-z）を含む</li>
+                <li>数字（0-9）を含む</li>
+              </ul>
+            </div>
           </div>
 
           <div className="mb-6">
@@ -125,7 +145,7 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
           </div>
