@@ -246,10 +246,10 @@ function IncidentsPageContent() {
 
   const getStatusStyle = (status: Status) => {
     switch (status) {
-      case 'open': return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-400)' };
-      case 'investigating': return { background: 'var(--info-light)', color: 'var(--info)', borderColor: 'var(--info)' };
-      case 'resolved': return { background: 'var(--success-light)', color: 'var(--success)', borderColor: 'var(--success)' };
-      case 'closed': return { background: 'var(--secondary-light)', color: 'var(--secondary-dark)', borderColor: 'var(--secondary)' };
+      case 'open': return { background: 'var(--status-open-light)', color: 'var(--status-open)', borderColor: 'var(--status-open)' };
+      case 'investigating': return { background: 'var(--status-investigating-light)', color: 'var(--status-investigating)', borderColor: 'var(--status-investigating)' };
+      case 'resolved': return { background: 'var(--status-resolved-light)', color: 'var(--status-resolved)', borderColor: 'var(--status-resolved)' };
+      case 'closed': return { background: 'var(--status-closed-light)', color: 'var(--status-closed)', borderColor: 'var(--status-closed)' };
       default: return { background: 'var(--gray-100)', color: 'var(--gray-700)', borderColor: 'var(--gray-300)' };
     }
   };
