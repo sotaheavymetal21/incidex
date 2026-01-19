@@ -134,9 +134,8 @@ export default function SeverityGuide() {
           </h2>
         </div>
         <svg
-          className={`w-6 h-6 transition-transform duration-300 ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
+          className={`w-6 h-6 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''
+            }`}
           style={{ color: 'var(--primary)' }}
           fill="none"
           stroke="currentColor"
@@ -287,7 +286,6 @@ export default function SeverityGuide() {
                 fontFamily: 'var(--font-display)'
               }}
             >
-              <span className="text-2xl mr-2">💡</span>
               Tips
             </h4>
             <ul className="space-y-2 text-sm font-medium" style={{ color: 'var(--info)', fontFamily: 'var(--font-body)' }}>
