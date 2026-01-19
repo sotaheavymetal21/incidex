@@ -40,24 +40,37 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
     config.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(url, config);
+  try {
+    const response = await fetch(url, config);
 
-  if (!response.ok) {
-    // 401エラー（認証エラー）の場合は自動的にログアウト処理
-    if (response.status === 401 && !endpoint.includes('/auth/')) {
-      // localStorageをクリア
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // ログインページにリダイレクト
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+    if (!response.ok) {
+      // 401エラー（認証エラー）の場合は自動的にログアウト処理
+      if (response.status === 401 && !endpoint.includes('/auth/')) {
+        // localStorageをクリア
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // ログインページにリダイレクト
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
       }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Request failed with status ${response.status}`);
     }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Request failed with status ${response.status}`);
-  }
 
-  return response.json();
+    return response.json();
+  } catch (error) {
+    // ネットワークエラーの場合、より詳細なエラーメッセージを提供
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      console.error(`API request failed: ${url}`, error);
+      throw new Error(
+        `バックエンドサーバーに接続できませんでした。サーバーが起動しているか確認してください。\n` +
+        `URL: ${url}\n` +
+        `エラー: ${error.message}`
+      );
+    }
+    throw error;
+  }
 }
 
 export const authApi = {
