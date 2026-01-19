@@ -21,20 +21,20 @@ func NewPostMortemHandler(postMortemUsecase usecase.PostMortemUsecase) *PostMort
 
 type CreatePostMortemRequest struct {
 	IncidentID       uint                       `json:"incident_id" binding:"required"`
-	RootCause        string                     `json:"root_cause"`
-	ImpactAnalysis   string                     `json:"impact_analysis"`
-	WhatWentWell     string                     `json:"what_went_well"`
-	WhatWentWrong    string                     `json:"what_went_wrong"`
-	LessonsLearned   string                     `json:"lessons_learned"`
+	RootCause        string                     `json:"root_cause" binding:"max=10000"`
+	ImpactAnalysis   string                     `json:"impact_analysis" binding:"max=10000"`
+	WhatWentWell     string                     `json:"what_went_well" binding:"max=10000"`
+	WhatWentWrong    string                     `json:"what_went_wrong" binding:"max=10000"`
+	LessonsLearned   string                     `json:"lessons_learned" binding:"max=10000"`
 	FiveWhysAnalysis *domain.FiveWhysAnalysis   `json:"five_whys_analysis"`
 }
 
 type UpdatePostMortemRequest struct {
-	RootCause        string                     `json:"root_cause"`
-	ImpactAnalysis   string                     `json:"impact_analysis"`
-	WhatWentWell     string                     `json:"what_went_well"`
-	WhatWentWrong    string                     `json:"what_went_wrong"`
-	LessonsLearned   string                     `json:"lessons_learned"`
+	RootCause        string                     `json:"root_cause" binding:"max=10000"`
+	ImpactAnalysis   string                     `json:"impact_analysis" binding:"max=10000"`
+	WhatWentWell     string                     `json:"what_went_well" binding:"max=10000"`
+	WhatWentWrong    string                     `json:"what_went_wrong" binding:"max=10000"`
+	LessonsLearned   string                     `json:"lessons_learned" binding:"max=10000"`
 	FiveWhysAnalysis *domain.FiveWhysAnalysis   `json:"five_whys_analysis"`
 }
 
