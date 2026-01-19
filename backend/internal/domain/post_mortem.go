@@ -37,11 +37,11 @@ const (
 
 // FiveWhysAnalysis represents the Five Whys structure
 type FiveWhysAnalysis struct {
-	Why1 string `json:"why1"`
-	Why2 string `json:"why2"`
-	Why3 string `json:"why3"`
-	Why4 string `json:"why4"`
-	Why5 string `json:"why5"`
+	Why1 string `json:"why1" binding:"max=1000"`
+	Why2 string `json:"why2" binding:"max=1000"`
+	Why3 string `json:"why3" binding:"max=1000"`
+	Why4 string `json:"why4" binding:"max=1000"`
+	Why5 string `json:"why5" binding:"max=1000"`
 }
 
 // PostMortemRepository defines the interface for post-mortem data access.
