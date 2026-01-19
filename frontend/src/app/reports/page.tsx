@@ -54,6 +54,28 @@ export default function ReportsPage() {
     setShowCalendar(false);
   };
 
+  const handlePreviousMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedYear(selectedYear - 1);
+      setSelectedMonth(12);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    // 未来の月には進めない
+    const isCurrentMonth = selectedYear === currentDate.getFullYear() && selectedMonth === currentDate.getMonth() + 1;
+    if (isCurrentMonth) return;
+
+    if (selectedMonth === 12) {
+      setSelectedYear(selectedYear + 1);
+      setSelectedMonth(1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
   const formatMonth = (year: number, month: number) => {
     return `${year}年${month}月`;
   };
@@ -169,7 +191,12 @@ export default function ReportsPage() {
         </div>
         <button
           onClick={handleNextMonth}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+          disabled={selectedYear === currentDate.getFullYear() && selectedMonth === currentDate.getMonth() + 1}
+          className={`px-4 py-2 text-sm font-medium rounded-md ${
+            selectedYear === currentDate.getFullYear() && selectedMonth === currentDate.getMonth() + 1
+              ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+              : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+          }`}
         >
           次月 →
         </button>
