@@ -39,6 +39,28 @@ func NewPostMortemUsecase(
 	}
 }
 
+const maxFiveWhysFieldLength = 1000
+
+// validateFiveWhys validates the length of each field in FiveWhysAnalysis
+func validateFiveWhys(fiveWhys *domain.FiveWhysAnalysis) error {
+	if len(fiveWhys.Why1) > maxFiveWhysFieldLength {
+		return domain.ErrValidation("Why1 must be at most 1000 characters")
+	}
+	if len(fiveWhys.Why2) > maxFiveWhysFieldLength {
+		return domain.ErrValidation("Why2 must be at most 1000 characters")
+	}
+	if len(fiveWhys.Why3) > maxFiveWhysFieldLength {
+		return domain.ErrValidation("Why3 must be at most 1000 characters")
+	}
+	if len(fiveWhys.Why4) > maxFiveWhysFieldLength {
+		return domain.ErrValidation("Why4 must be at most 1000 characters")
+	}
+	if len(fiveWhys.Why5) > maxFiveWhysFieldLength {
+		return domain.ErrValidation("Why5 must be at most 1000 characters")
+	}
+	return nil
+}
+
 func (u *postMortemUsecase) CreatePostMortem(
 	ctx context.Context,
 	authorID uint,
@@ -46,6 +68,13 @@ func (u *postMortemUsecase) CreatePostMortem(
 	rootCause, impactAnalysis, whatWentWell, whatWentWrong, lessonsLearned string,
 	fiveWhys *domain.FiveWhysAnalysis,
 ) (*domain.PostMortem, error) {
+	// Validate FiveWhysAnalysis field lengths
+	if fiveWhys != nil {
+		if err := validateFiveWhys(fiveWhys); err != nil {
+			return nil, err
+		}
+	}
+
 	// Check if incident exists
 	_, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
@@ -105,6 +134,13 @@ func (u *postMortemUsecase) UpdatePostMortem(
 	rootCause, impactAnalysis, whatWentWell, whatWentWrong, lessonsLearned string,
 	fiveWhys *domain.FiveWhysAnalysis,
 ) (*domain.PostMortem, error) {
+	// Validate FiveWhysAnalysis field lengths
+	if fiveWhys != nil {
+		if err := validateFiveWhys(fiveWhys); err != nil {
+			return nil, err
+		}
+	}
+
 	// Get existing post-mortem
 	pm, err := u.postMortemRepo.FindByID(ctx, id)
 	if err != nil {
