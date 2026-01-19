@@ -23,7 +23,6 @@ export default function PostMortemPage() {
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
 
   // Validate incidentId
   if (isNaN(incidentId)) {
@@ -128,18 +127,6 @@ export default function PostMortemPage() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAISuggestion = async () => {
-    try {
-      setAiLoading(true);
-      const response = await postMortemApi.generateAISuggestion(token!, incidentId);
-      setRootCause(response.suggestion);
-    } catch (err: any) {
-      alert('AI提案の生成に失敗しました: ' + err.message);
-    } finally {
-      setAiLoading(false);
     }
   };
 
@@ -275,6 +262,23 @@ export default function PostMortemPage() {
     }
   };
 
+  const handleCompleteActionItem = async (item: ActionItem) => {
+    try {
+      const updated = await actionItemApi.update(token!, item.id, {
+        title: item.title,
+        description: item.description,
+        assignee_id: item.assignee_id ?? undefined,
+        priority: item.priority,
+        status: 'completed',
+        due_date: item.due_date ?? undefined,
+        related_links: item.related_links,
+      });
+      setActionItems(actionItems.map(ai => ai.id === updated.id ? updated : ai));
+    } catch (err: any) {
+      alert('完了処理に失敗しました: ' + err.message);
+    }
+  };
+
   const getPriorityColor = (priority: Priority) => {
     switch (priority) {
       case 'high':
@@ -352,22 +356,7 @@ export default function PostMortemPage() {
 
         {/* Root Cause Section */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Root Cause (根本原因)</h2>
-            <button
-              onClick={handleAISuggestion}
-              disabled={aiLoading}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400"
-            >
-              {aiLoading ? 'AI提案生成中...' : 'AI提案を取得'}
-            </button>
-          </div>
-          {postMortem?.ai_root_cause_suggestion && (
-            <div className="bg-purple-50 border border-purple-200 rounded-md p-4 mb-4">
-              <p className="text-sm font-medium text-purple-800">AI提案:</p>
-              <p className="text-sm text-purple-700 mt-1">{postMortem.ai_root_cause_suggestion}</p>
-            </div>
-          )}
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">根本原因</h2>
           <textarea
             value={rootCause}
             onChange={(e) => setRootCause(e.target.value)}
@@ -379,7 +368,7 @@ export default function PostMortemPage() {
 
         {/* Impact Analysis */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Analysis (影響分析)</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">影響分析</h2>
           <textarea
             value={impactAnalysis}
             onChange={(e) => setImpactAnalysis(e.target.value)}
@@ -394,7 +383,7 @@ export default function PostMortemPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                What Went Well (うまくいったこと)
+                うまくいったこと
               </h2>
               <textarea
                 value={whatWentWell}
@@ -406,7 +395,7 @@ export default function PostMortemPage() {
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                What Went Wrong (問題点)
+                問題点
               </h2>
               <textarea
                 value={whatWentWrong}
@@ -421,7 +410,7 @@ export default function PostMortemPage() {
 
         {/* Lessons Learned */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Lessons Learned (教訓)</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">教訓</h2>
           <textarea
             value={lessonsLearned}
             onChange={(e) => setLessonsLearned(e.target.value)}
@@ -433,12 +422,12 @@ export default function PostMortemPage() {
 
         {/* 5 Whys Analysis */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">5 Whys Analysis (5回のなぜ)</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">5回のなぜ分析</h2>
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((index) => (
               <div key={index}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Why {index}
+                  なぜ {index}
                 </label>
                 <input
                   type="text"
@@ -458,7 +447,7 @@ export default function PostMortemPage() {
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              Action Items (アクションアイテム)
+              アクションアイテム
             </h2>
             {canEditActionItems && (
               <button
@@ -509,10 +498,47 @@ export default function PostMortemPage() {
                           期限: {new Date(item.due_date).toLocaleDateString('ja-JP')}
                         </span>
                       )}
+                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
+                        作成: {new Date(item.created_at).toLocaleDateString('ja-JP')}
+                      </span>
                     </div>
+                    {item.related_links && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {item.related_links.split(',').map((link, index) => {
+                          const trimmedLink = link.trim();
+                          if (!trimmedLink) return null;
+                          return (
+                            <a
+                              key={index}
+                              href={trimmedLink.startsWith('http') ? trimmedLink : `https://${trimmedLink}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                              </svg>
+                              {trimmedLink.length > 30 ? trimmedLink.substring(0, 30) + '...' : trimmedLink}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   {canEditActionItems && (
                     <div className="flex gap-2 ml-4">
+                      {item.status !== 'completed' && (
+                        <button
+                          onClick={() => handleCompleteActionItem(item)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:text-white hover:bg-green-600 border border-green-600 rounded transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          完了
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEditActionItem(item)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:text-white hover:bg-blue-600 border border-blue-600 rounded transition-colors"
