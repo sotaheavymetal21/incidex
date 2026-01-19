@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"incidex/internal/domain"
 	"strings"
 
@@ -28,7 +29,10 @@ func (r *postMortemRepository) FindByID(ctx context.Context, id uint) (*domain.P
 		Preload("ActionItems").
 		Preload("ActionItems.Assignee").
 		First(&pm, id).Error; err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound("post-mortem")
+		}
+		return nil, domain.ErrDatabase("Failed to fetch post-mortem", err)
 	}
 	return &pm, nil
 }
@@ -42,7 +46,10 @@ func (r *postMortemRepository) FindByIncidentID(ctx context.Context, incidentID 
 		Preload("ActionItems.Assignee").
 		Where("incident_id = ?", incidentID).
 		First(&pm).Error; err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound("post-mortem")
+		}
+		return nil, domain.ErrDatabase("Failed to fetch post-mortem", err)
 	}
 	return &pm, nil
 }
