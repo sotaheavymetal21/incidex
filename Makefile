@@ -1,4 +1,4 @@
-.PHONY: up down logs dev start setup seed seed-force migrate-up migrate-down migrate-status migrate-create migrate-docker-up migrate-docker-down migrate-docker-status
+.PHONY: up down logs dev start setup seed seed-force migrate-up migrate-down migrate-status migrate-create migrate-docker-up migrate-docker-down migrate-docker-status cleanup-audit-logs
 
 # Docker
 up:
@@ -69,3 +69,7 @@ migrate-docker-down:
 
 migrate-docker-status:
 	docker compose exec backend goose -dir /app/migrations postgres "postgres://user:password@postgres:5432/incidex?sslmode=disable" status
+
+# Maintenance
+cleanup-audit-logs:
+	./scripts/cleanup-audit-logs.sh
