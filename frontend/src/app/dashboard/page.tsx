@@ -275,12 +275,12 @@ export default function DashboardPage() {
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderLeft: '4px solid var(--high)',
+              borderLeft: '4px solid var(--status-open)',
               boxShadow: 'var(--shadow-md)'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
-              e.currentTarget.style.boxShadow = '0 0 30px var(--high-glow), var(--shadow-xl)';
+              e.currentTarget.style.boxShadow = '0 0 30px var(--critical-glow), var(--shadow-xl)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0) scale(1)';
@@ -297,18 +297,18 @@ export default function DashboardPage() {
                 </p>
                 <p
                   className="text-4xl font-bold"
-                  style={{ color: 'var(--high)', fontFamily: 'var(--font-display)' }}
+                  style={{ color: 'var(--status-open)', fontFamily: 'var(--font-display)' }}
                 >
                   {stats.by_status.open || 0}
                 </p>
-                <p className="text-xs mt-2" style={{ color: 'var(--high)' }}>→ 一覧を表示</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--status-open)' }}>→ 一覧を表示</p>
               </div>
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center"
                 style={{
-                  background: 'var(--high-light)',
-                  color: 'var(--high)',
-                  boxShadow: '0 4px 12px var(--high-glow)'
+                  background: 'var(--status-open-light)',
+                  color: 'var(--status-open)',
+                  boxShadow: '0 4px 12px var(--critical-glow)'
                 }}
               >
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
