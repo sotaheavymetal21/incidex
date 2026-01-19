@@ -22,22 +22,22 @@ func NewActionItemHandler(actionItemUsecase usecase.ActionItemUsecase) *ActionIt
 
 type CreateActionItemRequest struct {
 	PostMortemID uint    `json:"post_mortem_id" binding:"required"`
-	Title        string  `json:"title" binding:"required,max=500"`
-	Description  string  `json:"description"`
+	Title        string  `json:"title" binding:"required,min=1,max=500"`
+	Description  string  `json:"description" binding:"max=5000"`
 	AssigneeID   *uint   `json:"assignee_id"`
 	Priority     string  `json:"priority" binding:"required,oneof=high medium low"`
 	DueDate      *string `json:"due_date"` // RFC3339 format
-	RelatedLinks string  `json:"related_links"`
+	RelatedLinks string  `json:"related_links" binding:"max=2000"`
 }
 
 type UpdateActionItemRequest struct {
-	Title        string  `json:"title" binding:"required,max=500"`
-	Description  string  `json:"description"`
+	Title        string  `json:"title" binding:"required,min=1,max=500"`
+	Description  string  `json:"description" binding:"max=5000"`
 	AssigneeID   *uint   `json:"assignee_id"`
 	Priority     string  `json:"priority" binding:"required,oneof=high medium low"`
 	Status       string  `json:"status" binding:"required,oneof=pending in_progress completed"`
 	DueDate      *string `json:"due_date"` // RFC3339 format
-	RelatedLinks string  `json:"related_links"`
+	RelatedLinks string  `json:"related_links" binding:"max=2000"`
 }
 
 // Create godoc
@@ -130,7 +130,7 @@ func (h *ActionItemHandler) GetByID(c *gin.Context) {
 // @Router /api/action-items/post-mortem/{postMortemId} [get]
 // @Security BearerAuth
 func (h *ActionItemHandler) GetByPostMortemID(c *gin.Context) {
-	idStr := c.Param("postMortemId")
+	idStr := c.Param("id")
 	postMortemID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
