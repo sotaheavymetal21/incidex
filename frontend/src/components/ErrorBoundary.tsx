@@ -44,18 +44,6 @@ export class ErrorBoundary extends Component<Props, State> {
                 申し訳ございません。予期しないエラーが発生しました。
               </p>
 
-              {this.state.error && process.env.NODE_ENV === 'development' && (
-                <div className="mb-6 p-4 rounded-lg text-left overflow-auto" style={{
-                  background: '#fee2e2',
-                  border: '1px solid #fca5a5',
-                  maxHeight: '200px'
-                }}>
-                  <pre className="text-xs" style={{ color: '#7f1d1d' }}>
-                    {this.state.error.toString()}
-                  </pre>
-                </div>
-              )}
-
               <button
                 onClick={() => window.location.reload()}
                 className="px-6 py-3 rounded-lg font-medium transition-all"
