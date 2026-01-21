@@ -186,8 +186,97 @@ export default function ReportsPage() {
         >
           ← 前月
         </button>
-        <div className="text-xl font-semibold text-gray-900">
-          {formatMonth(selectedYear, selectedMonth)}
+        <div className="relative" ref={calendarRef}>
+          <button
+            onClick={() => {
+              setCalendarYear(selectedYear);
+              setShowCalendar(!showCalendar);
+            }}
+            className="text-xl font-semibold text-gray-900 hover:text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-md transition-colors flex items-center gap-2"
+          >
+            {formatMonth(selectedYear, selectedMonth)}
+            <svg className={`w-5 h-5 transition-transform ${showCalendar ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Calendar Popup */}
+          {showCalendar && (
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 w-72">
+              {/* Year Navigation */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setCalendarYear(calendarYear - 1)}
+                  className="p-2 hover:bg-gray-100 rounded-md text-gray-600"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-lg font-semibold text-gray-900">{calendarYear}年</span>
+                <button
+                  onClick={() => {
+                    if (calendarYear < currentDate.getFullYear()) {
+                      setCalendarYear(calendarYear + 1);
+                    }
+                  }}
+                  disabled={calendarYear >= currentDate.getFullYear()}
+                  className={`p-2 rounded-md ${
+                    calendarYear >= currentDate.getFullYear()
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Month Grid */}
+              <div className="grid grid-cols-4 gap-2">
+                {months.map((monthName, index) => {
+                  const monthNum = index + 1;
+                  const isFuture = isFutureMonth(monthNum);
+                  const isSelected = isSelectedMonth(monthNum);
+                  const isCurrent = isCurrentMonth(monthNum);
+
+                  return (
+                    <button
+                      key={monthName}
+                      onClick={() => !isFuture && handleMonthSelect(monthNum)}
+                      disabled={isFuture}
+                      className={`py-2 px-1 text-sm rounded-md transition-colors ${
+                        isFuture
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-blue-600 text-white font-semibold'
+                            : isCurrent
+                              ? 'bg-blue-100 text-blue-700 font-medium hover:bg-blue-200'
+                              : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {monthName}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setSelectedYear(currentDate.getFullYear());
+                    setSelectedMonth(currentDate.getMonth() + 1);
+                    setShowCalendar(false);
+                  }}
+                  className="w-full py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                >
+                  今月に移動
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <button
           onClick={handleNextMonth}
