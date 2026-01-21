@@ -7,14 +7,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler, healthHandler *handler.HealthHandler, passwordResetHandler *handler.PasswordResetHandler) {
 	api := r.Group("/api")
 	{
+		// Health check routes (no auth required)
+		api.GET("/health", healthHandler.Liveness)
+		api.GET("/health/ready", healthHandler.Readiness)
+
 		// Auth routes
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/forgot-password", passwordResetHandler.RequestPasswordReset)
+			auth.POST("/reset-password", passwordResetHandler.ResetPassword)
+			auth.GET("/validate-reset-token", passwordResetHandler.ValidateToken)
 		}
 
 		// Protected routes

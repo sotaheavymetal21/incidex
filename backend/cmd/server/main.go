@@ -15,7 +15,6 @@ import (
 	"incidex/internal/pkg/logger"
 	"incidex/internal/usecase"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -72,6 +71,12 @@ func main() {
 	authUsecase := usecase.NewAuthUsecase(userRepo, cfg.JWTSecret, 24*time.Hour)
 	authHandler := handler.NewAuthHandler(authUsecase)
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
+
+	// Password Reset
+	emailService := notification.NewEmailService()
+	passwordResetTokenRepo := persistence.NewPasswordResetTokenRepository(dbConn)
+	passwordResetUsecase := usecase.NewPasswordResetUsecase(userRepo, passwordResetTokenRepo, emailService, cfg.FrontendURL)
+	passwordResetHandler := handler.NewPasswordResetHandler(passwordResetUsecase)
 
 	// Tags
 	tagRepo := persistence.NewTagRepository(dbConn)
@@ -135,6 +140,9 @@ func main() {
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
 	reportHandler := handler.NewReportHandler(reportUsecase)
 
+	// Health
+	healthHandler := handler.NewHealthHandler(dbConn)
+
 	r := gin.Default()
 
 	// Audit log middleware (before CORS)
@@ -150,16 +158,8 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Health Check
-	r.GET("/api/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "ok",
-			"message": "Incidex API is running",
-		})
-	})
-
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler, healthHandler, passwordResetHandler)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

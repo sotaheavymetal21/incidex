@@ -145,6 +145,43 @@ func (s *EmailService) SendResolvedEmail(to, incidentTitle string, incidentID ui
 	return s.SendEmail(to, subject, body)
 }
 
+// SendPasswordResetEmail はパスワードリセットメールを送信します
+func (s *EmailService) SendPasswordResetEmail(to, userName, resetToken, frontendURL string) error {
+	subject := "[Incidex] パスワードリセットのご案内"
+
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, resetToken)
+
+	body := fmt.Sprintf(`
+		<html>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+			<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+				<h2 style="color: #2563eb;">パスワードリセットのご案内</h2>
+				<p>%s 様</p>
+				<p>パスワードリセットのリクエストを受け付けました。</p>
+				<p>以下のボタンをクリックして、新しいパスワードを設定してください。</p>
+				<p style="margin: 30px 0;">
+					<a href="%s" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">パスワードをリセット</a>
+				</p>
+				<p>または、以下のURLをブラウザに貼り付けてください：</p>
+				<p style="word-break: break-all; color: #666;">%s</p>
+				<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+				<p style="color: #666; font-size: 14px;">
+					<strong>注意：</strong>このリンクは1時間で有効期限が切れます。
+				</p>
+				<p style="color: #666; font-size: 14px;">
+					パスワードリセットをリクエストしていない場合は、このメールを無視してください。
+				</p>
+				<p style="color: #999; font-size: 12px; margin-top: 30px;">
+					このメールは自動送信されています。返信はできません。
+				</p>
+			</div>
+		</body>
+		</html>
+	`, userName, resetLink, resetLink)
+
+	return s.SendEmail(to, subject, body)
+}
+
 func getEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

@@ -26,6 +26,8 @@ type Config struct {
 	InitialAdminEmail    string
 	InitialAdminPassword string
 	InitialAdminName     string
+	// Frontend URL for email links
+	FrontendURL string
 }
 
 // Insecure default values - only for local development
@@ -52,6 +54,7 @@ func Load() *Config {
 		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", ""),
 		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		InitialAdminName:     getEnv("INITIAL_ADMIN_NAME", ""),
+		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
 	}
 
 	// Validate configuration for production environment
