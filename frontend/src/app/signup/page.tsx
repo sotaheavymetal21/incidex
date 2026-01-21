@@ -4,6 +4,22 @@ import { useAuth } from '@/context/AuthContext';
 import { authApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import {
+  validateName,
+  validateEmail,
+  validatePassword,
+  validateEmployeeNumber,
+  validateDepartment,
+  ValidationLimits,
+} from '@/utils/validation';
+
+interface FieldErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  employeeNumber?: string;
+  department?: string;
+}
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -12,33 +28,70 @@ export default function SignupPage() {
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [department, setDepartment] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const router = useRouter();
+
+  const validateField = (field: keyof FieldErrors, value: string): string | undefined => {
+    switch (field) {
+      case 'name': {
+        const result = validateName(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'email': {
+        const result = validateEmail(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'password': {
+        const result = validatePassword(value, true);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'employeeNumber': {
+        const result = validateEmployeeNumber(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'department': {
+        const result = validateDepartment(value);
+        return result.isValid ? undefined : result.error;
+      }
+    }
+    return undefined;
+  };
+
+  const handleFieldChange = (field: keyof FieldErrors, value: string, setter: (v: string) => void) => {
+    setter(value);
+    if (fieldErrors[field]) {
+      const error = validateField(field, value);
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    }
+  };
+
+  const handleFieldBlur = (field: keyof FieldErrors, value: string) => {
+    const error = validateField(field, value);
+    setFieldErrors((prev) => ({ ...prev, [field]: error }));
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FieldErrors = {
+      name: validateField('name', name),
+      email: validateField('email', email),
+      password: validateField('password', password),
+      employeeNumber: validateField('employeeNumber', employeeNumber),
+      department: validateField('department', department),
+    };
+    setFieldErrors(errors);
+    return !Object.values(errors).some((e) => e !== undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validate password strength
-    if (password.length < 8) {
-      setError('パスワードは8文字以上である必要があります');
-      return;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setError('パスワードには大文字を含める必要があります');
-      return;
-    }
-    if (!/[a-z]/.test(password)) {
-      setError('パスワードには小文字を含める必要があります');
-      return;
-    }
-    if (!/[0-9]/.test(password)) {
-      setError('パスワードには数字を含める必要があります');
+    if (!validateForm()) {
       return;
     }
 
     try {
-      await authApi.register(name, email, password, employeeNumber, department);
-      // Automatically redirect to login or login directly
+      await authApi.register(name.trim(), email.trim(), password, employeeNumber.trim(), department.trim());
       router.push('/login');
     } catch (err: any) {
       setError(err.message);
@@ -150,16 +203,17 @@ export default function SignupPage() {
                       fontFamily: 'var(--font-body)'
                     }}
                   >
-                    氏名
+                    氏名 <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
                     id="name"
                     type="text"
                     required
+                    maxLength={ValidationLimits.NAME_MAX_LENGTH}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.name ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -168,13 +222,18 @@ export default function SignupPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('name', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.name ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="山田 太郎"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => handleFieldChange('name', e.target.value, setName)}
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.name}</p>
+                  )}
+                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{ValidationLimits.NAME_MAX_LENGTH}文字以内</p>
                 </div>
                 <div>
                   <label
@@ -185,16 +244,17 @@ export default function SignupPage() {
                       fontFamily: 'var(--font-body)'
                     }}
                   >
-                    メールアドレス
+                    メールアドレス <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
                     id="email"
                     type="email"
                     required
+                    maxLength={ValidationLimits.EMAIL_MAX_LENGTH}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.email ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -203,13 +263,17 @@ export default function SignupPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('email', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.email ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="user@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => handleFieldChange('email', e.target.value, setEmail)}
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label
@@ -220,16 +284,17 @@ export default function SignupPage() {
                       fontFamily: 'var(--font-body)'
                     }}
                   >
-                    社員番号
+                    社員番号 <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
                     id="employeeNumber"
                     type="text"
                     required
+                    maxLength={ValidationLimits.EMPLOYEE_NUMBER_MAX_LENGTH}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.employeeNumber ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -238,13 +303,18 @@ export default function SignupPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('employeeNumber', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.employeeNumber ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="EMP-001"
                     value={employeeNumber}
-                    onChange={(e) => setEmployeeNumber(e.target.value)}
+                    onChange={(e) => handleFieldChange('employeeNumber', e.target.value, setEmployeeNumber)}
                   />
+                  {fieldErrors.employeeNumber && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.employeeNumber}</p>
+                  )}
+                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>英数字とハイフンのみ、{ValidationLimits.EMPLOYEE_NUMBER_MAX_LENGTH}文字以内</p>
                 </div>
                 <div>
                   <label
@@ -255,16 +325,17 @@ export default function SignupPage() {
                       fontFamily: 'var(--font-body)'
                     }}
                   >
-                    所属部署
+                    所属部署 <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
                     id="department"
                     type="text"
                     required
+                    maxLength={ValidationLimits.DEPARTMENT_MAX_LENGTH}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.department ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -273,13 +344,18 @@ export default function SignupPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('department', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.department ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="開発部"
                     value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
+                    onChange={(e) => handleFieldChange('department', e.target.value, setDepartment)}
                   />
+                  {fieldErrors.department && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.department}</p>
+                  )}
+                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{ValidationLimits.DEPARTMENT_MAX_LENGTH}文字以内</p>
                 </div>
                 <div>
                   <label
@@ -290,17 +366,17 @@ export default function SignupPage() {
                       fontFamily: 'var(--font-body)'
                     }}
                   >
-                    パスワード
+                    パスワード <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
                     id="password"
                     type="password"
                     required
-                    minLength={8}
+                    minLength={ValidationLimits.PASSWORD_MIN_LENGTH}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.password ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -309,13 +385,17 @@ export default function SignupPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('password', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.password ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => handleFieldChange('password', e.target.value, setPassword)}
                   />
+                  {fieldErrors.password && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.password}</p>
+                  )}
                   <div
                     className="mt-2 text-xs space-y-1"
                     style={{
