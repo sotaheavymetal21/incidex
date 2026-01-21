@@ -4,20 +4,75 @@ import { useAuth } from '@/context/AuthContext';
 import { authApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import {
+  validateEmail,
+  ValidationLimits,
+} from '@/utils/validation';
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const { login } = useAuth();
   const router = useRouter();
+
+  const validateField = (field: keyof FieldErrors, value: string): string | undefined => {
+    switch (field) {
+      case 'email': {
+        const result = validateEmail(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'password':
+        if (!value) return 'パスワードは必須です';
+        break;
+    }
+    return undefined;
+  };
+
+  const handleFieldChange = (field: keyof FieldErrors, value: string) => {
+    if (field === 'email') {
+      setEmail(value);
+    } else {
+      setPassword(value);
+    }
+
+    // Validate on change if there's already an error
+    if (fieldErrors[field]) {
+      const error = validateField(field, value);
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    }
+  };
+
+  const handleFieldBlur = (field: keyof FieldErrors, value: string) => {
+    const error = validateField(field, value);
+    setFieldErrors((prev) => ({ ...prev, [field]: error }));
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FieldErrors = {
+      email: validateField('email', email),
+      password: validateField('password', password),
+    };
+    setFieldErrors(errors);
+    return !Object.values(errors).some((e) => e !== undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    try {
 
-      const res = await authApi.login(email, password);
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const res = await authApi.login(email.trim(), password);
       login(res.token, res.user);
       router.push('/');
     } catch (err: any) {
@@ -135,10 +190,11 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     required
+                    maxLength={ValidationLimits.EMAIL_MAX_LENGTH}
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.email ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -147,13 +203,17 @@ export default function LoginPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('email', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.email ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="user@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => handleFieldChange('email', e.target.value)}
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label
@@ -173,7 +233,7 @@ export default function LoginPage() {
                     className="block w-full rounded-xl px-4 py-3.5 focus:outline-none transition-all"
                     style={{
                       background: 'var(--gray-50)',
-                      border: '2px solid var(--border)',
+                      border: `2px solid ${fieldErrors.password ? 'var(--error)' : 'var(--border)'}`,
                       color: 'var(--foreground)',
                       fontFamily: 'var(--font-body)'
                     }}
@@ -182,13 +242,17 @@ export default function LoginPage() {
                       e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
+                      handleFieldBlur('password', e.target.value);
+                      e.currentTarget.style.borderColor = fieldErrors.password ? 'var(--error)' : 'var(--border)';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => handleFieldChange('password', e.target.value)}
                   />
+                  {fieldErrors.password && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.password}</p>
+                  )}
                 </div>
               </div>
 
