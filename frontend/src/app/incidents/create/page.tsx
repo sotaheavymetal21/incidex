@@ -6,6 +6,20 @@ import { useAuth } from '@/context/AuthContext';
 import { incidentApi, tagApi, userApi } from '@/lib/api';
 import { Severity, Status, User } from '@/types/incident';
 import { Tag } from '@/types/tag';
+import {
+  validateIncidentTitle,
+  validateIncidentDescription,
+  validateImpactScope,
+  validateDatetime,
+  ValidationLimits,
+} from '@/utils/validation';
+
+interface FieldErrors {
+  title?: string;
+  description?: string;
+  impactScope?: string;
+  detectedAt?: string;
+}
 
 function CreateIncidentForm() {
   const { token, loading: authLoading } = useAuth();
@@ -14,6 +28,7 @@ function CreateIncidentForm() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Form state
   const [title, setTitle] = useState('');
@@ -67,21 +82,49 @@ function CreateIncidentForm() {
     );
   };
 
+  const validateField = (field: keyof FieldErrors, value: string): string | undefined => {
+    switch (field) {
+      case 'title': {
+        const result = validateIncidentTitle(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'description': {
+        const result = validateIncidentDescription(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'impactScope': {
+        const result = validateImpactScope(value);
+        return result.isValid ? undefined : result.error;
+      }
+      case 'detectedAt': {
+        const result = validateDatetime(value, true, '検出日時');
+        return result.isValid ? undefined : result.error;
+      }
+    }
+    return undefined;
+  };
+
+  const handleFieldBlur = (field: keyof FieldErrors, value: string) => {
+    const error = validateField(field, value);
+    setFieldErrors((prev) => ({ ...prev, [field]: error }));
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FieldErrors = {
+      title: validateField('title', title),
+      description: validateField('description', description),
+      impactScope: validateField('impactScope', impactScope),
+      detectedAt: validateField('detectedAt', detectedAt),
+    };
+    setFieldErrors(errors);
+    return !Object.values(errors).some((e) => e !== undefined);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (!title.trim()) {
-      setError('タイトルは必須です');
-      return;
-    }
-    if (!description.trim()) {
-      setError('説明は必須です');
-      return;
-    }
-    if (!detectedAt) {
-      setError('検出日時は必須です');
+    if (!validateForm()) {
       return;
     }
 
@@ -91,7 +134,7 @@ function CreateIncidentForm() {
         title: title.trim(),
         description: description.trim(),
         severity,
-        status: 'open' as Status,  // 新規作成時は常にopen
+        status: 'open' as Status,
         impact_scope: impactScope.trim(),
         detected_at: new Date(detectedAt).toISOString(),
         assignee_id: assigneeId || undefined,
@@ -148,12 +191,12 @@ function CreateIncidentForm() {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              maxLength={500}
+              maxLength={ValidationLimits.TITLE_MAX_LENGTH}
               required
               className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
               style={{
                 background: 'var(--surface)',
-                borderColor: 'var(--border)',
+                borderColor: fieldErrors.title ? 'var(--error)' : 'var(--border)',
                 color: 'var(--foreground)'
               }}
               onFocus={(e) => {
@@ -161,10 +204,15 @@ function CreateIncidentForm() {
                 e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
+                handleFieldBlur('title', e.target.value);
+                e.currentTarget.style.borderColor = fieldErrors.title ? 'var(--error)' : 'var(--border)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
+            {fieldErrors.title && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.title}</p>
+            )}
+            <p className="mt-1 text-xs" style={{ color: 'var(--secondary)' }}>{ValidationLimits.TITLE_MAX_LENGTH}文字以内</p>
           </div>
 
           {/* Description */}
