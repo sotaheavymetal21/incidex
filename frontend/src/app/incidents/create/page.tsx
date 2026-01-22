@@ -224,12 +224,13 @@ function CreateIncidentForm() {
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={ValidationLimits.DESCRIPTION_MAX_LENGTH}
               required
               rows={6}
               className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
               style={{
                 background: 'var(--surface)',
-                borderColor: 'var(--border)',
+                borderColor: fieldErrors.description ? 'var(--error)' : 'var(--border)',
                 color: 'var(--foreground)'
               }}
               onFocus={(e) => {
@@ -237,10 +238,15 @@ function CreateIncidentForm() {
                 e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
+                handleFieldBlur('description', e.target.value);
+                e.currentTarget.style.borderColor = fieldErrors.description ? 'var(--error)' : 'var(--border)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
+            {fieldErrors.description && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.description}</p>
+            )}
+            <p className="mt-1 text-xs" style={{ color: 'var(--secondary)' }}>{ValidationLimits.DESCRIPTION_MAX_LENGTH}文字以内</p>
           </div>
 
           {/* Severity */}
@@ -288,11 +294,11 @@ function CreateIncidentForm() {
               id="impactScope"
               value={impactScope}
               onChange={(e) => setImpactScope(e.target.value)}
-              maxLength={500}
+              maxLength={ValidationLimits.IMPACT_SCOPE_MAX_LENGTH}
               className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
               style={{
                 background: 'var(--surface)',
-                borderColor: 'var(--border)',
+                borderColor: fieldErrors.impactScope ? 'var(--error)' : 'var(--border)',
                 color: 'var(--foreground)'
               }}
               onFocus={(e) => {
@@ -300,10 +306,15 @@ function CreateIncidentForm() {
                 e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
+                handleFieldBlur('impactScope', e.target.value);
+                e.currentTarget.style.borderColor = fieldErrors.impactScope ? 'var(--error)' : 'var(--border)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
+            {fieldErrors.impactScope && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.impactScope}</p>
+            )}
+            <p className="mt-1 text-xs" style={{ color: 'var(--secondary)' }}>{ValidationLimits.IMPACT_SCOPE_MAX_LENGTH}文字以内</p>
           </div>
 
           {/* Detected At */}
@@ -320,7 +331,7 @@ function CreateIncidentForm() {
               className="w-full px-3 py-2.5 border-2 rounded-lg focus:outline-none transition-all"
               style={{
                 background: 'var(--surface)',
-                borderColor: 'var(--border)',
+                borderColor: fieldErrors.detectedAt ? 'var(--error)' : 'var(--border)',
                 color: 'var(--foreground)'
               }}
               onFocus={(e) => {
@@ -328,10 +339,14 @@ function CreateIncidentForm() {
                 e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
+                handleFieldBlur('detectedAt', e.target.value);
+                e.currentTarget.style.borderColor = fieldErrors.detectedAt ? 'var(--error)' : 'var(--border)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             />
+            {fieldErrors.detectedAt && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--error)' }}>{fieldErrors.detectedAt}</p>
+            )}
           </div>
 
           {/* Assignee */}

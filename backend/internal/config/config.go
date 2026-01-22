@@ -28,41 +28,36 @@ type Config struct {
 	InitialAdminName     string
 	// Frontend URL for email links
 	FrontendURL string
+	// Auto migration configuration
+	AutoMigrate     bool
+	MigrationsDir   string
 }
-
-// Insecure default values - only for local development
-const (
-	defaultJWTSecret      = "super-secret-key-change-me-in-production"
-	defaultDatabaseURL    = "postgres://user:password@localhost:5432/incidex?sslmode=disable"
-	defaultMinioAccessKey = "minioadmin"
-	defaultMinioSecretKey = "minioadmin"
-)
 
 func Load() *Config {
 	appEnv := getEnv("APP_ENV", "development")
+
+	// Required environment variables - no defaults for security
 	cfg := &Config{
 		Port:                 getEnv("PORT", "8080"),
-		DatabaseURL:          getEnv("DATABASE_URL", defaultDatabaseURL),
-		RedisURL:             getEnv("REDIS_URL", "redis://localhost:6379/0"),
-		MinioEndpoint:        getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinioAccessKey:       getEnv("MINIO_ACCESS_KEY", defaultMinioAccessKey),
-		MinioSecretKey:       getEnv("MINIO_SECRET_KEY", defaultMinioSecretKey),
-		JWTSecret:            getEnv("JWT_SECRET", defaultJWTSecret),
+		DatabaseURL:          getEnvRequired("DATABASE_URL"),
+		RedisURL:             getEnvRequired("REDIS_URL"),
+		MinioEndpoint:        getEnvRequired("MINIO_ENDPOINT"),
+		MinioAccessKey:       getEnvRequired("MINIO_ACCESS_KEY"),
+		MinioSecretKey:       getEnvRequired("MINIO_SECRET_KEY"),
+		JWTSecret:            getEnvRequired("JWT_SECRET"),
 		AppEnv:               appEnv,
 		DBLogLevel:           getEnv("DB_LOG_LEVEL", getDefaultDBLogLevel(appEnv)),
-		CORSAllowedOrigins:   parseCORSOrigins(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
+		CORSAllowedOrigins:   parseCORSOrigins(getEnvRequired("CORS_ALLOWED_ORIGINS")),
 		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", ""),
 		InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		InitialAdminName:     getEnv("INITIAL_ADMIN_NAME", ""),
-		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
+		FrontendURL:          getEnvRequired("FRONTEND_URL"),
+		AutoMigrate:          getEnv("AUTO_MIGRATE", "false") == "true",
+		MigrationsDir:        getEnv("MIGRATIONS_DIR", "./migrations"),
 	}
 
-	// Validate configuration for production environment
-	if isProduction(cfg.AppEnv) {
-		validateProductionConfig(cfg)
-	} else if isDevelopment(cfg.AppEnv) {
-		logDevelopmentWarnings(cfg)
-	}
+	// Validate configuration
+	validateConfig(cfg)
 
 	return cfg
 }
@@ -72,6 +67,15 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// getEnvRequired returns the value of an environment variable or panics if not set
+func getEnvRequired(key string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		panic(fmt.Sprintf("CRITICAL: Required environment variable %s is not set", key))
+	}
+	return value
 }
 
 // parseCORSOrigins parses a comma-separated string into a slice of origins
@@ -108,61 +112,42 @@ func getDefaultDBLogLevel(env string) string {
 	return "info" // Development: log all queries (with masked sensitive data)
 }
 
-func validateProductionConfig(cfg *Config) {
+// validateConfig validates the configuration and logs warnings/errors
+func validateConfig(cfg *Config) {
 	errors := []string{}
+	warnings := []string{}
 
-	// Check JWT Secret
-	if cfg.JWTSecret == defaultJWTSecret || len(cfg.JWTSecret) < 32 {
-		errors = append(errors, "JWT_SECRET must be set to a strong secret (minimum 32 characters) in production")
-	}
-
-	// Check Database URL
-	if cfg.DatabaseURL == defaultDatabaseURL {
-		errors = append(errors, "DATABASE_URL must be properly configured in production")
-	}
-	if strings.Contains(cfg.DatabaseURL, "sslmode=disable") {
-		log.Println("WARNING: Database SSL is disabled. This is insecure for production.")
+	// Validate JWT Secret length
+	if len(cfg.JWTSecret) < 32 {
+		errors = append(errors, "JWT_SECRET must be at least 32 characters long")
 	}
 
-	// Check MinIO credentials
-	if cfg.MinioAccessKey == defaultMinioAccessKey {
-		errors = append(errors, "MINIO_ACCESS_KEY must be changed from default value in production")
-	}
-	if cfg.MinioSecretKey == defaultMinioSecretKey {
-		errors = append(errors, "MINIO_SECRET_KEY must be changed from default value in production")
+	// Validate Database SSL in production
+	if isProduction(cfg.AppEnv) && strings.Contains(cfg.DatabaseURL, "sslmode=disable") {
+		warnings = append(warnings, "Database SSL is disabled in production - this is insecure")
 	}
 
-	// If there are any critical errors, panic to prevent startup
+	// Validate CORS origins
+	if len(cfg.CORSAllowedOrigins) == 0 {
+		errors = append(errors, "CORS_ALLOWED_ORIGINS must be configured")
+	}
+
+	// Log warnings
+	if len(warnings) > 0 {
+		log.Println("Configuration warnings:")
+		for _, warning := range warnings {
+			log.Printf("  - WARNING: %s\n", warning)
+		}
+	}
+
+	// Panic on critical errors
 	if len(errors) > 0 {
-		errorMsg := "CRITICAL SECURITY ERROR: Production environment detected with insecure configuration:\n"
+		errorMsg := "CRITICAL: Configuration validation failed:\n"
 		for _, err := range errors {
 			errorMsg += fmt.Sprintf("  - %s\n", err)
 		}
-		errorMsg += "\nPlease set proper environment variables before running in production."
 		panic(errorMsg)
 	}
 
-	log.Println("INFO: Production configuration validated successfully")
-}
-
-func logDevelopmentWarnings(cfg *Config) {
-	warnings := []string{}
-
-	if cfg.JWTSecret == defaultJWTSecret {
-		warnings = append(warnings, "Using default JWT_SECRET (not suitable for production)")
-	}
-	if cfg.DatabaseURL == defaultDatabaseURL {
-		warnings = append(warnings, "Using default DATABASE_URL (not suitable for production)")
-	}
-	if cfg.MinioAccessKey == defaultMinioAccessKey {
-		warnings = append(warnings, "Using default MINIO credentials (not suitable for production)")
-	}
-
-	if len(warnings) > 0 {
-		log.Println("DEVELOPMENT MODE: The following default values are being used:")
-		for _, warning := range warnings {
-			log.Printf("  - %s\n", warning)
-		}
-		log.Println("These defaults are convenient for local development but must be changed for production.")
-	}
+	log.Printf("Configuration loaded successfully (environment: %s)", cfg.AppEnv)
 }

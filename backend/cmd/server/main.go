@@ -40,10 +40,18 @@ func main() {
 	isProduction := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
 	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, isProduction)
 
-	// Database migrations are managed by goose
-	// Run 'make migrate-up' (local) or 'make migrate-docker-up' (Docker) to apply migrations
-	log.Println("INFO: Database migrations are managed by goose.")
-	log.Println("Run 'make migrate-up' or 'make migrate-docker-up' to apply database migrations.")
+	// Run database migrations if AUTO_MIGRATE is enabled
+	if cfg.AutoMigrate {
+		log.Println("INFO: AUTO_MIGRATE is enabled. Running database migrations...")
+		if err := db.RunMigrations(cfg.MigrationsDir, cfg.DatabaseURL); err != nil {
+			log.Fatalf("Failed to run database migrations: %v", err)
+		}
+		log.Println("SUCCESS: Database migrations completed successfully")
+	} else {
+		log.Println("INFO: AUTO_MIGRATE is disabled. Database migrations are managed manually.")
+		log.Println("To enable auto-migration, set AUTO_MIGRATE=true environment variable.")
+		log.Println("To run migrations manually: 'make migrate-up' (local) or 'make migrate-docker-up' (Docker)")
+	}
 
 	// Initialize MinIO Storage
 	minioStorage, err := storage.NewMinIOStorage(
@@ -64,11 +72,13 @@ func main() {
 	// Dependency Injection
 	// Auth
 	userRepo := persistence.NewUserRepository(dbConn)
+	refreshTokenRepo := persistence.NewRefreshTokenRepository(dbConn)
 
 	// Create initial admin user if configured and no users exist
 	createInitialAdminIfNeeded(dbConn, userRepo, cfg)
 
-	authUsecase := usecase.NewAuthUsecase(userRepo, cfg.JWTSecret, 24*time.Hour)
+	// JWT token expiry: 1 hour for access tokens (more secure)
+	authUsecase := usecase.NewAuthUsecase(userRepo, refreshTokenRepo, cfg.JWTSecret, 1*time.Hour)
 	authHandler := handler.NewAuthHandler(authUsecase)
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
 
@@ -145,7 +155,10 @@ func main() {
 
 	r := gin.Default()
 
-	// Audit log middleware (before CORS)
+	// Security headers middleware (first)
+	r.Use(middleware.SecurityHeaders())
+
+	// Audit log middleware
 	r.Use(auditMiddleware.Log())
 
 	// CORS middleware

@@ -5,6 +5,7 @@ type RequestOptions = {
   headers?: Record<string, string>;
   body?: unknown;
   token?: string;
+  skipRefresh?: boolean; // Skip automatic token refresh
 };
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
@@ -18,6 +19,34 @@ import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '..
 import { User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest } from '../types/user';
 import { AuditLog, AuditLogFilters, AuditLogResponse } from '../types/auditLog';
 import { MonthlyReport } from '../types/report';
+
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include', // Include httpOnly cookies
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to refresh token');
+  }
+
+  const data = await response.json();
+  const newToken = data.access_token;
+
+  // Update token in localStorage
+  localStorage.setItem('token', newToken);
+  if (data.user) {
+    localStorage.setItem('user', JSON.stringify(data.user));
+  }
+
+  return newToken;
+}
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
@@ -34,6 +63,7 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   const config: RequestInit = {
     method: options.method || 'GET',
     headers,
+    credentials: 'include', // Include cookies for refresh token
   };
 
   if (options.body) {
@@ -44,16 +74,36 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      // 401エラー（認証エラー）の場合は自動的にログアウト処理
-      if (response.status === 401 && !endpoint.includes('/auth/')) {
-        // localStorageをクリア
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        // ログインページにリダイレクト
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+      // 401エラー（認証エラー）の場合、リフレッシュトークンで再試行
+      if (response.status === 401 && !endpoint.includes('/auth/') && !options.skipRefresh) {
+        try {
+          // Prevent multiple simultaneous refresh requests
+          if (!isRefreshing) {
+            isRefreshing = true;
+            refreshPromise = refreshAccessToken();
+          }
+
+          const newToken = await refreshPromise!;
+          isRefreshing = false;
+          refreshPromise = null;
+
+          // Retry the original request with new token
+          return apiRequest<T>(endpoint, {
+            ...options,
+            token: newToken,
+            skipRefresh: true, // Prevent infinite loop
+          });
+        } catch (refreshError) {
+          // Refresh failed, logout user
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          throw refreshError;
         }
       }
+
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Request failed with status ${response.status}`);
     }
@@ -74,7 +124,6 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 }
 
 export const authApi = {
-  // ... existing auth methods ...
   register: (name: string, email: string, password: string, employeeNumber: string, department: string) =>
     apiRequest<{ token: string; user: any }>('/auth/register', {
       method: 'POST',
@@ -84,6 +133,20 @@ export const authApi = {
     apiRequest<{ token: string; user: any }>('/auth/login', {
       method: 'POST',
       body: { email, password },
+    }),
+  requestPasswordReset: (email: string) =>
+    apiRequest<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    }),
+  resetPassword: (token: string, newPassword: string) =>
+    apiRequest<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, new_password: newPassword },
+    }),
+  validateResetToken: (token: string) =>
+    apiRequest<{ valid: boolean }>(`/auth/validate-reset-token?token=${token}`, {
+      method: 'GET',
     }),
 };
 

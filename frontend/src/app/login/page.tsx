@@ -299,7 +299,26 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-8 text-center">
+            <div className="mt-6 text-center">
+              <a
+                href="/forgot-password"
+                className="text-sm font-medium hover:underline transition-all inline-block"
+                style={{
+                  color: 'var(--primary)',
+                  fontFamily: 'var(--font-body)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--primary-dark)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--primary)';
+                }}
+              >
+                パスワードを忘れた場合
+              </a>
+            </div>
+
+            <div className="mt-4 text-center">
               <a
                 href="/signup"
                 className="text-sm font-semibold hover:underline transition-all inline-block"
