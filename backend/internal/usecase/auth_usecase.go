@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"incidex/internal/domain"
 	"time"
 
@@ -9,22 +11,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type AuthResponse struct {
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+	User         *domain.User `json:"user"`
+}
+
 type AuthUsecase interface {
 	Register(ctx context.Context, name, email, password, employeeNumber, department string) (*domain.User, error)
-	Login(ctx context.Context, email, password string) (string, *domain.User, error)
+	Login(ctx context.Context, email, password string) (*AuthResponse, error)
+	RefreshAccessToken(ctx context.Context, refreshToken string) (*AuthResponse, error)
+	Logout(ctx context.Context, refreshToken string) error
 }
 
 type authUsecase struct {
-	userRepo  domain.UserRepository
-	jwtSecret []byte
-	jwtExpiry time.Duration
+	userRepo         domain.UserRepository
+	refreshTokenRepo domain.RefreshTokenRepository
+	jwtSecret        []byte
+	jwtExpiry        time.Duration
+	refreshExpiry    time.Duration
 }
 
-func NewAuthUsecase(userRepo domain.UserRepository, jwtSecret string, jwtExpiry time.Duration) AuthUsecase {
+func NewAuthUsecase(userRepo domain.UserRepository, refreshTokenRepo domain.RefreshTokenRepository, jwtSecret string, jwtExpiry time.Duration) AuthUsecase {
 	return &authUsecase{
-		userRepo:  userRepo,
-		jwtSecret: []byte(jwtSecret),
-		jwtExpiry: jwtExpiry,
+		userRepo:         userRepo,
+		refreshTokenRepo: refreshTokenRepo,
+		jwtSecret:        []byte(jwtSecret),
+		jwtExpiry:        jwtExpiry,
+		refreshExpiry:    7 * 24 * time.Hour, // 7 days for refresh tokens
 	}
 }
 
@@ -74,25 +88,111 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password, emplo
 	return user, nil
 }
 
-func (u *authUsecase) Login(ctx context.Context, email, password string) (string, *domain.User, error) {
+func (u *authUsecase) Login(ctx context.Context, email, password string) (*AuthResponse, error) {
 	user, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return "", nil, domain.ErrDatabase("Failed to find user", err)
+		return nil, domain.ErrDatabase("Failed to find user", err)
 	}
 	if user == nil {
-		return "", nil, domain.ErrUnauthorized("Invalid credentials")
+		return nil, domain.ErrUnauthorized("Invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", nil, domain.ErrUnauthorized("Invalid credentials")
+		return nil, domain.ErrUnauthorized("Invalid credentials")
 	}
 
 	// Check if user is active
 	if !user.IsActive {
-		return "", nil, domain.ErrForbidden("Account is disabled")
+		return nil, domain.ErrForbidden("Account is disabled")
 	}
 
-	// Generate JWT
+	// Generate access token (JWT)
+	accessToken, err := u.generateAccessToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate refresh token
+	refreshToken, err := u.generateRefreshToken(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         user,
+	}, nil
+}
+
+func (u *authUsecase) RefreshAccessToken(ctx context.Context, refreshTokenStr string) (*AuthResponse, error) {
+	// Find refresh token
+	refreshToken, err := u.refreshTokenRepo.FindByToken(ctx, refreshTokenStr)
+	if err != nil {
+		return nil, domain.ErrDatabase("Failed to find refresh token", err)
+	}
+	if refreshToken == nil {
+		return nil, domain.ErrUnauthorized("Invalid refresh token")
+	}
+
+	// Validate refresh token
+	if !refreshToken.IsValid() {
+		return nil, domain.ErrUnauthorized("Refresh token is expired or revoked")
+	}
+
+	// Get user
+	user, err := u.userRepo.FindByID(ctx, refreshToken.UserID)
+	if err != nil {
+		return nil, domain.ErrDatabase("Failed to find user", err)
+	}
+	if user == nil {
+		return nil, domain.ErrUnauthorized("User not found")
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		return nil, domain.ErrForbidden("Account is disabled")
+	}
+
+	// Generate new access token
+	accessToken, err := u.generateAccessToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Optionally: Generate new refresh token and revoke old one (rotation)
+	newRefreshToken, err := u.generateRefreshToken(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Revoke old refresh token
+	if err := u.refreshTokenRepo.RevokeByToken(ctx, refreshTokenStr); err != nil {
+		return nil, domain.ErrDatabase("Failed to revoke old refresh token", err)
+	}
+
+	return &AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		User:         user,
+	}, nil
+}
+
+func (u *authUsecase) Logout(ctx context.Context, refreshToken string) error {
+	if refreshToken == "" {
+		return nil // Nothing to revoke
+	}
+
+	// Revoke the refresh token
+	if err := u.refreshTokenRepo.RevokeByToken(ctx, refreshToken); err != nil {
+		return domain.ErrDatabase("Failed to revoke refresh token", err)
+	}
+
+	return nil
+}
+
+// generateAccessToken creates a new JWT access token
+func (u *authUsecase) generateAccessToken(user *domain.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role,
@@ -101,8 +201,31 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (string
 
 	tokenString, err := token.SignedString(u.jwtSecret)
 	if err != nil {
-		return "", nil, domain.ErrInternal("Failed to generate token", err)
+		return "", domain.ErrInternal("Failed to generate access token", err)
 	}
 
-	return tokenString, user, nil
+	return tokenString, nil
+}
+
+// generateRefreshToken creates a new refresh token and stores it in the database
+func (u *authUsecase) generateRefreshToken(ctx context.Context, userID uint) (string, error) {
+	// Generate a secure random token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", domain.ErrInternal("Failed to generate refresh token", err)
+	}
+	tokenString := base64.URLEncoding.EncodeToString(tokenBytes)
+
+	// Create refresh token in database
+	refreshToken := &domain.RefreshToken{
+		Token:     tokenString,
+		UserID:    userID,
+		ExpiresAt: time.Now().Add(u.refreshExpiry),
+	}
+
+	if err := u.refreshTokenRepo.Create(ctx, refreshToken); err != nil {
+		return "", domain.ErrDatabase("Failed to save refresh token", err)
+	}
+
+	return tokenString, nil
 }

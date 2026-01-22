@@ -19,6 +19,8 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/refresh", authHandler.Refresh)
+			auth.POST("/logout", authHandler.Logout)
 			auth.POST("/forgot-password", passwordResetHandler.RequestPasswordReset)
 			auth.POST("/reset-password", passwordResetHandler.ResetPassword)
 			auth.GET("/validate-reset-token", passwordResetHandler.ValidateToken)
