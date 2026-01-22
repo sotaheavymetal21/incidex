@@ -73,15 +73,33 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 		return nil, nil, err
 	}
 
-	// Apply sorting
+	// Apply sorting with whitelist validation to prevent SQL injection
 	sortBy := filters.SortBy
 	if sortBy == "" {
 		sortBy = "created_at"
 	}
-	order := filters.Order
-	if order == "" {
-		order = "desc"
+
+	// Whitelist of allowed sort columns
+	allowedSortColumns := map[string]bool{
+		"id":          true,
+		"title":       true,
+		"severity":    true,
+		"status":      true,
+		"created_at":  true,
+		"updated_at":  true,
+		"detected_at": true,
+		"resolved_at": true,
 	}
+
+	if !allowedSortColumns[sortBy] {
+		sortBy = "created_at" // Default to safe value
+	}
+
+	order := strings.ToLower(filters.Order)
+	if order != "asc" && order != "desc" {
+		order = "desc" // Default to safe value
+	}
+
 	query = query.Order(sortBy + " " + order)
 
 	// Apply pagination

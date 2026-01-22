@@ -2,6 +2,7 @@ package handler
 
 import (
 	"incidex/internal/domain"
+	"incidex/internal/interface/http/validator"
 	"incidex/internal/usecase"
 	"net/http"
 	"strconv"
@@ -45,17 +46,39 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 }
 
 type CreateUserRequest struct {
-	Email          string      `json:"email" binding:"required,email"`
+	Email          string      `json:"email" binding:"required,email,max=254"`
 	Password       string      `json:"password" binding:"required,min=6"`
-	Name           string      `json:"name" binding:"required"`
+	Name           string      `json:"name" binding:"required,max=50"`
 	Role           domain.Role `json:"role" binding:"required"`
-	EmployeeNumber string      `json:"employee_number"`
-	Department     string      `json:"department"`
+	EmployeeNumber string      `json:"employee_number,omitempty" binding:"omitempty,max=20"`
+	Department     string      `json:"department,omitempty" binding:"omitempty,max=50"`
 }
 
 func (h *UserHandler) Create(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Custom validation
+	if err := validator.ValidateName(req.Name); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateEmail(req.Email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidatePassword(req.Password, false); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateEmployeeNumber(req.EmployeeNumber); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateDepartment(req.Department); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -76,11 +99,11 @@ func (h *UserHandler) Create(c *gin.Context) {
 }
 
 type UpdateUserRequest struct {
-	Name           string      `json:"name" binding:"required"`
-	Email          string      `json:"email" binding:"required,email"`
+	Name           string      `json:"name" binding:"required,max=50"`
+	Email          string      `json:"email" binding:"required,email,max=254"`
 	Role           domain.Role `json:"role" binding:"required"`
-	EmployeeNumber string      `json:"employee_number"`
-	Department     string      `json:"department"`
+	EmployeeNumber string      `json:"employee_number,omitempty" binding:"omitempty,max=20"`
+	Department     string      `json:"department,omitempty" binding:"omitempty,max=50"`
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
@@ -93,6 +116,24 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Custom validation
+	if err := validator.ValidateName(req.Name); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateEmail(req.Email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateEmployeeNumber(req.EmployeeNumber); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateDepartment(req.Department); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -114,7 +155,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 type UpdatePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=6"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
 func (h *UserHandler) UpdatePassword(c *gin.Context) {
@@ -127,6 +168,12 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 
 	var req UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Custom validation for new password
+	if err := validator.ValidatePassword(req.NewPassword, true); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -153,6 +200,12 @@ func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 
 	var req AdminResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Custom validation for new password (admin has looser requirements)
+	if err := validator.ValidatePassword(req.NewPassword, false); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

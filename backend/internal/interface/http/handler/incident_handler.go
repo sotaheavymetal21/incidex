@@ -2,6 +2,7 @@ package handler
 
 import (
 	"incidex/internal/domain"
+	"incidex/internal/interface/http/validator"
 	"incidex/internal/usecase"
 	"net/http"
 	"strconv"
@@ -49,6 +50,28 @@ type IncidentListResponse struct {
 func (h *IncidentHandler) Create(c *gin.Context) {
 	var req CreateIncidentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Custom validation
+	if err := validator.ValidateTitle(req.Title); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateDescription(req.Description); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateImpactScope(req.ImpactScope); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateSeverity(req.Severity); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validator.ValidateStatus(req.Status); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
