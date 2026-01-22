@@ -4,6 +4,9 @@ FROM golang:1.24-alpine AS builder
 # 必要なパッケージのインストール
 RUN apk add --no-cache git
 
+# gooseのインストール（マイグレーションツール）
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
 # 作業ディレクトリを設定
 WORKDIR /app
 
@@ -34,6 +37,14 @@ WORKDIR /root/
 # ビルドステージから実行ファイルをコピー
 COPY --from=builder /app/server .
 COPY --from=builder /app/seeder .
+COPY --from=builder /go/bin/goose /usr/local/bin/goose
+
+# マイグレーションファイルをコピー
+COPY --from=builder /app/migrations /root/migrations
+
+# Entrypoint script をコピー
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # ポートを公開
 EXPOSE 8080
@@ -42,5 +53,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
 
-# アプリケーションを実行
+# Entrypoint とコマンドを設定
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["./server"]

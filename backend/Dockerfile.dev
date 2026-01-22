@@ -7,6 +7,9 @@ RUN apk add --no-cache git curl
 # airのインストール（Go 1.24対応バージョン）
 RUN go install github.com/air-verse/air@v1.52.3
 
+# gooseのインストール（マイグレーションツール）
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
 # 作業ディレクトリを設定
 WORKDIR /app
 
