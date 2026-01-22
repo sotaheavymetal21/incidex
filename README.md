@@ -1,449 +1,283 @@
 # Incidex
 
-<div align="center">
-
 ![Incidex Logo](./incidex_full_logo.jpg)
 
-**Modern Incident Management System for SRE, DevOps, and Development Teams**
+**組織内で発生したインシデントを記録・管理し、継続的な改善を促進するオープンソースのインシデント管理システム**
 
 [English](./README_EN.md) | [日本語](./README.md)
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org/)
-[![Next.js Version](https://img.shields.io/badge/Next.js-14+-000000?logo=next.js)](https://nextjs.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
+[![Next.js Version](https://img.shields.io/badge/Next.js-16+-000000?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
-</div>
+---
+
+## 概要
+
+Incidexは、インシデント情報を記録・分類し、組織の知見として蓄積するためのシステムです。タイムライン管理、AI要約、ポストモーテム、統計分析などの機能により、チームの学習と改善を支援します。
+
+### 主な特徴
+
+- インシデントの作成・編集・検索とステータス管理
+- タイムライン機能による時系列イベントの記録
+- ファイル添付（ログ、スクリーンショット等）
+- タグによる分類とフィルタリング
+- ポストモーテムとアクションアイテム管理
+- 統計ダッシュボードとSLA追跡
+- レポート生成（月次レポート、カスタムレポート）
+- PDFエクスポート（インシデント詳細、CSV一括出力）
+- 監査ログによる操作履歴の記録
+- 通知設定（インシデント作成、コメント追加等）
+- ロールベースアクセス制御（管理者/編集者/閲覧者）
+- セルフホスト対応（Docker Compose）
+
+### 想定ユーザー
+
+- 開発チーム、SREチーム
+- セキュリティオペレーションチーム
+- IT部門、情報システム部門
+- セルフホスティングを希望する組織
 
 ---
 
-## 📖 概要
-
-**Incidex**（インシデックス）は、組織内で発生したインシデントを記録・管理し、AI要約とポストモーテムを通じて継続的な改善を促進するオープンソースのインシデント管理システムです。
-
-インシデント情報をインデックス化し、組織の知見として蓄積することで、類似インシデントの再発を防ぎ、チームの学習と改善を支援します。
-
-### ✨ 主な特徴
-
-- 🤖 **AI要約機能**: インシデント詳細から自動で概要を生成（OpenAI API / Claude API対応）
-- 📊 **タイムライン管理**: インシデントの経緯を時系列で記録・可視化
-- 🏷️ **タグ管理**: カラー付きタグによる柔軟な分類とフィルタリング
-- 📈 **統計ダッシュボード**: インシデント傾向の可視化とMTTRなどの指標追跡
-- 📎 **ファイル添付**: ログやスクリーンショットなどの関連ファイルを管理
-- 🔍 **高度な検索**: PostgreSQL全文検索による高速な検索機能
-- 📄 **PDFレポート生成**: 期間指定でのサマリーレポート自動生成
-- 🔐 **セルフホスト対応**: Docker Composeで簡単セットアップ、データは組織内に保持
-- 🌐 **多言語対応**: 日本語・英語のUI対応（予定）
-
-### 🎯 ターゲットユーザー
-
-- 中小規模の開発チーム・SREチーム（5-50名）
-- セキュリティオペレーションチーム（SOC）
-- IT部門・情報システム部門
-- コスト重視でセルフホスティングを希望する組織
-- データを外部SaaSに出したくない組織（金融機関、官公庁等）
-
----
-
-## 🚀 クイックスタート
+## クイックスタート
 
 ### 前提条件
 
 - Docker 20.10+ および Docker Compose 2.0+
-- または、Go 1.21+ と Node.js 18+ がインストールされていること
+- または、Go 1.24+ と Node.js 18+ がインストール済みであること
 
-### Docker Composeを使用した起動（推奨）
+### Docker Composeでの起動
 
 ```bash
-# リポジトリのクローン
 git clone https://github.com/your-org/incidex.git
 cd incidex
 
 # 環境変数のセットアップ
-cp .env.example .env
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
-
-# 本番環境の場合は、.envファイルの値を必ず変更してください
-# 詳細は SECURITY.md を参照してください
+# 本番環境では .env ファイルの値を変更してください（SECURITY.md 参照）
 
 # アプリケーションの起動
 make up
-
-# または
-docker-compose up -d
 ```
 
-起動後、以下のURLでアクセスできます：
+起動後のアクセス先:
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **MinIO Console**: http://localhost:9090（デフォルト: `minioadmin` / `minioadmin`）
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8080>
+- MinIO Console: <http://localhost:9090>
+
+初回起動時は、環境変数で指定した管理者アカウントが自動作成されます（デフォルト: <admin@example.com> / admin123）。
 
 ### ローカル開発環境での起動
 
-#### Backend
-
 ```bash
+# Backend
 cd backend
 cp .env.example .env
 go mod download
 go run cmd/server/main.go
-```
 
-#### Frontend
-
-```bash
+# Frontend
 cd frontend
-cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-詳細なセットアップ手順は [ドキュメント](./docs/) を参照してください。
+---
+
+## 機能一覧
+
+### 認証・ユーザー管理
+
+- ユーザー登録・ログイン（JWT認証）
+- パスワードリセット機能（メール送信対応）
+- ロールベースアクセス制御（管理者/編集者/閲覧者）
+- 管理者によるユーザー管理（作成、更新、無効化、削除）
+
+### インシデント管理
+
+- インシデントの作成・編集・削除・一覧表示
+- 深刻度（Critical/High/Medium/Low）とステータス管理
+- インシデントの担当者割り当て
+- ページネーションと検索・フィルタリング
+- SLA管理と違反追跡
+
+### タイムライン・アクティビティ
+
+- タイムラインイベントの記録（検知、調査開始、原因特定、緩和、解決等）
+- コメント機能
+- アクティビティ履歴の表示
+
+### ファイル管理
+
+- インシデントへのファイル添付（画像、PDF、ログ等）
+- MinIOによるオブジェクトストレージ管理
+- ファイルのダウンロード・削除
+
+### タグ管理
+
+- タグの作成・編集・削除
+- カラー設定による分類
+- タグによるフィルタリング
+
+### ポストモーテム
+
+- ポストモーテムの作成・編集・削除
+- 公開/非公開ステータス管理
+- アクションアイテムの登録・管理
+- 根本原因分析の記録
+
+### 統計・ダッシュボード
+
+- インシデント件数推移（日別・週別・月別）
+- 深刻度別・ステータス別の分布
+- SLAメトリクス
+- タグ別統計
+- 最近のインシデント一覧
+
+### レポート・エクスポート
+
+- 月次レポート生成
+- カスタム期間でのレポート生成
+- インシデント詳細のPDFエクスポート
+- インシデント一覧のCSVエクスポート
+
+### 監査ログ
+
+- 全ての操作履歴の記録
+- ユーザー、リソース、操作種別による検索
+
+### 通知設定
+
+- インシデント作成時の通知
+- コメント追加時の通知
+- タイムラインイベント追加時の通知
+- ユーザーごとの通知設定
 
 ---
 
-## 📋 機能一覧
-
-### Phase 1: 基本機能（実装済み）
-
-- ✅ **認証・ユーザー管理**
-  - ユーザー登録・ログイン（JWT認証）
-  - ロールベースアクセス制御（管理者/編集者/閲覧者）
-  - パスワードハッシュ化（bcrypt）
-
-- ✅ **インシデント管理**
-  - インシデントの作成・編集・削除・一覧表示
-  - 深刻度（Critical/High/Medium/Low）とステータス管理
-  - ページネーションと検索・フィルタリング機能
-  - SLA管理と違反追跡
-
-- ✅ **AI要約機能**
-  - インシデント作成時の自動要約生成
-  - 手動での要約再生成
-  - OpenAI API / Claude API対応
-
-- ✅ **タイムライン機能**
-  - インシデントに紐づく時系列イベントの記録
-  - イベントタイプ（検知、調査開始、原因特定、緩和、解決等）
-  - コメント機能
-
-- ✅ **タグ管理**
-  - タグの作成・編集・削除
-  - カラー設定による視覚的な分類
-  - タグによるフィルタリング
-
-- ✅ **ダッシュボード**
-  - インシデント件数推移（日別・週別・月別）
-  - 深刻度別・ステータス別の分布グラフ
-  - 最近のインシデント一覧
-
-- ✅ **ファイル添付**
-  - インシデントへのファイル添付（画像、PDF、ログ等）
-  - MinIOによるオブジェクトストレージ管理
-  - ファイルのダウンロード・削除
-
-### Phase 2: 高度な機能（開発中）
-
-- 🔄 **ポストモーテム機能**
-  - 根本原因分析（Five Whysテンプレート）
-  - アクションアイテム管理
-  - AI支援による根本原因分析の提案
-
-- 🔄 **高度な検索・フィルタリング**
-  - PostgreSQL全文検索（日本語・英語対応）
-  - 複数条件での絞り込み
-  - 検索結果のRedisキャッシュ
-
-- 🔄 **統計・分析**
-  - MTTR（平均復旧時間）の計算・表示
-  - カテゴリ別のインシデント傾向分析
-  - 再発率のトラッキング
-
-### Phase 3: レポート機能（予定）
-
-- 📄 **PDF自動生成**
-  - 単体インシデントのPDFレポート出力
-  - 期間指定でのサマリーレポート生成
-  - カスタマイズ可能なレポートテンプレート
-
----
-
-## 🛠 技術スタック
+## 技術スタック
 
 ### Backend
 
-- **Language**: Go 1.21+
-- **Framework**: [Gin Web Framework](https://gin-gonic.com/)
-- **ORM**: [GORM](https://gorm.io/)
-- **Architecture**: Clean Architecture（`domain` / `usecase` / `interface` / `infrastructure`）
-- **Database**: PostgreSQL 15+
-- **Cache**: Redis 7+
-- **Storage**: MinIO（S3互換オブジェクトストレージ）
-- **AI**: OpenAI API / Claude API
+- Language: Go 1.24
+- Framework: Gin Web Framework
+- ORM: GORM
+- Architecture: Clean Architecture (domain / usecase / interface / infrastructure)
+- Database: PostgreSQL 15
+- Cache: Redis 7
+- Storage: MinIO (S3互換オブジェクトストレージ)
+- Migration: goose
 
 ### Frontend
 
-- **Framework**: [Next.js 14+](https://nextjs.org/)（App Router）
-- **Language**: TypeScript 5+
-- **Styling**: [TailwindCSS](https://tailwindcss.com/)
-- **State Management**: React Context API
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript 5
+- Runtime: React 19
+- Styling: TailwindCSS 4
+- Charts: Recharts
 
 ### Infrastructure
 
-- **Containerization**: Docker & Docker Compose
-- **Tooling**: Make（開発・起動コマンドの共通化）
+- Containerization: Docker & Docker Compose
+- Development Tools: Make
 
 ---
 
-## 📁 プロジェクト構成
+## プロジェクト構成
 
 ```
 incidex/
-├── backend/                 # Go Backend
+├── backend/
 │   ├── cmd/
 │   │   ├── server/         # メインサーバー
-│   │   └── seed/          # データベースシードツール
+│   │   └── seed/           # データベースシードツール
 │   ├── internal/
 │   │   ├── config/         # 設定管理
 │   │   ├── domain/         # ドメインエンティティ・リポジトリIF
-│   │   ├── usecase/       # ビジネスロジック
-│   │   ├── interface/     # HTTPハンドラ・ルータ
-│   │   └── infrastructure/ # DB・ストレージ・AI等の実装
-│   └── Dockerfile
-├── frontend/               # Next.js Frontend
-│   ├── src/
-│   │   ├── app/           # App Router ページ
-│   │   ├── components/    # Reactコンポーネント
-│   │   ├── context/       # グローバル状態管理
-│   │   ├── lib/           # APIクライアント等
-│   │   └── types/         # TypeScript型定義
-│   └── Dockerfile
+│   │   ├── usecase/        # ビジネスロジック
+│   │   ├── interface/      # HTTPハンドラ・ルータ
+│   │   └── infrastructure/ # DB・ストレージ・通知等の実装
+│   └── migrations/         # データベースマイグレーション
+├── frontend/
+│   └── src/
+│       ├── app/            # App Routerページ
+│       ├── components/     # Reactコンポーネント
+│       ├── context/        # グローバル状態管理
+│       ├── lib/            # APIクライアント
+│       └── types/          # TypeScript型定義
 ├── docs/                   # ドキュメント
-│   ├── 要件定義書.md
-│   ├── api-specification.md
-│   ├── database-schema.md
-│   └── プロジェクト計画書.md
-├── docker-compose.yml      # Docker Compose設定
-├── Makefile               # 開発用コマンド
-├── README.md              # このファイル（日本語）
-├── README_EN.md           # English README
-├── SECURITY.md            # セキュリティガイドライン
-├── CONTRIBUTING.md        # コントリビューションガイド
-└── LICENSE                # ライセンスファイル
+├── docker-compose.yml
+├── Makefile
+└── README.md
 ```
 
 ---
 
-## 📚 ドキュメント
+## ドキュメント
 
-詳細なドキュメントは [`docs/`](./docs/) ディレクトリにあります：
+詳細なドキュメントは `docs/` ディレクトリを参照してください。
 
-- [要件定義書](./docs/要件定義書.md) - 機能要件と非機能要件の詳細
-- [API仕様書](./docs/api-specification.md) - REST APIの詳細仕様
-- [データベーススキーマ](./docs/database-schema.md) - データベース設計
-- [ER図](./docs/er-diagram.md) - エンティティ関係図
-- [プロジェクト計画書](./docs/プロジェクト計画書.md) - プロジェクト全体の計画
+- API仕様書
+- データベーススキーマ
+- 要件定義書
 
 ---
 
-## 🗃️ データベースマイグレーション
+## データベースマイグレーション
 
-Incidexでは、データベースマイグレーションに [goose](https://github.com/pressly/goose) を使用しています。
+データベースマイグレーションには goose を使用します。
 
-### マイグレーションの実行
+### マイグレーション実行
 
-#### Docker環境（推奨）
+Docker環境:
 
 ```bash
-# マイグレーションを実行（最新の状態にアップデート）
-make migrate-docker-up
-
-# マイグレーションのステータスを確認
-make migrate-docker-status
-
-# 最後のマイグレーションをロールバック
-make migrate-docker-down
+make migrate-docker-up       # マイグレーション実行
+make migrate-docker-status   # ステータス確認
+make migrate-docker-down     # ロールバック
 ```
 
-#### ローカル開発環境
+ローカル開発環境:
 
 ```bash
-# マイグレーションを実行（最新の状態にアップデート）
-make migrate-up
-
-# マイグレーションのステータスを確認
-make migrate-status
-
-# 最後のマイグレーションをロールバック
-make migrate-down
-
-# すべてのマイグレーションをリセット（注意: すべてのデータが削除されます）
-make migrate-reset
+make migrate-up       # マイグレーション実行
+make migrate-status   # ステータス確認
+make migrate-down     # ロールバック
 ```
 
-**注意**: ローカル環境では、デフォルトで `postgres://user:password@localhost:5432/incidex?sslmode=disable` に接続します。異なる接続文字列を使用する場合は、`MIGRATE_DB_URL` 環境変数を設定してください。
+### 新規マイグレーションの作成
 
 ```bash
-# カスタムデータベースURLでマイグレーションを実行
-MIGRATE_DB_URL="postgres://user:pass@host:5432/dbname?sslmode=disable" make migrate-up
-```
-
-### 新しいマイグレーションの作成
-
-```bash
-# 新しいマイグレーションファイルを作成
 make migrate-create name=add_new_feature
-
-# 作成されたファイル: backend/migrations/YYYYMMDDHHMMSS_add_new_feature.sql
 ```
 
-作成されたファイルには、`-- +goose Up` と `-- +goose Down` セクションがあります。Up セクションにマイグレーション処理を、Down セクションにロールバック処理を記述してください。
-
-### マイグレーションファイルの構造
-
-マイグレーションファイルは `backend/migrations/` ディレクトリに配置されます：
-
-```
-backend/migrations/
-├── 20250101000000_create_initial_tables.sql    # 初期テーブル作成
-├── 20250101000001_add_fulltext_search.sql      # 全文検索機能の追加
-└── legacy/                                      # 旧マイグレーションファイル（参考用）
-    ├── 001_add_fulltext_search.sql
-    └── run_migrations.sh
-```
-
-### マイグレーションのベストプラクティス
-
-1. **バックアップ**: 本番環境でのマイグレーション実行前に必ずデータベースのバックアップを取得してください
-2. **テスト**: 開発環境でマイグレーションを十分にテストしてから本番環境に適用してください
-3. **ロールバック**: Down マイグレーションは常に Up の逆操作を実装してください
-4. **原子性**: 1つのマイグレーションファイルには、関連する変更のみを含めてください
-5. **コメント**: 複雑なマイグレーションには、適切なコメントを付けてください
+作成されたファイル（`backend/migrations/YYYYMMDDHHMMSS_add_new_feature.sql`）の `-- +goose Up` セクションにマイグレーション処理、`-- +goose Down` セクションにロールバック処理を記述します。
 
 ---
 
-## 🔐 セキュリティ
+## セキュリティ
 
-セキュリティに関する重要な情報は [`SECURITY.md`](./SECURITY.md) に記載されています。
+本番環境での使用前に `SECURITY.md` を確認してください。
 
-**本番環境で使用する前に必ず一読してください。**
+主な注意事項:
 
-主な注意事項：
-
-- 強力な `JWT_SECRET` の設定（最低32文字）
+- 強力なJWT_SECRETの設定（最低32文字）
 - データベースSSLの有効化
 - MinIO認証情報の変更
 - HTTPS/TLSの設定
 
-セキュリティ脆弱性を発見した場合は、公開Issueではなく、プロジェクトメンテナーに直接連絡してください。
+セキュリティ脆弱性の報告は、公開Issueではなくプロジェクトメンテナーに直接連絡してください。
 
 ---
 
-## 🤝 コントリビューション
+## コントリビューション
 
-Incidexへのコントリビューションを歓迎します！
+プルリクエストやバグ報告を歓迎します。詳細は `CONTRIBUTING.md` を参照してください。
 
-コントリビューション方法の詳細は [`CONTRIBUTING.md`](./CONTRIBUTING.md) を参照してください。
-
-### コントリビューションの種類
-
-- 🐛 **バグ報告**: Issueで問題を報告
-- 💡 **機能提案**: 新機能や改善案の提案
-- 🔧 **コード改善**: Pull Requestでのコード改善
-- 📝 **ドキュメント改善**: ドキュメントの改善や翻訳
-- 🧪 **テスト追加**: テストカバレッジの向上
-
-### 開発フロー
-
-1. このリポジトリをフォーク
-2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+1. リポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/new-feature`)
+3. 変更をコミット
+4. ブランチにプッシュ
 5. Pull Requestを作成
-
----
-
-## 📝 ライセンス
-
-このプロジェクトは [MIT License](./LICENSE) の下で公開されています。
-
----
-
-## 🗺 ロードマップ
-
-### Phase 1: MVP（基本機能）✅
-- 認証・ユーザー管理
-- インシデントCRUD・検索・フィルタリング
-- タグ管理
-- AI要約機能
-- タイムライン機能
-- ダッシュボード
-
-### Phase 2: 運用高度化 🔄
-- ポストモーテム機能
-- 高度な検索・フィルタリング
-- 統計・分析機能の拡張
-
-### Phase 3: レポート機能 📅
-- PDFレポート生成
-- カスタマイズ可能なレポートテンプレート
-
-### 将来の計画
-- マルチテナント対応（SaaS化）
-- Webhook通知
-- Slack連携
-- 多言語UI対応の拡張
-- Kubernetes Operator
-
-詳細は [プロジェクト計画書](./docs/プロジェクト計画書.md) を参照してください。
-
----
-
-## 💬 サポート
-
-### Issue報告
-
-バグ報告や機能要望は [GitHub Issues](https://github.com/your-org/incidex/issues) で受け付けています。
-
-### ディスカッション
-
-一般的な質問や議論は [GitHub Discussions](https://github.com/your-org/incidex/discussions) で行えます。
-
-### セキュリティ問題
-
-セキュリティに関する問題は、公開Issueではなく、プロジェクトメンテナーに直接連絡してください。
-
----
-
-## 🙏 謝辞
-
-Incidexは以下のオープンソースプロジェクトに依存しています：
-
-- [Gin](https://gin-gonic.com/) - Go Web Framework
-- [GORM](https://gorm.io/) - Go ORM
-- [Next.js](https://nextjs.org/) - React Framework
-- [TailwindCSS](https://tailwindcss.com/) - CSS Framework
-- [PostgreSQL](https://www.postgresql.org/) - Database
-- [Redis](https://redis.io/) - Cache
-- [MinIO](https://min.io/) - Object Storage
-
-その他、すべての依存パッケージの開発者に感謝します。
-
----
-
-## 📞 連絡先
-
-- **GitHub**: [https://github.com/your-org/incidex](https://github.com/your-org/incidex)
-- **Issues**: [https://github.com/your-org/incidex/issues](https://github.com/your-org/incidex/issues)
-- **Discussions**: [https://github.com/your-org/incidex/discussions](https://github.com/your-org/incidex/discussions)
-
----
-
-<div align="center">
-
-**Made with ❤️ by the Incidex Team**
-
-[⭐ Star us on GitHub](https://github.com/your-org/incidex) | [📖 Documentation](./docs/) | [🤝 Contribute](./CONTRIBUTING.md)
-
-</div>
