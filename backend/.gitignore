@@ -10,3 +10,6 @@ seeder
 # Test coverage
 *.out
 coverage.html
+
+# Security scan reports (auto-generated)
+gosec-report.json
