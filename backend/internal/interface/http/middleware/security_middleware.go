@@ -1,12 +1,18 @@
 package middleware
 
 import (
+	"os"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
 // SecurityHeaders adds security headers to all responses
 func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Check if running in production
+		appEnv := os.Getenv("APP_ENV")
+		isProduction := strings.ToLower(appEnv) == "production" || strings.ToLower(appEnv) == "prod"
 		// Prevent clickjacking attacks
 		c.Header("X-Frame-Options", "DENY")
 
@@ -31,8 +37,13 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 
 		// HSTS - only enable in production with HTTPS
-		// Uncomment the following line when using HTTPS in production
-		// c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+		if isProduction {
+			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+		}
+
+		// Additional security headers
+		c.Header("X-Permitted-Cross-Domain-Policies", "none")
+		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
 		c.Next()
 	}
