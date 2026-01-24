@@ -15,7 +15,7 @@ type ActionItem struct {
 	Priority     Priority     `gorm:"size:20;not null;default:'medium';index" json:"priority"`
 	Status       ActionStatus `gorm:"size:20;not null;default:'pending';index" json:"status"`
 	DueDate      *time.Time   `json:"due_date"`
-	RelatedLinks string       `gorm:"type:text" json:"related_links"` // JSON array of links
+	RelatedLinks string       `gorm:"type:jsonb;default:'[]'" json:"related_links"` // JSON array of links
 	CreatedAt    time.Time    `gorm:"index" json:"created_at"`
 	UpdatedAt    time.Time    `json:"updated_at"`
 	CompletedAt  *time.Time   `json:"completed_at"`

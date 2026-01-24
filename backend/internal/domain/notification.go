@@ -5,7 +5,7 @@ import "time"
 // NotificationSetting はユーザーごとの通知設定を表します
 type NotificationSetting struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
-	UserID    uint      `gorm:"not null;index" json:"user_id"`
+	UserID    uint      `gorm:"not null;uniqueIndex" json:"user_id"`
 	User      *User     `gorm:"foreignKey:UserID" json:"user,omitempty"`
 
 	// 通知チャネル
