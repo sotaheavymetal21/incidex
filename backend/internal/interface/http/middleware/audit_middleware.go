@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"incidex/internal/domain"
+	"incidex/internal/pkg/sanitizer"
 	"io"
 	"strconv"
 	"strings"
@@ -41,7 +42,7 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 			requestBody = string(bodyBytes)
 			// Sanitize sensitive data (passwords, tokens, etc.)
-			requestBody = sanitizeSensitiveData(requestBody)
+			requestBody = sanitizer.SanitizeJSON(requestBody)
 		}
 
 		// Process request
@@ -52,7 +53,7 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 			log := &domain.AuditLog{
 				Method:     c.Request.Method,
 				Path:       c.Request.URL.Path,
-				IPAddress:  c.ClientIP(),
+				IPAddress:  sanitizer.SanitizeIP(c.ClientIP()), // Mask IP for GDPR compliance
 				UserAgent:  c.Request.UserAgent(),
 				StatusCode: c.Writer.Status(),
 				CreatedAt:  time.Now(),
@@ -221,24 +222,5 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 	return action, resourceType, resourceID
 }
 
-func sanitizeSensitiveData(body string) string {
-	// Remove password fields
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(body), &data); err != nil {
-		return body
-	}
-
-	// Sanitize passwords
-	if _, exists := data["password"]; exists {
-		data["password"] = "***REDACTED***"
-	}
-	if _, exists := data["old_password"]; exists {
-		data["old_password"] = "***REDACTED***"
-	}
-	if _, exists := data["new_password"]; exists {
-		data["new_password"] = "***REDACTED***"
-	}
-
-	sanitized, _ := json.Marshal(data)
-	return string(sanitized)
-}
+// Note: sanitizeSensitiveData function has been removed
+// Use sanitizer.SanitizeJSON instead for comprehensive sanitization

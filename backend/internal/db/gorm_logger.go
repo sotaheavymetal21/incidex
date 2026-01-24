@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"errors"
-	"regexp"
+	"incidex/internal/pkg/sanitizer"
 	"time"
 
 	"go.uber.org/zap"
@@ -95,23 +95,8 @@ func (l *SecureLogger) maskSensitiveData(sql string) string {
 		return sql
 	}
 
-	// Mask password hashes (bcrypt format: $2a$, $2b$, $2y$)
-	bcryptPattern := regexp.MustCompile(`'\$2[aby]\$[^']*'`)
-	sql = bcryptPattern.ReplaceAllString(sql, "'[MASKED_HASH]'")
-
-	// Mask email addresses
-	emailPattern := regexp.MustCompile(`'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'`)
-	sql = emailPattern.ReplaceAllString(sql, "'[MASKED_EMAIL]'")
-
-	// Mask JWT tokens (typically long base64-like strings)
-	jwtPattern := regexp.MustCompile(`'eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*'`)
-	sql = jwtPattern.ReplaceAllString(sql, "'[MASKED_TOKEN]'")
-
-	// Mask UUIDs in sensitive contexts (optional, can be uncommented if needed)
-	// uuidPattern := regexp.MustCompile(`'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'`)
-	// sql = uuidPattern.ReplaceAllString(sql, "'[MASKED_UUID]'")
-
-	return sql
+	// Use the centralized sanitizer for comprehensive masking
+	return sanitizer.SanitizeSQL(sql)
 }
 
 // NewSecureLogger creates a new secure logger instance
