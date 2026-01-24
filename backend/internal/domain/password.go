@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"slices"
 	"unicode"
 )
 
@@ -16,17 +17,17 @@ type PasswordPolicy struct {
 
 // DefaultPasswordPolicy is the default password policy
 var DefaultPasswordPolicy = PasswordPolicy{
-	MinLength:      8,
+	MinLength:      12,
 	RequireUpper:   true,
 	RequireLower:   true,
 	RequireNumber:  true,
-	RequireSpecial: false, // Optional for now
+	RequireSpecial: true,
 }
 
 // Validate checks if a password meets the policy requirements
 func (p *PasswordPolicy) Validate(password string) error {
 	if len(password) < p.MinLength {
-		return ErrValidation("Password must be at least 8 characters long")
+		return ErrValidation("Password must be at least 12 characters long")
 	}
 
 	var (
@@ -71,19 +72,33 @@ func ValidatePassword(password string) error {
 }
 
 // IsCommonPassword checks if the password is in a list of common passwords
-// For now, just check for extremely weak passwords
 func IsCommonPassword(password string) bool {
+	// Top 100 most common passwords
 	commonPasswords := []string{
-		"password", "12345678", "password123", "qwerty", "abc123",
-		"password1", "12345", "1234567890", "letmein", "welcome",
+		"password", "123456", "12345678", "qwerty", "abc123",
+		"monkey", "1234567", "letmein", "trustno1", "dragon",
+		"baseball", "111111", "iloveyou", "master", "sunshine",
+		"ashley", "bailey", "passw0rd", "shadow", "123123",
+		"654321", "superman", "qazwsx", "michael", "football",
+		"welcome", "jesus", "ninja", "mustang", "password1",
+		"123456789", "adobe123", "admin", "1234567890", "photoshop",
+		"1234", "12345", "password123", "pussy", "hunter",
+		"harley", "computer", "mickey", "tigger", "qwerty123",
+		"charlie", "donald", "pepper", "ginger", "liverpool",
+		"buster", "dallas", "access", "love", "flower",
+		"batman", "startrek", "killer", "soccer", "ranger",
+		"sunshine", "jordan", "asshole", "master", "andrea",
+		"fuckme", "pepper", "whatever", "hockey", "corvette",
+		"maggie", "george", "bigdog", "cheese", "matthew",
+		"112233", "samsung", "compaq", "boston", "taylor",
+		"yellow", "jessica", "summer", "sparky", "test",
+		"scooter", "forever", "maverick", "cookie", "peanut",
+		"morgan", "falcon", "cowboy", "ferrari", "knight",
+		"amazon", "google", "twitter", "facebook", "linkedin",
+		"welcome1", "password!", "admin123", "root", "toor",
 	}
 
-	for _, common := range commonPasswords {
-		if password == common {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(commonPasswords, password)
 }
 
 // ValidatePasswordStrength validates password strength including common password check
