@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 type RequestOptions = {
@@ -71,6 +73,8 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   }
 
   try {
+    logger.apiRequest(config.method || 'GET', endpoint, options.body);
+
     const response = await fetch(url, config);
 
     if (!response.ok) {
@@ -95,6 +99,7 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
           });
         } catch (refreshError) {
           // Refresh failed, logout user
+          logger.warn('Token refresh failed, logging out user');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           if (typeof window !== 'undefined') {
@@ -105,18 +110,20 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
       }
 
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed with status ${response.status}`);
+      const error = new Error(errorData.error || `Request failed with status ${response.status}`);
+      logger.apiResponse(config.method || 'GET', endpoint, response.status);
+      throw error;
     }
 
+    logger.apiResponse(config.method || 'GET', endpoint, response.status);
     return response.json();
   } catch (error) {
     // ネットワークエラーの場合、より詳細なエラーメッセージを提供
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      console.error(`API request failed: ${url}`, error);
+      logger.error('API request failed - network error', error as Error, { url, endpoint });
       throw new Error(
         `バックエンドサーバーに接続できませんでした。サーバーが起動しているか確認してください。\n` +
-        `URL: ${url}\n` +
-        `エラー: ${error.message}`
+        `エラー: ${(error as Error).message}`
       );
     }
     throw error;
@@ -125,14 +132,22 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 
 export const authApi = {
   register: (name: string, email: string, password: string, employeeNumber: string, department: string) =>
-    apiRequest<{ token: string; user: any }>('/auth/register', {
+    apiRequest<{ access_token: string; user: any }>('/auth/register', {
       method: 'POST',
       body: { name, email, password, employee_number: employeeNumber, department },
     }),
   login: (email: string, password: string) =>
-    apiRequest<{ token: string; user: any }>('/auth/login', {
+    apiRequest<{ access_token: string; user: any }>('/auth/login', {
       method: 'POST',
       body: { email, password },
+    }),
+  logout: () =>
+    apiRequest<{ message: string }>('/auth/logout', {
+      method: 'POST',
+    }),
+  refresh: () =>
+    apiRequest<{ access_token: string; user: any }>('/auth/refresh', {
+      method: 'POST',
     }),
   requestPasswordReset: (email: string) =>
     apiRequest<{ message: string }>('/auth/forgot-password', {
