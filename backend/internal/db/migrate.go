@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/pressly/goose/v3"
 )
 
