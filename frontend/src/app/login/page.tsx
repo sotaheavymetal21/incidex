@@ -73,7 +73,7 @@ export default function LoginPage() {
 
     try {
       const res = await authApi.login(email.trim(), password);
-      login(res.token, res.user);
+      login(res.access_token, res.user);
       router.push('/');
     } catch (err: any) {
       setError(err.message);

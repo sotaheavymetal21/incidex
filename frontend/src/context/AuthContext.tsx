@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 import { useRouter } from 'next/navigation';
+import { authApi } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 type User = {
   id: number;
@@ -45,7 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call logout API to revoke refresh token
+      await authApi.logout();
+    } catch (error) {
+      // Ignore errors - still log out locally
+      logger.warn('Logout API call failed, proceeding with local logout', { error });
+    }
+
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
