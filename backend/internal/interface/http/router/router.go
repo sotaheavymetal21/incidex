@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler, healthHandler *handler.HealthHandler, passwordResetHandler *handler.PasswordResetHandler) {
+func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler, healthHandler *handler.HealthHandler, passwordResetHandler *handler.PasswordResetHandler, loginRateLimiter *middleware.RateLimitMiddleware, apiRateLimiter *middleware.RateLimitMiddleware) {
 	api := r.Group("/api")
 	{
 		// Health check routes (no auth required)
@@ -17,18 +17,20 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 		// Auth routes
 		auth := api.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.Refresh)
+			// Apply rate limiting to authentication endpoints
+			auth.POST("/register", loginRateLimiter.Handle(), authHandler.Register)
+			auth.POST("/login", loginRateLimiter.Handle(), authHandler.Login)
+			auth.POST("/refresh", loginRateLimiter.Handle(), authHandler.Refresh)
 			auth.POST("/logout", authHandler.Logout)
-			auth.POST("/forgot-password", passwordResetHandler.RequestPasswordReset)
-			auth.POST("/reset-password", passwordResetHandler.ResetPassword)
+			auth.POST("/forgot-password", loginRateLimiter.Handle(), passwordResetHandler.RequestPasswordReset)
+			auth.POST("/reset-password", loginRateLimiter.Handle(), passwordResetHandler.ResetPassword)
 			auth.GET("/validate-reset-token", passwordResetHandler.ValidateToken)
 		}
 
 		// Protected routes
 		protected := api.Group("/")
 		protected.Use(jwtMiddleware.Handle())
+		protected.Use(apiRateLimiter.Handle()) // Apply general API rate limiting
 		{
 			protected.GET("/protected", func(c *gin.Context) {
 				userID, _ := c.Get("userID")
