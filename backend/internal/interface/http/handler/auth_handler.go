@@ -9,11 +9,15 @@ import (
 )
 
 type AuthHandler struct {
-	authUsecase usecase.AuthUsecase
+	authUsecase  usecase.AuthUsecase
+	isProduction bool
 }
 
-func NewAuthHandler(authUsecase usecase.AuthUsecase) *AuthHandler {
-	return &AuthHandler{authUsecase: authUsecase}
+func NewAuthHandler(authUsecase usecase.AuthUsecase, isProduction bool) *AuthHandler {
+	return &AuthHandler{
+		authUsecase:  authUsecase,
+		isProduction: isProduction,
+	}
 }
 
 type RegisterRequest struct {
@@ -93,9 +97,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		7*24*60*60,                // maxAge in seconds (7 days)
 		"/",                       // path
 		"",                        // domain (empty for current domain)
-		false,                     // secure (set to true in production with HTTPS)
+		h.isProduction,            // secure (true in production with HTTPS)
 		true,                      // httpOnly
 	)
+	// Set SameSite attribute for CSRF protection
+	c.SetSameSite(http.SameSiteStrictMode)
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": authResponse.AccessToken,
@@ -138,9 +144,11 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		7*24*60*60,                // maxAge in seconds (7 days)
 		"/",                       // path
 		"",                        // domain
-		false,                     // secure (set to true in production with HTTPS)
+		h.isProduction,            // secure (true in production with HTTPS)
 		true,                      // httpOnly
 	)
+	// Set SameSite attribute for CSRF protection
+	c.SetSameSite(http.SameSiteStrictMode)
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token": authResponse.AccessToken,
@@ -167,9 +175,10 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		-1, // maxAge -1 deletes the cookie
 		"/",
 		"",
-		false,
+		h.isProduction,
 		true,
 	)
+	c.SetSameSite(http.SameSiteStrictMode)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
