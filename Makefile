@@ -1,4 +1,4 @@
-.PHONY: up down logs dev start setup seed seed-force migrate-up migrate-down migrate-status migrate-create migrate-docker-up migrate-docker-down migrate-docker-status cleanup-audit-logs
+.PHONY: up down logs dev start setup seed seed-force migrate-up migrate-down migrate-status migrate-create migrate-docker-up migrate-docker-down migrate-docker-status cleanup-audit-logs security security-gosec security-vulncheck security-lint
 
 # Docker
 up:
@@ -73,3 +73,19 @@ migrate-docker-status:
 # Maintenance
 cleanup-audit-logs:
 	./scripts/cleanup-audit-logs.sh
+
+# Security Scanning
+security: security-gosec security-vulncheck security-lint
+	@echo "All security checks completed!"
+
+security-gosec:
+	@echo "Running gosec security scanner..."
+	cd backend && gosec -fmt=json -out=gosec-report.json -stdout -verbose=text ./...
+
+security-vulncheck:
+	@echo "Running govulncheck for known vulnerabilities..."
+	cd backend && govulncheck ./...
+
+security-lint:
+	@echo "Running golangci-lint with security checks..."
+	cd backend && golangci-lint run --config=../.golangci.yml ./...
