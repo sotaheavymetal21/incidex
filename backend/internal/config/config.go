@@ -16,8 +16,15 @@ type Config struct {
 	MinioSecretKey string
 	JWTSecret      string
 	AppEnv         string
+	// Logging configuration
+	// LOG_LEVEL: Application log level (debug, info, warn, error, fatal)
+	// Default: "info" for production, "debug" for development
+	LogLevel string
+	// LOG_STACKTRACE: Enable/disable stack traces (true/false)
+	// Default: false for production, true for development
+	LogStacktrace bool
 	// Database logging configuration
-	// Options: "silent", "error", "warn", "info"
+	// DB_LOG_LEVEL: Database query log level (silent, error, warn, info)
 	// Default: "warn" for production, "info" for development
 	DBLogLevel string
 	// CORS configuration
@@ -29,8 +36,8 @@ type Config struct {
 	// Frontend URL for email links
 	FrontendURL string
 	// Auto migration configuration
-	AutoMigrate     bool
-	MigrationsDir   string
+	AutoMigrate   bool
+	MigrationsDir string
 }
 
 func Load() *Config {
@@ -46,6 +53,8 @@ func Load() *Config {
 		MinioSecretKey:       getEnvRequired("MINIO_SECRET_KEY"),
 		JWTSecret:            getEnvRequired("JWT_SECRET"),
 		AppEnv:               appEnv,
+		LogLevel:             getEnv("LOG_LEVEL", getDefaultLogLevel(appEnv)),
+		LogStacktrace:        getEnv("LOG_STACKTRACE", getDefaultLogStacktrace(appEnv)) == "true",
 		DBLogLevel:           getEnv("DB_LOG_LEVEL", getDefaultDBLogLevel(appEnv)),
 		CORSAllowedOrigins:   parseCORSOrigins(getEnvRequired("CORS_ALLOWED_ORIGINS")),
 		InitialAdminEmail:    getEnv("INITIAL_ADMIN_EMAIL", ""),
@@ -103,6 +112,20 @@ func isProduction(env string) bool {
 
 func isDevelopment(env string) bool {
 	return strings.ToLower(env) == "development" || strings.ToLower(env) == "dev"
+}
+
+func getDefaultLogLevel(env string) string {
+	if isProduction(env) {
+		return "info" // Production: info level logs
+	}
+	return "debug" // Development: debug level logs
+}
+
+func getDefaultLogStacktrace(env string) string {
+	if isProduction(env) {
+		return "false" // Production: disable stack traces for security
+	}
+	return "true" // Development: enable stack traces for debugging
 }
 
 func getDefaultDBLogLevel(env string) string {
