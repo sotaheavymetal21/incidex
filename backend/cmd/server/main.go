@@ -54,12 +54,14 @@ func main() {
 	}
 
 	// Initialize MinIO Storage
+	// Use SSL in production, disable in development for local testing
+	useSSL := isProduction
 	minioStorage, err := storage.NewMinIOStorage(
 		cfg.MinioEndpoint,
 		cfg.MinioAccessKey,
 		cfg.MinioSecretKey,
 		storage.DefaultBucketName,
-		false, // useSSL = false for local development
+		useSSL,
 	)
 	if err != nil {
 		log.Fatalf("Failed to initialize MinIO storage: %v", err)
@@ -79,7 +81,7 @@ func main() {
 
 	// JWT token expiry: 1 hour for access tokens (more secure)
 	authUsecase := usecase.NewAuthUsecase(userRepo, refreshTokenRepo, cfg.JWTSecret, 1*time.Hour)
-	authHandler := handler.NewAuthHandler(authUsecase)
+	authHandler := handler.NewAuthHandler(authUsecase, isProduction)
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
 
 	// Password Reset
@@ -153,6 +155,12 @@ func main() {
 	// Health
 	healthHandler := handler.NewHealthHandler(dbConn)
 
+	// Rate limiters
+	// Login rate limit: 5 requests per minute
+	loginRateLimiter := middleware.NewRateLimitMiddleware(redisClient, 5, 1*time.Minute)
+	// General API rate limit: 100 requests per minute
+	apiRateLimiter := middleware.NewRateLimitMiddleware(redisClient, 100, 1*time.Minute)
+
 	r := gin.Default()
 
 	// Security headers middleware (first)
@@ -172,7 +180,7 @@ func main() {
 	}))
 
 	// Register Routes
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler, healthHandler, passwordResetHandler)
+	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler, healthHandler, passwordResetHandler, loginRateLimiter, apiRateLimiter)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
