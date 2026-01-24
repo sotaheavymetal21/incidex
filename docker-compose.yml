@@ -51,13 +51,17 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       JWT_SECRET: ${JWT_SECRET}
       PORT: ${PORT}
-      APP_ENV: development
-      AUTO_MIGRATE: "true"
-      MIGRATIONS_DIR: "/app/migrations"
+      APP_ENV: ${APP_ENV:-development}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      FRONTEND_URL: ${FRONTEND_URL}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+      MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/app/migrations}
+      DB_LOG_LEVEL: ${DB_LOG_LEVEL:-info}
       # Initial admin user (created automatically on first startup if no users exist)
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
       INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD}
     ports:
       - "8080:8080"
     volumes:
