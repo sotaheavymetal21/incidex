@@ -1,0 +1,24 @@
+{
+  "severity": "medium",
+  "confidence": "medium",
+  "exclude": [],
+  "exclude-generated": true,
+  "tests": true,
+  "exclude-dirs": [
+    "vendor",
+    "node_modules"
+  ],
+  "exclude-rules": {
+    "G104": {
+      "description": "エラーチェックを許可する特定のパターン",
+      "files": [
+        "cmd/seed/main.go"
+      ]
+    }
+  },
+  "global": {
+    "nosec": false,
+    "show-ignored": true,
+    "audit": true
+  }
+}

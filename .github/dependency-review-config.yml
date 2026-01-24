@@ -1,0 +1,27 @@
+# 依存関係レビューの設定
+# https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/configuring-dependency-review
+
+# 脆弱性のしきい値
+fail-on-severity: moderate
+
+# ライセンスの設定
+fail-on-scopes:
+  - development
+  - runtime
+
+# 許可しないライセンス
+deny-licenses:
+  - GPL-3.0
+  - AGPL-3.0
+
+# 許可するライセンス
+allow-licenses:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - MPL-2.0
+
+# 依存関係の変更を常に許可するパッケージ
+allow-dependencies-licenses: []
