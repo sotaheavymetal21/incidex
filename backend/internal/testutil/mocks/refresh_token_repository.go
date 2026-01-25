@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockRefreshTokenRepository is a mock implementation of domain.RefreshTokenRepository
+// MockRefreshTokenRepository は domain.RefreshTokenRepository のモック実装です
 type MockRefreshTokenRepository struct {
 	mock.Mock
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockCacheRepository is a mock implementation of domain.CacheRepository
+// MockCacheRepository は domain.CacheRepository のモック実装です
 type MockCacheRepository struct {
 	mock.Mock
 }

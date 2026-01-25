@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockIncidentActivityRepository is a mock implementation of domain.IncidentActivityRepository
+// MockIncidentActivityRepository は domain.IncidentActivityRepository のモック実装です
 type MockIncidentActivityRepository struct {
 	mock.Mock
 }

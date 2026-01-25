@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockPostMortemRepository is a mock implementation of domain.PostMortemRepository
+// MockPostMortemRepository は domain.PostMortemRepository のモック実装です
 type MockPostMortemRepository struct {
 	mock.Mock
 }

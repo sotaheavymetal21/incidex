@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-// Factory provides methods to create test data
+// Factory はテストデータを作成するためのメソッドを提供します
 
-// NewTestUser creates a new test user with default values
+// NewTestUser はデフォルト値を持つ新しいテストユーザーを作成します
 func NewTestUser(overrides ...func(*domain.User)) *domain.User {
 	user := &domain.User{
 		ID:           1,
@@ -27,7 +27,7 @@ func NewTestUser(overrides ...func(*domain.User)) *domain.User {
 	return user
 }
 
-// NewTestAdmin creates a new test admin user
+// NewTestAdmin は新しいテスト管理者ユーザーを作成します
 func NewTestAdmin(overrides ...func(*domain.User)) *domain.User {
 	return NewTestUser(append([]func(*domain.User){
 		func(u *domain.User) {
@@ -38,7 +38,7 @@ func NewTestAdmin(overrides ...func(*domain.User)) *domain.User {
 	}, overrides...)...)
 }
 
-// NewTestEditor creates a new test editor user
+// NewTestEditor は新しいテスト編集者ユーザーを作成します
 func NewTestEditor(overrides ...func(*domain.User)) *domain.User {
 	return NewTestUser(append([]func(*domain.User){
 		func(u *domain.User) {
@@ -49,7 +49,7 @@ func NewTestEditor(overrides ...func(*domain.User)) *domain.User {
 	}, overrides...)...)
 }
 
-// NewTestIncident creates a new test incident with default values
+// NewTestIncident はデフォルト値を持つ新しいテストインシデントを作成します
 func NewTestIncident(overrides ...func(*domain.Incident)) *domain.Incident {
 	detectedAt := time.Now().Add(-1 * time.Hour)
 	slaHours := domain.GetDefaultSLAHours(domain.SeverityMedium)
@@ -77,7 +77,7 @@ func NewTestIncident(overrides ...func(*domain.Incident)) *domain.Incident {
 	return incident
 }
 
-// NewTestCriticalIncident creates a critical severity test incident
+// NewTestCriticalIncident はクリティカル重要度のテストインシデントを作成します
 func NewTestCriticalIncident(overrides ...func(*domain.Incident)) *domain.Incident {
 	return NewTestIncident(append([]func(*domain.Incident){
 		func(i *domain.Incident) {
@@ -89,7 +89,7 @@ func NewTestCriticalIncident(overrides ...func(*domain.Incident)) *domain.Incide
 	}, overrides...)...)
 }
 
-// NewTestResolvedIncident creates a resolved test incident
+// NewTestResolvedIncident は解決済みのテストインシデントを作成します
 func NewTestResolvedIncident(overrides ...func(*domain.Incident)) *domain.Incident {
 	resolvedAt := time.Now()
 	return NewTestIncident(append([]func(*domain.Incident){
@@ -100,7 +100,7 @@ func NewTestResolvedIncident(overrides ...func(*domain.Incident)) *domain.Incide
 	}, overrides...)...)
 }
 
-// NewTestTag creates a new test tag with default values
+// NewTestTag はデフォルト値を持つ新しいテストタグを作成します
 func NewTestTag(overrides ...func(*domain.Tag)) *domain.Tag {
 	tag := &domain.Tag{
 		ID:        1,
@@ -117,7 +117,7 @@ func NewTestTag(overrides ...func(*domain.Tag)) *domain.Tag {
 	return tag
 }
 
-// NewTestRefreshToken creates a new test refresh token
+// NewTestRefreshToken は新しいテスト refresh token を作成します
 func NewTestRefreshToken(userID uint, overrides ...func(*domain.RefreshToken)) *domain.RefreshToken {
 	token := &domain.RefreshToken{
 		ID:        1,
@@ -134,7 +134,7 @@ func NewTestRefreshToken(userID uint, overrides ...func(*domain.RefreshToken)) *
 	return token
 }
 
-// NewTestIncidentActivity creates a new test incident activity
+// NewTestIncidentActivity は新しいテストインシデントアクティビティを作成します
 func NewTestIncidentActivity(incidentID, userID uint, overrides ...func(*domain.IncidentActivity)) *domain.IncidentActivity {
 	activity := &domain.IncidentActivity{
 		ID:           1,
@@ -152,7 +152,7 @@ func NewTestIncidentActivity(incidentID, userID uint, overrides ...func(*domain.
 	return activity
 }
 
-// NewTestPostMortem creates a new test post mortem
+// NewTestPostMortem は新しいテストポストモーテムを作成します
 func NewTestPostMortem(incidentID, authorID uint, overrides ...func(*domain.PostMortem)) *domain.PostMortem {
 	pm := &domain.PostMortem{
 		ID:             1,
@@ -175,17 +175,34 @@ func NewTestPostMortem(incidentID, authorID uint, overrides ...func(*domain.Post
 	return pm
 }
 
-// TimePtr returns a pointer to a time.Time value
+// NewTestPasswordResetToken は新しいテストパスワードリセットトークンを作成します
+func NewTestPasswordResetToken(userID uint, overrides ...func(*domain.PasswordResetToken)) *domain.PasswordResetToken {
+	token := &domain.PasswordResetToken{
+		ID:        1,
+		UserID:    userID,
+		Token:     "test-reset-token-0123456789abcdef0123456789abcdef0123456789abcdef",
+		ExpiresAt: time.Now().Add(domain.PasswordResetTokenExpiration),
+		CreatedAt: time.Now(),
+	}
+
+	for _, override := range overrides {
+		override(token)
+	}
+
+	return token
+}
+
+// TimePtr は time.Time 値へのポインタを返します
 func TimePtr(t time.Time) *time.Time {
 	return &t
 }
 
-// UintPtr returns a pointer to a uint value
+// UintPtr は uint 値へのポインタを返します
 func UintPtr(u uint) *uint {
 	return &u
 }
 
-// StringPtr returns a pointer to a string value
+// StringPtr は string 値へのポインタを返します
 func StringPtr(s string) *string {
 	return &s
 }

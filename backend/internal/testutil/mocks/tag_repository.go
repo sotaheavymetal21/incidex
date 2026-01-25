@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockTagRepository is a mock implementation of domain.TagRepository
+// MockTagRepository は domain.TagRepository のモック実装です
 type MockTagRepository struct {
 	mock.Mock
 }
