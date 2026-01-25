@@ -9,31 +9,36 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ReportHandler はレポート関連の HTTP handler を提供します
 type ReportHandler struct {
 	reportUsecase usecase.ReportUsecase
 }
 
+// NewReportHandler は新しい ReportHandler を作成します
 func NewReportHandler(u usecase.ReportUsecase) *ReportHandler {
 	return &ReportHandler{
 		reportUsecase: u,
 	}
 }
 
-// GetMonthlyReport generates a monthly report
-// @Summary Get monthly report
-// @Description Get comprehensive monthly incident report for a specific month
+// GetMonthlyReport godoc
+// @Summary 月次レポートを生成します
+// @Description 特定の月の包括的なインシデント月次レポートを取得します
 // @Tags reports
 // @Accept json
 // @Produce json
-// @Param year query int true "Year (e.g., 2024)"
-// @Param month query int true "Month (1-12)"
+// @Param year query int true "年（例: 2024）"
+// @Param month query int true "月（1-12）"
 // @Success 200 {object} domain.MonthlyReport
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /reports/monthly [get]
+// @Security BearerAuth
 func (h *ReportHandler) GetMonthlyReport(c *gin.Context) {
 	yearStr := c.Query("year")
 	monthStr := c.Query("month")
 
-	// Default to current month if not specified
+	// 指定がない場合は現在の月をデフォルトとする
 	now := time.Now()
 	year := now.Year()
 	month := int(now.Month())
@@ -64,16 +69,19 @@ func (h *ReportHandler) GetMonthlyReport(c *gin.Context) {
 	c.JSON(http.StatusOK, report)
 }
 
-// GetCustomReport generates a custom period report
-// @Summary Get custom period report
-// @Description Get incident report for a custom date range
+// GetCustomReport godoc
+// @Summary カスタム期間レポートを生成します
+// @Description カスタム日付範囲のインシデントレポートを取得します
 // @Tags reports
 // @Accept json
 // @Produce json
-// @Param start_date query string true "Start date (RFC3339 format)"
-// @Param end_date query string true "End date (RFC3339 format)"
+// @Param start_date query string true "開始日（RFC3339 形式）"
+// @Param end_date query string true "終了日（RFC3339 形式）"
 // @Success 200 {object} domain.MonthlyReport
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /reports/custom [get]
+// @Security BearerAuth
 func (h *ReportHandler) GetCustomReport(c *gin.Context) {
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")

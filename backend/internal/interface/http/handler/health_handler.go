@@ -7,22 +7,24 @@ import (
 	"gorm.io/gorm"
 )
 
+// HealthHandler はヘルスチェック関連の HTTP handler を提供します
 type HealthHandler struct {
 	db *gorm.DB
 }
 
+// NewHealthHandler は新しい HealthHandler を作成します
 func NewHealthHandler(db *gorm.DB) *HealthHandler {
 	return &HealthHandler{db: db}
 }
 
-// Liveness は アプリケーションが動作しているかを返す
+// Liveness はアプリケーションが動作しているかを返します
 func (h *HealthHandler) Liveness(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
 	})
 }
 
-// Readiness は DB接続を含む依存サービスの状態を返す
+// Readiness はデータベース接続を含む依存サービスの状態を返します
 func (h *HealthHandler) Readiness(c *gin.Context) {
 	sqlDB, err := h.db.DB()
 	if err != nil {

@@ -7,27 +7,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ErrorResponse represents the JSON structure for error responses
+// ErrorResponse は error response の JSON 構造を表します
 type ErrorResponse struct {
 	Error   string                 `json:"error"`
 	Message string                 `json:"message"`
 	Details map[string]interface{} `json:"details,omitempty"`
 }
 
-// HandleError processes errors and returns appropriate HTTP responses
+// HandleError は error を処理し適切な HTTP response を返します
 func HandleError(c *gin.Context, err error) {
 	if err == nil {
 		return
 	}
 
-	// Check if it's a DomainError
+	// DomainError かどうかをチェック
 	if domainErr, ok := domain.AsDomainError(err); ok {
 		response := ErrorResponse{
 			Error:   string(domainErr.Code),
 			Message: domainErr.Message,
 		}
 
-		// Include details if present
+		// 詳細がある場合は含める
 		if len(domainErr.Details) > 0 {
 			response.Details = domainErr.Details
 		}
@@ -36,14 +36,14 @@ func HandleError(c *gin.Context, err error) {
 		return
 	}
 
-	// Default error response for unknown errors
+	// 不明な error に対するデフォルトの error response
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
 		Error:   string(domain.ErrCodeInternal),
 		Message: "An internal error occurred",
 	})
 }
 
-// HandleValidationError handles request validation errors
+// HandleValidationError は request バリデーション error を処理します
 func HandleValidationError(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, ErrorResponse{
 		Error:   string(domain.ErrCodeValidation),

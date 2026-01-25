@@ -7,10 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// StatsHandler は統計情報関連の HTTP handler を提供します
 type StatsHandler struct {
 	statsUsecase *usecase.StatsUsecase
 }
 
+// NewStatsHandler は新しい StatsHandler を作成します
 func NewStatsHandler(statsUsecase *usecase.StatsUsecase) *StatsHandler {
 	return &StatsHandler{
 		statsUsecase: statsUsecase,
@@ -18,12 +20,12 @@ func NewStatsHandler(statsUsecase *usecase.StatsUsecase) *StatsHandler {
 }
 
 // GetDashboardStats godoc
-// @Summary Get dashboard statistics
-// @Description Retrieve statistics for the dashboard including counts, distributions, and trends
+// @Summary ダッシュボード統計を取得します
+// @Description カウント、分布、トレンドを含むダッシュボード用の統計情報を取得します
 // @Tags stats
 // @Accept json
 // @Produce json
-// @Param period query string false "Period for trend data (daily, weekly, monthly)" default(daily)
+// @Param period query string false "トレンドデータの期間 (daily, weekly, monthly)" default(daily)
 // @Success 200 {object} usecase.DashboardStats
 // @Failure 500 {object} map[string]string
 // @Router /api/stats/dashboard [get]
@@ -41,8 +43,8 @@ func (h *StatsHandler) GetDashboardStats(c *gin.Context) {
 }
 
 // GetSLAMetrics godoc
-// @Summary Get SLA performance metrics
-// @Description Retrieve SLA metrics including compliance rate, MTTR, and violations
+// @Summary SLA パフォーマンスメトリクスを取得します
+// @Description コンプライアンス率、MTTR、違反を含む SLA メトリクスを取得します
 // @Tags stats
 // @Accept json
 // @Produce json
@@ -61,8 +63,8 @@ func (h *StatsHandler) GetSLAMetrics(c *gin.Context) {
 }
 
 // GetTagStats godoc
-// @Summary Get tag statistics
-// @Description Retrieve incident count statistics by tag
+// @Summary タグ統計を取得します
+// @Description タグ別のインシデント数統計を取得します
 // @Tags stats
 // @Accept json
 // @Produce json

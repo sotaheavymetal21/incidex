@@ -10,16 +10,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuditLogHandler は監査ログ関連の HTTP handler を提供します
 type AuditLogHandler struct {
 	auditLogUsecase usecase.AuditLogUsecase
 }
 
+// NewAuditLogHandler は新しい AuditLogHandler を作成します
 func NewAuditLogHandler(u usecase.AuditLogUsecase) *AuditLogHandler {
 	return &AuditLogHandler{auditLogUsecase: u}
 }
 
+// GetAll godoc
+// @Summary すべての監査ログを取得します
+// @Description フィルタとページネーション付きですべての監査ログを取得します
+// @Tags audit-logs
+// @Accept json
+// @Produce json
+// @Param page query int false "ページ番号" default(1)
+// @Param limit query int false "1ページあたりの件数" default(50)
+// @Param user_id query int false "ユーザー ID フィルタ"
+// @Param action query string false "アクションフィルタ"
+// @Param resource_type query string false "リソースタイプフィルタ"
+// @Param start_date query string false "開始日時（RFC3339 形式）"
+// @Param end_date query string false "終了日時（RFC3339 形式）"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /api/audit-logs [get]
+// @Security BearerAuth
 func (h *AuditLogHandler) GetAll(c *gin.Context) {
-	// Parse query parameters
+	// クエリパラメータをパース
 	filters := domain.AuditLogFilters{
 		Page:  1,
 		Limit: 50,
@@ -71,7 +90,7 @@ func (h *AuditLogHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	// Calculate pagination info
+	// ページネーション情報を計算
 	totalPages := int((total + int64(filters.Limit) - 1) / int64(filters.Limit))
 
 	c.JSON(http.StatusOK, gin.H{
@@ -85,6 +104,18 @@ func (h *AuditLogHandler) GetAll(c *gin.Context) {
 	})
 }
 
+// GetByID godoc
+// @Summary ID で監査ログを取得します
+// @Description ID を指定して監査ログを取得します
+// @Tags audit-logs
+// @Accept json
+// @Produce json
+// @Param id path int true "監査ログ ID"
+// @Success 200 {object} domain.AuditLog
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/audit-logs/{id} [get]
+// @Security BearerAuth
 func (h *AuditLogHandler) GetByID(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)

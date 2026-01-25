@@ -10,43 +10,47 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ActionItemHandler はアクションアイテム関連の HTTP handler を提供します
 type ActionItemHandler struct {
 	actionItemUsecase usecase.ActionItemUsecase
 }
 
+// NewActionItemHandler は新しい ActionItemHandler を作成します
 func NewActionItemHandler(actionItemUsecase usecase.ActionItemUsecase) *ActionItemHandler {
 	return &ActionItemHandler{
 		actionItemUsecase: actionItemUsecase,
 	}
 }
 
+// CreateActionItemRequest はアクションアイテム作成の request body を表します
 type CreateActionItemRequest struct {
 	PostMortemID uint    `json:"post_mortem_id" binding:"required"`
 	Title        string  `json:"title" binding:"required,min=1,max=500"`
 	Description  string  `json:"description" binding:"max=5000"`
 	AssigneeID   *uint   `json:"assignee_id"`
 	Priority     string  `json:"priority" binding:"required,oneof=high medium low"`
-	DueDate      *string `json:"due_date"` // RFC3339 format
+	DueDate      *string `json:"due_date"` // RFC3339 形式
 	RelatedLinks string  `json:"related_links" binding:"max=2000"`
 }
 
+// UpdateActionItemRequest はアクションアイテム更新の request body を表します
 type UpdateActionItemRequest struct {
 	Title        string  `json:"title" binding:"required,min=1,max=500"`
 	Description  string  `json:"description" binding:"max=5000"`
 	AssigneeID   *uint   `json:"assignee_id"`
 	Priority     string  `json:"priority" binding:"required,oneof=high medium low"`
 	Status       string  `json:"status" binding:"required,oneof=pending in_progress completed"`
-	DueDate      *string `json:"due_date"` // RFC3339 format
+	DueDate      *string `json:"due_date"` // RFC3339 形式
 	RelatedLinks string  `json:"related_links" binding:"max=2000"`
 }
 
 // Create godoc
-// @Summary Create a new action item
-// @Description Create a new action item for a post-mortem
+// @Summary 新しいアクションアイテムを作成します
+// @Description ポストモーテムに対して新しいアクションアイテムを作成します
 // @Tags action-items
 // @Accept json
 // @Produce json
-// @Param action_item body CreateActionItemRequest true "Action item data"
+// @Param action_item body CreateActionItemRequest true "アクションアイテムデータ"
 // @Success 201 {object} domain.ActionItem
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -59,7 +63,7 @@ func (h *ActionItemHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Parse due date if provided
+	// 期限日をパース（指定されている場合）
 	var dueDate *time.Time
 	if req.DueDate != nil && *req.DueDate != "" {
 		parsedDate, err := time.Parse(time.RFC3339, *req.DueDate)
@@ -89,12 +93,12 @@ func (h *ActionItemHandler) Create(c *gin.Context) {
 }
 
 // GetByID godoc
-// @Summary Get action item by ID
-// @Description Get an action item by ID
+// @Summary ID でアクションアイテムを取得します
+// @Description ID を指定してアクションアイテムを取得します
 // @Tags action-items
 // @Accept json
 // @Produce json
-// @Param id path int true "Action item ID"
+// @Param id path int true "アクションアイテム ID"
 // @Success 200 {object} domain.ActionItem
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
@@ -118,12 +122,12 @@ func (h *ActionItemHandler) GetByID(c *gin.Context) {
 }
 
 // GetByPostMortemID godoc
-// @Summary Get action items by post-mortem ID
-// @Description Get all action items for a post-mortem
+// @Summary ポストモーテム ID でアクションアイテムを取得します
+// @Description ポストモーテムに紐づくすべてのアクションアイテムを取得します
 // @Tags action-items
 // @Accept json
 // @Produce json
-// @Param postMortemId path int true "Post-mortem ID"
+// @Param postMortemId path int true "ポストモーテム ID"
 // @Success 200 {array} domain.ActionItem
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -147,19 +151,19 @@ func (h *ActionItemHandler) GetByPostMortemID(c *gin.Context) {
 }
 
 // GetAll godoc
-// @Summary Get all action items
-// @Description Get all action items with filters and pagination
+// @Summary すべてのアクションアイテムを取得します
+// @Description フィルタとページネーション付きですべてのアクションアイテムを取得します
 // @Tags action-items
 // @Accept json
 // @Produce json
-// @Param status query string false "Status filter"
-// @Param priority query string false "Priority filter"
-// @Param assignee_id query int false "Assignee ID filter"
-// @Param search query string false "Search query"
-// @Param sort_by query string false "Sort by field"
-// @Param order query string false "Sort order (asc/desc)"
-// @Param page query int false "Page number" default(1)
-// @Param limit query int false "Items per page" default(20)
+// @Param status query string false "ステータスフィルタ"
+// @Param priority query string false "優先度フィルタ"
+// @Param assignee_id query int false "担当者 ID フィルタ"
+// @Param search query string false "検索クエリ"
+// @Param sort_by query string false "ソートフィールド"
+// @Param order query string false "ソート順 (asc/desc)"
+// @Param page query int false "ページ番号" default(1)
+// @Param limit query int false "1ページあたりの件数" default(20)
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} map[string]string
 // @Router /api/action-items [get]
@@ -214,13 +218,13 @@ func (h *ActionItemHandler) GetAll(c *gin.Context) {
 }
 
 // Update godoc
-// @Summary Update an action item
-// @Description Update an action item
+// @Summary アクションアイテムを更新します
+// @Description アクションアイテムを更新します
 // @Tags action-items
 // @Accept json
 // @Produce json
-// @Param id path int true "Action item ID"
-// @Param action_item body UpdateActionItemRequest true "Action item data"
+// @Param id path int true "アクションアイテム ID"
+// @Param action_item body UpdateActionItemRequest true "アクションアイテムデータ"
 // @Success 200 {object} domain.ActionItem
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -240,7 +244,7 @@ func (h *ActionItemHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Parse due date if provided
+	// 期限日をパース（指定されている場合）
 	var dueDate *time.Time
 	if req.DueDate != nil && *req.DueDate != "" {
 		parsedDate, err := time.Parse(time.RFC3339, *req.DueDate)
@@ -271,12 +275,12 @@ func (h *ActionItemHandler) Update(c *gin.Context) {
 }
 
 // Delete godoc
-// @Summary Delete an action item
-// @Description Delete an action item (admin only)
+// @Summary アクションアイテムを削除します
+// @Description アクションアイテムを削除します（管理者専用）
 // @Tags action-items
 // @Accept json
 // @Produce json
-// @Param id path int true "Action item ID"
+// @Param id path int true "アクションアイテム ID"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Failure 401 {object} map[string]string

@@ -8,19 +8,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// PasswordResetHandler はパスワードリセット関連の HTTP handler を提供します
 type PasswordResetHandler struct {
 	passwordResetUsecase usecase.PasswordResetUsecase
 }
 
+// NewPasswordResetHandler は新しい PasswordResetHandler を作成します
 func NewPasswordResetHandler(passwordResetUsecase usecase.PasswordResetUsecase) *PasswordResetHandler {
 	return &PasswordResetHandler{passwordResetUsecase: passwordResetUsecase}
 }
 
+// RequestPasswordResetRequest はパスワードリセット要求の request body を表します
 type RequestPasswordResetRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// RequestPasswordReset handles the password reset request
+// RequestPasswordReset はパスワードリセット要求を処理します
 func (h *PasswordResetHandler) RequestPasswordReset(c *gin.Context) {
 	var req RequestPasswordResetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -34,18 +37,19 @@ func (h *PasswordResetHandler) RequestPasswordReset(c *gin.Context) {
 		return
 	}
 
-	// Always return success to prevent email enumeration attacks
+	// メール列挙攻撃を防ぐために常に成功を返します
 	c.JSON(http.StatusOK, gin.H{
 		"message": "パスワードリセットのメールを送信しました。メールをご確認ください。",
 	})
 }
 
+// ResetPasswordRequest はパスワードリセット実行の request body を表します
 type ResetPasswordRequest struct {
 	Token       string `json:"token" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=12"`
 }
 
-// ResetPassword handles the actual password reset
+// ResetPassword は実際のパスワードリセットを処理します
 func (h *PasswordResetHandler) ResetPassword(c *gin.Context) {
 	var req ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -53,7 +57,7 @@ func (h *PasswordResetHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// Validate password strength (strict mode)
+	// パスワード強度をバリデーション（厳格モード）
 	if err := validator.ValidatePassword(req.NewPassword, true); err != nil {
 		HandleValidationError(c, err)
 		return
@@ -70,7 +74,7 @@ func (h *PasswordResetHandler) ResetPassword(c *gin.Context) {
 	})
 }
 
-// ValidateToken validates if a password reset token is valid
+// ValidateToken はパスワードリセット token が有効かどうかをバリデーションします
 func (h *PasswordResetHandler) ValidateToken(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
