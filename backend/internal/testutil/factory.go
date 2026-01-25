@@ -156,16 +156,16 @@ func NewTestIncidentActivity(incidentID, userID uint, overrides ...func(*domain.
 func NewTestPostMortem(incidentID, authorID uint, overrides ...func(*domain.PostMortem)) *domain.PostMortem {
 	pm := &domain.PostMortem{
 		ID:             1,
-		IncidentID:    incidentID,
-		AuthorID:      authorID,
-		RootCause:     "Test root cause",
+		IncidentID:     incidentID,
+		AuthorID:       authorID,
+		RootCause:      "Test root cause",
 		ImpactAnalysis: "Test impact analysis",
-		WhatWentWell:  "Test what went well",
-		WhatWentWrong: "Test what went wrong",
+		WhatWentWell:   "Test what went well",
+		WhatWentWrong:  "Test what went wrong",
 		LessonsLearned: "Test lessons learned",
-		Status:        domain.PMStatusDraft,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		Status:         domain.PMStatusDraft,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	for _, override := range overrides {
@@ -205,4 +205,153 @@ func UintPtr(u uint) *uint {
 // StringPtr は string 値へのポインタを返します
 func StringPtr(s string) *string {
 	return &s
+}
+
+// NewTestNotificationSetting は新しいテスト通知設定を作成します
+func NewTestNotificationSetting(userID uint, overrides ...func(*domain.NotificationSetting)) *domain.NotificationSetting {
+	setting := &domain.NotificationSetting{
+		ID:                      1,
+		UserID:                  userID,
+		EmailEnabled:            true,
+		SlackEnabled:            false,
+		SlackWebhook:            "",
+		NotifyOnIncidentCreated: true,
+		NotifyOnAssigned:        true,
+		NotifyOnComment:         true,
+		NotifyOnStatusChange:    true,
+		NotifyOnSeverityChange:  true,
+		NotifyOnResolved:        true,
+		NotifyOnEscalation:      true,
+		CreatedAt:               time.Now(),
+		UpdatedAt:               time.Now(),
+	}
+
+	for _, override := range overrides {
+		override(setting)
+	}
+
+	return setting
+}
+
+// NewTestActionItem は新しいテストアクションアイテムを作成します
+func NewTestActionItem(postMortemID uint, overrides ...func(*domain.ActionItem)) *domain.ActionItem {
+	dueDate := time.Now().Add(7 * 24 * time.Hour)
+	item := &domain.ActionItem{
+		ID:           1,
+		PostMortemID: postMortemID,
+		Title:        "Test Action Item",
+		Description:  "Test action item description",
+		AssigneeID:   nil,
+		Priority:     domain.PriorityMedium,
+		Status:       domain.ActionStatusPending,
+		DueDate:      &dueDate,
+		RelatedLinks: "[]",
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	for _, override := range overrides {
+		override(item)
+	}
+
+	return item
+}
+
+// NewTestAttachment は新しいテスト添付ファイルを作成します
+func NewTestAttachment(incidentID, userID uint, overrides ...func(*domain.Attachment)) *domain.Attachment {
+	attachment := &domain.Attachment{
+		ID:         1,
+		IncidentID: incidentID,
+		UserID:     userID,
+		FileName:   "test-file.pdf",
+		FileSize:   1024,
+		MimeType:   "application/pdf",
+		StorageKey: "incidents/1/test-uuid.pdf",
+		CreatedAt:  time.Now(),
+	}
+
+	for _, override := range overrides {
+		override(attachment)
+	}
+
+	return attachment
+}
+
+// NewTestAuditLog は新しいテスト監査ログを作成します
+func NewTestAuditLog(overrides ...func(*domain.AuditLog)) *domain.AuditLog {
+	userID := uint(1)
+	resourceID := uint(1)
+	log := &domain.AuditLog{
+		ID:           1,
+		UserID:       &userID,
+		UserName:     "Test User",
+		UserEmail:    "test@example.com",
+		Action:       domain.AuditActionCreate,
+		ResourceType: "incident",
+		ResourceID:   &resourceID,
+		Method:       "POST",
+		Path:         "/api/v1/incidents",
+		IPAddress:    "127.0.0.1",
+		UserAgent:    "Test Agent",
+		StatusCode:   201,
+		Details:      "{}",
+		CreatedAt:    time.Now(),
+	}
+
+	for _, override := range overrides {
+		override(log)
+	}
+
+	return log
+}
+
+// NewTestMonthlyReport は新しいテスト月次レポートを作成します
+func NewTestMonthlyReport(overrides ...func(*domain.MonthlyReport)) *domain.MonthlyReport {
+	now := time.Now()
+	startDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
+
+	report := &domain.MonthlyReport{
+		Period: domain.ReportPeriod{
+			StartDate: startDate,
+			EndDate:   endDate,
+			Month:     int(now.Month()),
+			Year:      now.Year(),
+		},
+		Summary: domain.IncidentSummary{
+			TotalIncidents:    10,
+			NewIncidents:      5,
+			ResolvedIncidents: 3,
+			OpenIncidents:     7,
+			CriticalIncidents: 2,
+		},
+		SeverityBreakdown: map[string]int{
+			"critical": 2,
+			"high":     3,
+			"medium":   3,
+			"low":      2,
+		},
+		StatusBreakdown: map[string]int{
+			"open":          4,
+			"investigating": 3,
+			"resolved":      3,
+		},
+		DailyTrend: []domain.DailyIncidentCount{
+			{Date: startDate, Count: 2},
+			{Date: startDate.AddDate(0, 0, 1), Count: 3},
+		},
+		TopTags: []domain.TagStatistic{
+			{TagID: 1, TagName: "Production", Count: 5},
+			{TagID: 2, TagName: "Database", Count: 3},
+		},
+		PerformanceMetrics: domain.PerformanceMetrics{
+			AverageResolutionTime: 24.5,
+		},
+	}
+
+	for _, override := range overrides {
+		override(report)
+	}
+
+	return report
 }
