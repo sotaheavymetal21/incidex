@@ -85,7 +85,7 @@ func main() {
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
 
 	// Password Reset
-	emailService := notification.NewEmailService()
+	emailService := notification.NewEmailService(cfg.FrontendURL)
 	passwordResetTokenRepo := persistence.NewPasswordResetTokenRepository(dbConn)
 	passwordResetUsecase := usecase.NewPasswordResetUsecase(userRepo, passwordResetTokenRepo, emailService, cfg.FrontendURL)
 	passwordResetHandler := handler.NewPasswordResetHandler(passwordResetUsecase)
@@ -100,7 +100,7 @@ func main() {
 
 	// Notifications
 	notificationRepo := persistence.NewNotificationSettingRepository(dbConn)
-	notificationService := notification.NewNotificationService(notificationRepo, userRepo)
+	notificationService := notification.NewNotificationService(notificationRepo, userRepo, cfg.FrontendURL)
 	notificationUsecase := usecase.NewNotificationUsecase(notificationRepo)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase)
 

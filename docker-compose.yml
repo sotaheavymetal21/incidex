@@ -57,11 +57,14 @@ services:
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/app/migrations}
       DB_LOG_LEVEL: ${DB_LOG_LEVEL:-info}
-      # Initial admin user (created automatically on first startup if no users exist)
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
-      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
-      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME}
+      # Test user password (for seeding)
       TEST_USER_PASSWORD: ${TEST_USER_PASSWORD}
+      # SMTP Configuration (optional)
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM}
     ports:
       - "8080:8080"
     volumes:

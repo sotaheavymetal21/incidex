@@ -1,4 +1,4 @@
-.PHONY: up down logs dev start setup seed seed-force migrate-up migrate-down migrate-status migrate-create migrate-docker-up migrate-docker-down migrate-docker-status cleanup-audit-logs security security-gosec security-vulncheck security-lint
+.PHONY: up down logs dev start setup seed seed-force migrate-up migrate-down migrate-status migrate-create migrate-docker-up migrate-docker-down migrate-docker-status cleanup-audit-logs security security-gosec security-vulncheck security-lint test test-backend test-frontend test-e2e test-coverage
 
 # Docker
 up:
@@ -36,10 +36,10 @@ setup:
 
 # Database
 seed:
-	cd backend && go run cmd/seed/main.go
+	docker compose exec backend go run cmd/seed/main.go
 
 seed-force:
-	cd backend && FORCE_SEED=true go run cmd/seed/main.go
+	docker compose exec -e FORCE_SEED=true backend go run cmd/seed/main.go
 
 # Migration commands
 MIGRATE_DB_URL ?= postgres://user:password@localhost:5432/incidex?sslmode=disable
@@ -89,3 +89,24 @@ security-vulncheck:
 security-lint:
 	@echo "Running golangci-lint with security checks..."
 	cd backend && golangci-lint run --config=../.golangci.yml ./...
+
+# Testing
+test: test-backend test-frontend
+	@echo "All tests completed!"
+
+test-backend:
+	@echo "Running backend tests..."
+	cd backend && go test -v -race ./...
+
+test-frontend:
+	@echo "Running frontend unit tests..."
+	cd frontend && npm run test:run
+
+test-e2e:
+	@echo "Running E2E tests..."
+	cd frontend && npm run test:e2e
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	cd backend && go test -v -race -coverprofile=coverage.out ./... && go tool cover -func=coverage.out
+	cd frontend && npm run test:coverage
