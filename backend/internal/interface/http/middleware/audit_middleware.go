@@ -26,45 +26,45 @@ func NewAuditMiddleware(auditLogRepo domain.AuditLogRepository, userRepo domain.
 	}
 }
 
-// AuditLog middleware records API calls for auditing purposes
+// Log は監査目的で API 呼び出しを記録する middleware です
 func (m *AuditMiddleware) Log() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip audit logging for certain paths and methods
+		// 特定のパスとメソッドでは監査ログをスキップします
 		if shouldSkipAudit(c.Request.URL.Path, c.Request.Method) {
 			c.Next()
 			return
 		}
 
-		// Capture request body for POST/PUT/DELETE (for details)
+		// POST/PUT/DELETE の request body を詳細用にキャプチャします
 		var requestBody string
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "DELETE" {
 			bodyBytes, _ := io.ReadAll(c.Request.Body)
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 			requestBody = string(bodyBytes)
-			// Sanitize sensitive data (passwords, tokens, etc.)
+			// 機密データ（パスワード、token など）をサニタイズします
 			requestBody = sanitizer.SanitizeJSON(requestBody)
 		}
 
-		// Process request
+		// request を処理します
 		c.Next()
 
-		// Create audit log after request is processed
+		// request 処理後に監査ログを作成します
 		go func() {
 			log := &domain.AuditLog{
 				Method:     c.Request.Method,
 				Path:       c.Request.URL.Path,
-				IPAddress:  sanitizer.SanitizeIP(c.ClientIP()), // Mask IP for GDPR compliance
+				IPAddress:  sanitizer.SanitizeIP(c.ClientIP()), // GDPR 準拠のため IP をマスクします
 				UserAgent:  c.Request.UserAgent(),
 				StatusCode: c.Writer.Status(),
 				CreatedAt:  time.Now(),
 			}
 
-			// Get user info from context (if available)
+			// context からユーザー情報を取得します（利用可能な場合）
 			if userIDVal, exists := c.Get("userID"); exists {
 				if userID, ok := userIDVal.(uint); ok {
 					log.UserID = &userID
 
-					// Fetch user details (use background context since we're in a goroutine)
+					// ユーザー詳細を取得します（goroutine 内なので background context を使用します）
 					ctx := context.Background()
 					user, err := m.userRepo.FindByID(ctx, userID)
 					if err == nil && user != nil {
@@ -74,13 +74,13 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 				}
 			}
 
-			// Determine action and resource
+			// アクションとリソースを判定します
 			action, resourceType, resourceID := determineActionAndResource(c)
 			log.Action = action
 			log.ResourceType = resourceType
 			log.ResourceID = resourceID
 
-			// Add details
+			// 詳細を追加します
 			details := make(map[string]interface{})
 			if requestBody != "" && len(requestBody) < 1000 {
 				details["request_body"] = requestBody
@@ -90,8 +90,8 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 				log.Details = string(detailsJSON)
 			}
 
-			// Save audit log (ignore errors to not affect main request)
-			// Use background context since we're in a goroutine
+			// 監査ログを保存します（メイン request に影響を与えないよう error を無視します）
+			// goroutine 内なので background context を使用します
 			ctx := context.Background()
 			_ = m.auditLogRepo.Create(ctx, log)
 		}()
@@ -99,19 +99,19 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 }
 
 func shouldSkipAudit(path string, method string) bool {
-	// Skip GET and OPTIONS requests
-	// GET: read-only operations don't need auditing
-	// OPTIONS: CORS preflight requests are browser-automated, not user actions
+	// GET と OPTIONS request をスキップします
+	// GET: 読み取り専用操作は監査不要です
+	// OPTIONS: CORS プリフライト request はブラウザ自動化であり、ユーザーアクションではありません
 	if method == "GET" || method == "OPTIONS" {
 		return true
 	}
 
-	// Skip specific endpoints regardless of method
+	// メソッドに関係なく特定のエンドポイントをスキップします
 	skipPaths := []string{
 		"/api/health",
-		"/api/stats",        // Statistics are read-only
-		"/api/export",       // Export operations are read-only
-		"/api/audit-logs",   // Don't audit the audit log queries
+		"/api/stats",        // 統計情報は読み取り専用です
+		"/api/export",       // エクスポート操作は読み取り専用です
+		"/api/audit-logs",   // 監査ログのクエリは監査しません
 	}
 
 	for _, skip := range skipPaths {
@@ -131,7 +131,7 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 	var resourceType string
 	var resourceID *uint
 
-	// Determine action based on HTTP method and path
+	// HTTP メソッドとパスに基づいてアクションを判定します
 	switch method {
 	case "POST":
 		if strings.Contains(path, "/login") {
@@ -160,7 +160,7 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 		action = domain.AuditActionDelete
 	}
 
-	// Determine resource type from path (check more specific paths first)
+	// パスからリソースタイプを判定します（より具体的なパスを先にチェックします）
 	if strings.Contains(path, "/attachments") {
 		resourceType = "attachment"
 	} else if strings.Contains(path, "/comments") {
@@ -195,18 +195,18 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 		resourceType = "auth"
 	}
 
-	// Try to extract resource ID from path parameter
+	// パスパラメータからリソース ID を抽出しようとします
 	if idParam := c.Param("id"); idParam != "" {
-		// Parse ID if possible
+		// 可能であれば ID をパースします
 		if parsedID, err := strconv.ParseUint(idParam, 10, 32); err == nil {
 			id := uint(parsedID)
 			resourceID = &id
 		}
 	}
 
-	// For nested routes, try to get incident ID or other parent IDs
+	// ネストされたルートの場合、インシデント ID または他の親 ID を取得しようとします
 	if resourceID == nil {
-		// Check for incident ID in path segments
+		// パスセグメント内のインシデント ID をチェックします
 		pathParts := strings.Split(path, "/")
 		for i, part := range pathParts {
 			if part == "incidents" && i+1 < len(pathParts) {
@@ -222,5 +222,5 @@ func determineActionAndResource(c *gin.Context) (domain.AuditAction, string, *ui
 	return action, resourceType, resourceID
 }
 
-// Note: sanitizeSensitiveData function has been removed
-// Use sanitizer.SanitizeJSON instead for comprehensive sanitization
+// 注意: sanitizeSensitiveData 関数は削除されました
+// 包括的なサニタイズには sanitizer.SanitizeJSON を使用してください

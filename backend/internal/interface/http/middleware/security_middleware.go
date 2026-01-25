@@ -7,41 +7,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SecurityHeaders adds security headers to all responses
+// SecurityHeaders はすべての response にセキュリティヘッダーを追加します
 func SecurityHeaders() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check if running in production
+		// 本番環境で実行中かチェックします
 		appEnv := os.Getenv("APP_ENV")
 		isProduction := strings.ToLower(appEnv) == "production" || strings.ToLower(appEnv) == "prod"
-		// Prevent clickjacking attacks
+		// クリックジャッキング攻撃を防止します
 		c.Header("X-Frame-Options", "DENY")
 
-		// Prevent MIME type sniffing
+		// MIME タイプスニッフィングを防止します
 		c.Header("X-Content-Type-Options", "nosniff")
 
-		// Enable XSS protection
+		// XSS 保護を有効にします
 		c.Header("X-XSS-Protection", "1; mode=block")
 
-		// Content Security Policy - restrictive default
-		// Adjust this based on your frontend needs
+		// Content Security Policy
+		// 注意: 'unsafe-inline' は Next.js の styled-jsx とインラインスタイルに必要です
+		// 'unsafe-eval' はセキュリティのため削除されました
 		csp := "default-src 'self'; " +
-			"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+			"script-src 'self' 'unsafe-inline'; " +
 			"style-src 'self' 'unsafe-inline'; " +
 			"img-src 'self' data: https:; " +
 			"font-src 'self' data:; " +
 			"connect-src 'self'; " +
-			"frame-ancestors 'none';"
+			"frame-ancestors 'none'; " +
+			"base-uri 'self'; " +
+			"form-action 'self';"
 		c.Header("Content-Security-Policy", csp)
 
-		// Referrer Policy
+		// Referrer ポリシー
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
 
-		// HSTS - only enable in production with HTTPS
+		// HSTS - HTTPS を使用する本番環境でのみ有効にします
 		if isProduction {
 			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
 
-		// Additional security headers
+		// 追加のセキュリティヘッダー
 		c.Header("X-Permitted-Cross-Domain-Policies", "none")
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 

@@ -45,7 +45,7 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			// Validate and extract user_id
+			// user_id のバリデーションと抽出
 			userIDFloat, ok := claims["user_id"].(float64)
 			if !ok {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user_id in token"})
@@ -53,14 +53,14 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 			}
 			c.Set("userID", uint(userIDFloat))
 
-			// Validate and extract role
+			// role のバリデーションと抽出
 			roleStr, ok := claims["role"].(string)
 			if !ok {
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid role in token"})
 				return
 			}
 
-			// Verify role is valid
+			// role の値が有効か検証します
 			userRole := domain.Role(roleStr)
 			switch userRole {
 			case domain.RoleAdmin, domain.RoleEditor, domain.RoleViewer:
@@ -75,7 +75,7 @@ func (m *JWTMiddleware) Handle() gin.HandlerFunc {
 	}
 }
 
-// RequireRole returns a middleware that checks if the user has one of the required roles
+// RequireRole はユーザーが必要な role のいずれかを持っているかチェックする middleware を返します
 func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		roleValue, exists := c.Get("role")
@@ -90,7 +90,7 @@ func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
 			return
 		}
 
-		// Check if user's role is in the allowed roles
+		// ユーザーの role が許可された role に含まれているかチェックします
 		for _, allowedRole := range allowedRoles {
 			if userRole == allowedRole {
 				c.Next()
@@ -102,12 +102,12 @@ func RequireRole(allowedRoles ...domain.Role) gin.HandlerFunc {
 	}
 }
 
-// RequireAdmin is a shorthand for RequireRole(domain.RoleAdmin)
+// RequireAdmin は RequireRole(domain.RoleAdmin) の省略形です
 func RequireAdmin() gin.HandlerFunc {
 	return RequireRole(domain.RoleAdmin)
 }
 
-// RequireEditorOrAdmin requires user to be either editor or admin
+// RequireEditorOrAdmin はユーザーが editor または admin であることを要求します
 func RequireEditorOrAdmin() gin.HandlerFunc {
 	return RequireRole(domain.RoleAdmin, domain.RoleEditor)
 }
