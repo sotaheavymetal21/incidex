@@ -21,20 +21,20 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Check if admin is resetting another user's password
+  // 管理者が他のユーザーのパスワードをリセットしているかどうかを確認します
   const isAdminReset = currentUser?.role === 'admin' && currentUser?.id !== user.id;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
 
-    // Validate passwords match
+    // パスワードの一致をバリデーションします
     if (formData.new_password !== confirmPassword) {
       setError('新しいパスワードが一致しません');
       return;
     }
 
-    // Validate password strength
+    // パスワード強度をバリデーションします
     if (formData.new_password.length < 8) {
       setError('パスワードは8文字以上である必要があります');
       return;
@@ -57,10 +57,10 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }: Change
       setError('');
 
       if (isAdminReset) {
-        // Admin resetting another user's password - no old password needed
+        // 管理者が他のユーザーのパスワードをリセット - 古いパスワードは不要です
         await userApi.adminResetPassword(token, user.id, formData.new_password);
       } else {
-        // User changing their own password - old password required
+        // ユーザーが自分のパスワードを変更 - 古いパスワードが必要です
         await userApi.updatePassword(token, user.id, formData);
       }
 

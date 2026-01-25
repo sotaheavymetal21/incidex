@@ -11,13 +11,13 @@ interface EditUserModalProps {
   onSuccess: () => void;
 }
 
-// Validation constants
+// バリデーション定数
 const MAX_NAME_LENGTH = 50;
 const MAX_EMAIL_LENGTH = 254;
 const MAX_EMPLOYEE_NUMBER_LENGTH = 20;
 const MAX_DEPARTMENT_LENGTH = 50;
 
-// Validation helper functions
+// バリデーションヘルパー関数
 const containsEmoji = (str: string): boolean => {
   const emojiRegex = /[\u{1F000}-\u{1F9FF}]|[\u{2600}-\u{27BF}]/u;
   return emojiRegex.test(str);
