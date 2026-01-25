@@ -16,17 +16,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// EmailServiceInterface は EmailService のインターフェースを定義します
-type EmailServiceInterface interface {
-	SendPasswordResetEmail(to, userName, resetToken, frontendURL string) error
+// testablePasswordResetUsecase は passwordResetUsecase のテスト可能な実装です
+// NOTE: 本番の passwordResetUsecase は *notification.EmailService という具象型に依存しており、
+// モックでのテストが困難なため、テスト用に同じロジックを実装しています。
+type testablePasswordResetUsecase struct {
+	userRepo     domain.UserRepository
+	tokenRepo    domain.PasswordResetTokenRepository
+	emailService *mocks.MockEmailService
+	frontendURL  string
 }
 
 func createTestPasswordResetUsecase(
 	userRepo *mocks.MockUserRepository,
 	tokenRepo *mocks.MockPasswordResetTokenRepository,
-	emailService EmailServiceInterface,
-) *testPasswordResetUsecase {
-	return &testPasswordResetUsecase{
+	emailService *mocks.MockEmailService,
+) *testablePasswordResetUsecase {
+	return &testablePasswordResetUsecase{
 		userRepo:     userRepo,
 		tokenRepo:    tokenRepo,
 		emailService: emailService,
@@ -34,15 +39,7 @@ func createTestPasswordResetUsecase(
 	}
 }
 
-// testPasswordResetUsecase は passwordResetUsecase のテスト用ラッパーです
-type testPasswordResetUsecase struct {
-	userRepo     domain.UserRepository
-	tokenRepo    domain.PasswordResetTokenRepository
-	emailService EmailServiceInterface
-	frontendURL  string
-}
-
-func (u *testPasswordResetUsecase) RequestPasswordReset(ctx context.Context, email string) error {
+func (u *testablePasswordResetUsecase) RequestPasswordReset(ctx context.Context, email string) error {
 	user, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.ErrDatabase("Failed to find user", err)
@@ -82,7 +79,7 @@ func (u *testPasswordResetUsecase) RequestPasswordReset(ctx context.Context, ema
 	return nil
 }
 
-func (u *testPasswordResetUsecase) ResetPassword(ctx context.Context, token, newPassword string) error {
+func (u *testablePasswordResetUsecase) ResetPassword(ctx context.Context, token, newPassword string) error {
 	resetToken, err := u.tokenRepo.FindByToken(ctx, token)
 	if err != nil {
 		return domain.ErrDatabase("Failed to find token", err)
@@ -121,7 +118,7 @@ func (u *testPasswordResetUsecase) ResetPassword(ctx context.Context, token, new
 	return nil
 }
 
-func (u *testPasswordResetUsecase) ValidateToken(ctx context.Context, token string) (bool, error) {
+func (u *testablePasswordResetUsecase) ValidateToken(ctx context.Context, token string) (bool, error) {
 	resetToken, err := u.tokenRepo.FindByToken(ctx, token)
 	if err != nil {
 		return false, domain.ErrDatabase("Failed to find token", err)
