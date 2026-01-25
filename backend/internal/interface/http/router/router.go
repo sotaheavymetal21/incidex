@@ -10,14 +10,14 @@ import (
 func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddleware *middleware.JWTMiddleware, tagHandler *handler.TagHandler, incidentHandler *handler.IncidentHandler, userHandler *handler.UserHandler, statsHandler *handler.StatsHandler, activityHandler *handler.IncidentActivityHandler, exportHandler *handler.ExportHandler, attachmentHandler *handler.AttachmentHandler, notificationHandler *handler.NotificationHandler, postMortemHandler *handler.PostMortemHandler, actionItemHandler *handler.ActionItemHandler, auditLogHandler *handler.AuditLogHandler, reportHandler *handler.ReportHandler, healthHandler *handler.HealthHandler, passwordResetHandler *handler.PasswordResetHandler, loginRateLimiter *middleware.RateLimitMiddleware, apiRateLimiter *middleware.RateLimitMiddleware) {
 	api := r.Group("/api")
 	{
-		// Health check routes (no auth required)
+		// ヘルスチェックルート（認証不要）
 		api.GET("/health", healthHandler.Liveness)
 		api.GET("/health/ready", healthHandler.Readiness)
 
-		// Auth routes
+		// 認証ルート
 		auth := api.Group("/auth")
 		{
-			// Apply rate limiting to authentication endpoints
+			// 認証エンドポイントにレート制限を適用
 			auth.POST("/register", loginRateLimiter.Handle(), authHandler.Register)
 			auth.POST("/login", loginRateLimiter.Handle(), authHandler.Login)
 			auth.POST("/refresh", loginRateLimiter.Handle(), authHandler.Refresh)
@@ -27,10 +27,10 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			auth.GET("/validate-reset-token", passwordResetHandler.ValidateToken)
 		}
 
-		// Protected routes
+		// 保護されたルート
 		protected := api.Group("/")
 		protected.Use(jwtMiddleware.Handle())
-		protected.Use(apiRateLimiter.Handle()) // Apply general API rate limiting
+		protected.Use(apiRateLimiter.Handle()) // 一般 API レート制限を適用
 		{
 			protected.GET("/protected", func(c *gin.Context) {
 				userID, _ := c.Get("userID")
@@ -42,7 +42,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				})
 			})
 
-			// Tag routes
+			// タグルート
 			tags := protected.Group("/tags")
 			{
 				tags.POST("", middleware.RequireEditorOrAdmin(), tagHandler.Create)
@@ -51,7 +51,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				tags.DELETE("/:id", middleware.RequireEditorOrAdmin(), tagHandler.Delete)
 			}
 
-			// Incident routes
+			// インシデントルート
 			incidents := protected.Group("/incidents")
 			{
 				incidents.POST("", middleware.RequireEditorOrAdmin(), incidentHandler.Create)
@@ -61,22 +61,22 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				incidents.DELETE("/:id", middleware.RequireEditorOrAdmin(), incidentHandler.Delete)
 				incidents.POST("/:id/assign", middleware.RequireEditorOrAdmin(), incidentHandler.AssignIncident)
 
-				// Incident activity routes
+				// インシデントアクティビティルート
 				incidents.POST("/:id/comments", middleware.RequireEditorOrAdmin(), activityHandler.AddComment)
 				incidents.POST("/:id/timeline", middleware.RequireEditorOrAdmin(), activityHandler.AddTimelineEvent)
 				incidents.GET("/:id/activities", activityHandler.GetActivities)
 
-				// Incident attachment routes
+				// インシデント添付ファイルルート
 				incidents.POST("/:id/attachments", middleware.RequireEditorOrAdmin(), attachmentHandler.Upload)
 				incidents.GET("/:id/attachments", attachmentHandler.GetByIncidentID)
 				incidents.GET("/:id/attachments/:attachmentId/download", attachmentHandler.Download)
 				incidents.DELETE("/:id/attachments/:attachmentId", middleware.RequireEditorOrAdmin(), attachmentHandler.Delete)
 
-				// Post-mortem routes under incidents
+				// インシデント配下のポストモーテムルート
 				incidents.GET("/:id/postmortem", postMortemHandler.GetByIncidentID)
 			}
 
-			// User routes (admin only)
+			// ユーザールート（管理者のみ）
 			users := protected.Group("/users")
 			users.Use(middleware.RequireAdmin())
 			{
@@ -90,7 +90,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				users.DELETE("/:id", userHandler.Delete)
 			}
 
-			// Stats routes
+			// 統計ルート
 			stats := protected.Group("/stats")
 			{
 				stats.GET("/dashboard", statsHandler.GetDashboardStats)
@@ -98,14 +98,14 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			stats.GET("/tags", statsHandler.GetTagStats)
 			}
 
-			// Export routes
+			// エクスポートルート
 			export := protected.Group("/export")
 			{
 				export.GET("/incidents", exportHandler.ExportIncidentsCSV)
 				export.GET("/incidents/:id/pdf", exportHandler.ExportIncidentPDF)
 			}
 
-			// Notification routes
+			// 通知ルート
 			notifications := protected.Group("/notifications")
 			{
 				notifications.GET("/settings", notificationHandler.GetMyNotificationSetting)
@@ -113,7 +113,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				notifications.GET("/settings/:id", notificationHandler.GetUserNotificationSetting)
 			}
 
-			// Post-mortem routes
+			// ポストモーテムルート
 			postMortems := protected.Group("/post-mortems")
 			{
 				postMortems.POST("", middleware.RequireEditorOrAdmin(), postMortemHandler.Create)
@@ -126,7 +126,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				postMortems.GET("/:id/action-items", actionItemHandler.GetByPostMortemID)
 			}
 
-			// Action item routes
+			// アクションアイテムルート
 			actionItems := protected.Group("/action-items")
 			{
 				actionItems.POST("", middleware.RequireEditorOrAdmin(), actionItemHandler.Create)
@@ -136,7 +136,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 				actionItems.DELETE("/:id", middleware.RequireEditorOrAdmin(), actionItemHandler.Delete)
 			}
 
-		// Audit log routes (admin only)
+		// 監査ログルート（管理者のみ）
 		auditLogs := protected.Group("/audit-logs")
 		auditLogs.Use(middleware.RequireAdmin())
 		{
@@ -144,7 +144,7 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			auditLogs.GET("/:id", auditLogHandler.GetByID)
 		}
 
-		// Report routes
+		// レポートルート
 		reports := protected.Group("/reports")
 		{
 			reports.GET("/monthly", reportHandler.GetMonthlyReport)

@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 )
 
-// ValidationLimits defines the maximum lengths for various fields
+// ValidationLimits は各種フィールドの最大長を定義します
 type ValidationLimits struct {
 	NameMaxLength             int
 	EmailMaxLength            int
@@ -26,7 +26,7 @@ type ValidationLimits struct {
 	SlackWebhookMaxLength     int
 }
 
-// Limits contains the validation limits
+// Limits はバリデーション制限値を含みます
 var Limits = ValidationLimits{
 	NameMaxLength:             50,
 	EmailMaxLength:            254,
@@ -46,7 +46,7 @@ var Limits = ValidationLimits{
 	SlackWebhookMaxLength:     500,
 }
 
-// ValidateName validates a name field
+// ValidateName は名前フィールドをバリデーションします
 func ValidateName(name string) error {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
@@ -64,7 +64,7 @@ func ValidateName(name string) error {
 	return nil
 }
 
-// ValidateEmail validates an email field
+// ValidateEmail はメールフィールドをバリデーションします
 func ValidateEmail(email string) error {
 	trimmed := strings.TrimSpace(email)
 	if trimmed == "" {
@@ -79,7 +79,7 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-// ValidatePassword validates a password field
+// ValidatePassword はパスワードフィールドをバリデーションします
 func ValidatePassword(password string, strict bool) error {
 	if password == "" {
 		return ErrPasswordRequired
@@ -109,10 +109,10 @@ func ValidatePassword(password string, strict bool) error {
 	return nil
 }
 
-// ValidateEmployeeNumber validates an employee number
+// ValidateEmployeeNumber は社員番号をバリデーションします
 func ValidateEmployeeNumber(employeeNumber string) error {
 	if employeeNumber == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(employeeNumber) > Limits.EmployeeNumberMaxLength {
 		return ErrEmployeeNumberTooLong
@@ -123,10 +123,10 @@ func ValidateEmployeeNumber(employeeNumber string) error {
 	return nil
 }
 
-// ValidateDepartment validates a department field
+// ValidateDepartment は部署フィールドをバリデーションします
 func ValidateDepartment(department string) error {
 	if department == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(department) > Limits.DepartmentMaxLength {
 		return ErrDepartmentTooLong
@@ -137,7 +137,7 @@ func ValidateDepartment(department string) error {
 	return nil
 }
 
-// ValidateTitle validates an incident/action item title
+// ValidateTitle はインシデント/アクションアイテムのタイトルをバリデーションします
 func ValidateTitle(title string) error {
 	trimmed := strings.TrimSpace(title)
 	if trimmed == "" {
@@ -152,7 +152,7 @@ func ValidateTitle(title string) error {
 	return nil
 }
 
-// ValidateDescription validates a description field
+// ValidateDescription は説明フィールドをバリデーションします
 func ValidateDescription(description string) error {
 	trimmed := strings.TrimSpace(description)
 	if trimmed == "" {
@@ -164,10 +164,10 @@ func ValidateDescription(description string) error {
 	return nil
 }
 
-// ValidateImpactScope validates an impact scope field
+// ValidateImpactScope は影響範囲フィールドをバリデーションします
 func ValidateImpactScope(impactScope string) error {
 	if impactScope == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(impactScope) > Limits.ImpactScopeMaxLength {
 		return ErrImpactScopeTooLong
@@ -175,7 +175,7 @@ func ValidateImpactScope(impactScope string) error {
 	return nil
 }
 
-// ValidateComment validates a comment field
+// ValidateComment はコメントフィールドをバリデーションします
 func ValidateComment(comment string) error {
 	trimmed := strings.TrimSpace(comment)
 	if trimmed == "" {
@@ -187,7 +187,7 @@ func ValidateComment(comment string) error {
 	return nil
 }
 
-// ValidateTagName validates a tag name field
+// ValidateTagName はタグ名フィールドをバリデーションします
 func ValidateTagName(name string) error {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
@@ -205,10 +205,10 @@ func ValidateTagName(name string) error {
 	return nil
 }
 
-// ValidateTagColor validates a hex color code
+// ValidateTagColor は16進数カラーコードをバリデーションします
 func ValidateTagColor(color string) error {
 	if color == "" {
-		return nil // Optional field with default
+		return nil // デフォルト値を持つ任意フィールド
 	}
 	if !regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`).MatchString(color) {
 		return ErrInvalidColorFormat
@@ -216,10 +216,10 @@ func ValidateTagColor(color string) error {
 	return nil
 }
 
-// ValidatePostMortemText validates post-mortem text fields
+// ValidatePostMortemText はポストモーテムのテキストフィールドをバリデーションします
 func ValidatePostMortemText(text string) error {
 	if text == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(text) > Limits.PostMortemTextMaxLength {
 		return ErrPostMortemTextTooLong
@@ -227,7 +227,7 @@ func ValidatePostMortemText(text string) error {
 	return nil
 }
 
-// ValidateActionItemTitle validates an action item title
+// ValidateActionItemTitle はアクションアイテムのタイトルをバリデーションします
 func ValidateActionItemTitle(title string) error {
 	trimmed := strings.TrimSpace(title)
 	if trimmed == "" {
@@ -239,10 +239,10 @@ func ValidateActionItemTitle(title string) error {
 	return nil
 }
 
-// ValidateActionItemDescription validates an action item description
+// ValidateActionItemDescription はアクションアイテムの説明をバリデーションします
 func ValidateActionItemDescription(description string) error {
 	if description == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(description) > Limits.ActionItemDescMaxLength {
 		return ErrActionItemDescTooLong
@@ -250,10 +250,10 @@ func ValidateActionItemDescription(description string) error {
 	return nil
 }
 
-// ValidateRelatedLinks validates related links field
+// ValidateRelatedLinks は関連リンクフィールドをバリデーションします
 func ValidateRelatedLinks(links string) error {
 	if links == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(links) > Limits.ActionItemLinksMaxLength {
 		return ErrActionItemLinksTooLong
@@ -261,10 +261,10 @@ func ValidateRelatedLinks(links string) error {
 	return nil
 }
 
-// ValidateSlackWebhook validates a Slack webhook URL
+// ValidateSlackWebhook は Slack webhook URL をバリデーションします
 func ValidateSlackWebhook(url string) error {
 	if url == "" {
-		return nil // Optional field
+		return nil // 任意フィールド
 	}
 	if utf8.RuneCountInString(url) > Limits.SlackWebhookMaxLength {
 		return ErrSlackWebhookTooLong
@@ -275,30 +275,30 @@ func ValidateSlackWebhook(url string) error {
 	return nil
 }
 
-// Helper functions
+// ヘルパー関数
 
-// IsValidEmail checks if an email is valid
+// IsValidEmail はメールが有効かをチェックします
 func IsValidEmail(email string) bool {
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
 }
 
-// ContainsEmoji checks if a string contains emoji characters
+// ContainsEmoji は文字列に絵文字が含まれているかをチェックします
 func ContainsEmoji(s string) bool {
 	emojiRanges := []struct {
 		start, end rune
 	}{
-		{0x1F000, 0x1F9FF}, // Miscellaneous Symbols and Pictographs
-		{0x2600, 0x27BF},   // Miscellaneous Symbols
-		{0x1F600, 0x1F64F}, // Emoticons
-		{0x1F680, 0x1F6FF}, // Transport and Map Symbols
-		{0x2702, 0x27B0},   // Dingbats
-		{0xFE00, 0xFE0F},   // Variation Selectors
-		{0x1F300, 0x1F5FF}, // Miscellaneous Symbols and Pictographs
-		{0x1F900, 0x1F9FF}, // Supplemental Symbols and Pictographs
-		{0x1FA00, 0x1FA6F}, // Chess Symbols
-		{0x1FA70, 0x1FAFF}, // Symbols and Pictographs Extended-A
-		{0x2300, 0x23FF},   // Miscellaneous Technical
+		{0x1F000, 0x1F9FF}, // その他の記号と絵文字
+		{0x2600, 0x27BF},   // その他の記号
+		{0x1F600, 0x1F64F}, // 顔文字
+		{0x1F680, 0x1F6FF}, // 交通と地図の記号
+		{0x2702, 0x27B0},   // 装飾記号
+		{0xFE00, 0xFE0F},   // 異体字セレクタ
+		{0x1F300, 0x1F5FF}, // その他の記号と絵文字
+		{0x1F900, 0x1F9FF}, // 補助記号と絵文字
+		{0x1FA00, 0x1FA6F}, // チェス記号
+		{0x1FA70, 0x1FAFF}, // 記号と絵文字拡張A
+		{0x2300, 0x23FF},   // その他の技術記号
 	}
 
 	for _, r := range s {
@@ -311,9 +311,9 @@ func ContainsEmoji(s string) bool {
 	return false
 }
 
-// ContainsDangerousChars checks for XSS and injection vulnerabilities
+// ContainsDangerousChars は XSS およびインジェクション脆弱性をチェックします
 func ContainsDangerousChars(s string) bool {
-	// Check for script tags, event handlers, and other XSS vectors
+	// スクリプトタグ、イベントハンドラ、その他の XSS ベクターをチェックします
 	dangerousPatterns := []string{
 		`<script`,
 		`javascript:`,
@@ -336,7 +336,7 @@ func ContainsDangerousChars(s string) bool {
 	return false
 }
 
-// ValidateSeverity validates severity enum
+// ValidateSeverity は重要度の列挙値をバリデーションします
 func ValidateSeverity(severity string) error {
 	validSeverities := map[string]bool{
 		"low":      true,
@@ -350,7 +350,7 @@ func ValidateSeverity(severity string) error {
 	return nil
 }
 
-// ValidateStatus validates status enum
+// ValidateStatus はステータスの列挙値をバリデーションします
 func ValidateStatus(status string) error {
 	validStatuses := map[string]bool{
 		"open":          true,
@@ -364,7 +364,7 @@ func ValidateStatus(status string) error {
 	return nil
 }
 
-// ValidatePriority validates priority enum
+// ValidatePriority は優先度の列挙値をバリデーションします
 func ValidatePriority(priority string) error {
 	validPriorities := map[string]bool{
 		"low":    true,
@@ -377,7 +377,7 @@ func ValidatePriority(priority string) error {
 	return nil
 }
 
-// ValidateActionStatus validates action item status enum
+// ValidateActionStatus はアクションアイテムステータスの列挙値をバリデーションします
 func ValidateActionStatus(status string) error {
 	validStatuses := map[string]bool{
 		"pending":     true,
@@ -390,7 +390,7 @@ func ValidateActionStatus(status string) error {
 	return nil
 }
 
-// ValidateTimelineEventType validates timeline event type enum
+// ValidateTimelineEventType はタイムラインイベントタイプの列挙値をバリデーションします
 func ValidateTimelineEventType(eventType string) error {
 	validTypes := map[string]bool{
 		"detected":                true,

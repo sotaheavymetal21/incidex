@@ -2,7 +2,7 @@ package validator
 
 import "errors"
 
-// Validation errors for user-related fields
+// ユーザー関連フィールドのバリデーションエラー
 var (
 	ErrNameRequired            = errors.New("name is required")
 	ErrNameTooLong             = errors.New("name is too long")
@@ -21,7 +21,7 @@ var (
 	ErrDepartmentContainsEmoji = errors.New("department name cannot contain emoji characters")
 )
 
-// Validation errors for incident-related fields
+// インシデント関連フィールドのバリデーションエラー
 var (
 	ErrTitleRequired        = errors.New("title is required")
 	ErrTitleTooLong         = errors.New("title is too long")
@@ -32,7 +32,7 @@ var (
 	ErrInvalidStatus        = errors.New("invalid status value")
 )
 
-// Validation errors for tag-related fields
+// タグ関連フィールドのバリデーションエラー
 var (
 	ErrTagNameRequired       = errors.New("tag name is required")
 	ErrTagNameTooLong        = errors.New("tag name is too long")
@@ -40,19 +40,19 @@ var (
 	ErrInvalidColorFormat    = errors.New("invalid color format (expected #RRGGBB)")
 )
 
-// Validation errors for comment/activity fields
+// コメント/アクティビティフィールドのバリデーションエラー
 var (
 	ErrCommentRequired    = errors.New("comment is required")
 	ErrCommentTooLong     = errors.New("comment is too long")
 	ErrInvalidEventType   = errors.New("invalid event type")
 )
 
-// Validation errors for post-mortem fields
+// ポストモーテムフィールドのバリデーションエラー
 var (
 	ErrPostMortemTextTooLong = errors.New("post-mortem text is too long")
 )
 
-// Validation errors for action item fields
+// アクションアイテムフィールドのバリデーションエラー
 var (
 	ErrActionItemTitleRequired  = errors.New("action item title is required")
 	ErrActionItemTitleTooLong   = errors.New("action item title is too long")
@@ -62,13 +62,13 @@ var (
 	ErrInvalidActionStatus      = errors.New("invalid action status value")
 )
 
-// Validation errors for notification settings
+// 通知設定のバリデーションエラー
 var (
 	ErrSlackWebhookTooLong  = errors.New("slack webhook URL is too long")
 	ErrInvalidSlackWebhook  = errors.New("invalid slack webhook URL format")
 )
 
-// General validation errors
+// 一般的なバリデーションエラー
 var (
 	ErrContainsDangerousChars = errors.New("input contains dangerous characters")
 )
