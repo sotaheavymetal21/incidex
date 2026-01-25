@@ -685,3 +685,200 @@ func TestAuthHandler_Logout(t *testing.T) {
 		authUsecase.AssertExpectations(t)
 	})
 }
+
+func TestAuthHandler_AdditionalLoginScenarios(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fails with invalid email format", func(t *testing.T) {
+		t.Parallel()
+
+		authUsecase := NewMockAuthUsecase()
+		handler := NewAuthHandler(authUsecase, false)
+
+		reqBody := LoginRequest{
+			Email:    "not-an-email",
+			Password: "Password123!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Login(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Contains(t, response, "error")
+		authUsecase.AssertNotCalled(t, "Login")
+	})
+
+	t.Run("fails when user account is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		authUsecase := NewMockAuthUsecase()
+		handler := NewAuthHandler(authUsecase, false)
+
+		authUsecase.On("Login", mock.Anything, "disabled@example.com", "Password123!").
+			Return(nil, domain.ErrForbidden("Account is disabled"))
+
+		reqBody := LoginRequest{
+			Email:    "disabled@example.com",
+			Password: "Password123!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Login(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, "FORBIDDEN", response["error"])
+		assert.Contains(t, response["message"], "Account is disabled")
+
+		authUsecase.AssertExpectations(t)
+	})
+}
+
+func TestAuthHandler_AdditionalRegisterScenarios(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fails with too long name", func(t *testing.T) {
+		t.Parallel()
+
+		authUsecase := NewMockAuthUsecase()
+		handler := NewAuthHandler(authUsecase, false)
+
+		// 51文字の名前（max=50）
+		longName := "12345678901234567890123456789012345678901234567890X" // 51 chars
+		reqBody := RegisterRequest{
+			Name:           longName,
+			Email:          "test@example.com",
+			Password:       "StrongPass123!",
+			EmployeeNumber: "EMP-001",
+			Department:     "Engineering",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Register(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		authUsecase.AssertNotCalled(t, "Register")
+	})
+
+	t.Run("fails with too long email", func(t *testing.T) {
+		t.Parallel()
+
+		authUsecase := NewMockAuthUsecase()
+		handler := NewAuthHandler(authUsecase, false)
+
+		// 255文字以上のメール（max=254）
+		// Create an email that's exactly 255 characters
+		localPart := "a123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123" // 243 chars
+		domain := "@example.com"                                                                                                                                                                                                                                            // 12 chars
+		longEmail := localPart + domain                                                                                                                                                                                                                                     // 255 total
+		reqBody := RegisterRequest{
+			Name:           "Test User",
+			Email:          longEmail,
+			Password:       "StrongPass123!",
+			EmployeeNumber: "EMP-001",
+			Department:     "Engineering",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Register(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		authUsecase.AssertNotCalled(t, "Register")
+	})
+}
+
+func TestAuthHandler_AdditionalRefreshScenarios(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fails with expired refresh token", func(t *testing.T) {
+		t.Parallel()
+
+		authUsecase := NewMockAuthUsecase()
+		handler := NewAuthHandler(authUsecase, false)
+
+		authUsecase.On("RefreshAccessToken", mock.Anything, "expired-token").
+			Return(nil, domain.ErrUnauthorized("Refresh token is expired or revoked"))
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
+		c.Request.AddCookie(&http.Cookie{
+			Name:  "refresh_token",
+			Value: "expired-token",
+		})
+
+		handler.Refresh(c)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, "UNAUTHORIZED", response["error"])
+		assert.Contains(t, response["message"], "expired or revoked")
+
+		authUsecase.AssertExpectations(t)
+	})
+
+	t.Run("fails with revoked refresh token", func(t *testing.T) {
+		t.Parallel()
+
+		authUsecase := NewMockAuthUsecase()
+		handler := NewAuthHandler(authUsecase, false)
+
+		authUsecase.On("RefreshAccessToken", mock.Anything, "revoked-token").
+			Return(nil, domain.ErrUnauthorized("Refresh token is expired or revoked"))
+
+		reqBody := RefreshRequest{
+			RefreshToken: "revoked-token",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Refresh(c)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, "UNAUTHORIZED", response["error"])
+
+		authUsecase.AssertExpectations(t)
+	})
+}
