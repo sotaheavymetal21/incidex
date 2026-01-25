@@ -12,8 +12,8 @@ import {
 import type { Permission } from '../permissions';
 
 describe('hasPermission', () => {
-  describe('admin role', () => {
-    it('has all permissions', () => {
+  describe('admin ロール', () => {
+    it('すべての権限を持っています', () => {
       const adminPermissions: Permission[] = [
         'view_incidents',
         'create_incidents',
@@ -35,8 +35,8 @@ describe('hasPermission', () => {
     });
   });
 
-  describe('editor role', () => {
-    it('has content management permissions', () => {
+  describe('editor ロール', () => {
+    it('コンテンツ管理権限を持っています', () => {
       expect(hasPermission('editor', 'view_incidents')).toBe(true);
       expect(hasPermission('editor', 'create_incidents')).toBe(true);
       expect(hasPermission('editor', 'edit_incidents')).toBe(true);
@@ -45,21 +45,21 @@ describe('hasPermission', () => {
       expect(hasPermission('editor', 'manage_postmortems')).toBe(true);
     });
 
-    it('does not have user management permissions', () => {
+    it('ユーザー管理権限を持っていません', () => {
       expect(hasPermission('editor', 'view_users')).toBe(false);
       expect(hasPermission('editor', 'manage_users')).toBe(false);
     });
   });
 
-  describe('viewer role', () => {
-    it('has view-only permissions', () => {
+  describe('viewer ロール', () => {
+    it('閲覧のみの権限を持っています', () => {
       expect(hasPermission('viewer', 'view_incidents')).toBe(true);
       expect(hasPermission('viewer', 'view_tags')).toBe(true);
       expect(hasPermission('viewer', 'view_postmortems')).toBe(true);
       expect(hasPermission('viewer', 'view_stats')).toBe(true);
     });
 
-    it('does not have edit permissions', () => {
+    it('編集権限を持っていません', () => {
       expect(hasPermission('viewer', 'create_incidents')).toBe(false);
       expect(hasPermission('viewer', 'edit_incidents')).toBe(false);
       expect(hasPermission('viewer', 'delete_incidents')).toBe(false);
@@ -68,107 +68,107 @@ describe('hasPermission', () => {
     });
   });
 
-  describe('invalid role', () => {
-    it('returns false for unknown role', () => {
+  describe('無効なロール', () => {
+    it('不明なロールの場合は false を返します', () => {
       expect(hasPermission('unknown' as any, 'view_incidents')).toBe(false);
     });
   });
 });
 
 describe('hasAnyPermission', () => {
-  it('returns true if user has at least one permission', () => {
+  it('少なくとも1つの権限を持っている場合は true を返します', () => {
     expect(hasAnyPermission('viewer', ['view_incidents', 'manage_users'])).toBe(true);
   });
 
-  it('returns false if user has none of the permissions', () => {
+  it('いずれの権限も持っていない場合は false を返します', () => {
     expect(hasAnyPermission('viewer', ['manage_users', 'create_incidents'])).toBe(false);
   });
 
-  it('returns true for admin with any permission', () => {
+  it('admin は任意の権限で true を返します', () => {
     expect(hasAnyPermission('admin', ['manage_users', 'manage_tags'])).toBe(true);
   });
 });
 
 describe('hasAllPermissions', () => {
-  it('returns true if user has all permissions', () => {
+  it('すべての権限を持っている場合は true を返します', () => {
     expect(hasAllPermissions('admin', ['view_incidents', 'create_incidents'])).toBe(true);
   });
 
-  it('returns false if user is missing any permission', () => {
+  it('いずれかの権限が欠けている場合は false を返します', () => {
     expect(hasAllPermissions('viewer', ['view_incidents', 'create_incidents'])).toBe(false);
   });
 
-  it('returns true for empty permissions array', () => {
+  it('空の権限配列の場合は true を返します', () => {
     expect(hasAllPermissions('viewer', [])).toBe(true);
   });
 });
 
 describe('canManageUsers', () => {
-  it('returns true for admin', () => {
+  it('admin の場合は true を返します', () => {
     expect(canManageUsers('admin')).toBe(true);
   });
 
-  it('returns false for editor', () => {
+  it('editor の場合は false を返します', () => {
     expect(canManageUsers('editor')).toBe(false);
   });
 
-  it('returns false for viewer', () => {
+  it('viewer の場合は false を返します', () => {
     expect(canManageUsers('viewer')).toBe(false);
   });
 });
 
 describe('canEditContent', () => {
-  it('returns true for admin', () => {
+  it('admin の場合は true を返します', () => {
     expect(canEditContent('admin')).toBe(true);
   });
 
-  it('returns true for editor', () => {
+  it('editor の場合は true を返します', () => {
     expect(canEditContent('editor')).toBe(true);
   });
 
-  it('returns false for viewer', () => {
+  it('viewer の場合は false を返します', () => {
     expect(canEditContent('viewer')).toBe(false);
   });
 });
 
 describe('isAdmin', () => {
-  it('returns true for admin role', () => {
+  it('admin ロールの場合は true を返します', () => {
     expect(isAdmin('admin')).toBe(true);
   });
 
-  it('returns false for editor role', () => {
+  it('editor ロールの場合は false を返します', () => {
     expect(isAdmin('editor')).toBe(false);
   });
 
-  it('returns false for viewer role', () => {
+  it('viewer ロールの場合は false を返します', () => {
     expect(isAdmin('viewer')).toBe(false);
   });
 });
 
 describe('isEditorOrAdmin', () => {
-  it('returns true for admin role', () => {
+  it('admin ロールの場合は true を返します', () => {
     expect(isEditorOrAdmin('admin')).toBe(true);
   });
 
-  it('returns true for editor role', () => {
+  it('editor ロールの場合は true を返します', () => {
     expect(isEditorOrAdmin('editor')).toBe(true);
   });
 
-  it('returns false for viewer role', () => {
+  it('viewer ロールの場合は false を返します', () => {
     expect(isEditorOrAdmin('viewer')).toBe(false);
   });
 });
 
 describe('isViewer', () => {
-  it('returns true for viewer role', () => {
+  it('viewer ロールの場合は true を返します', () => {
     expect(isViewer('viewer')).toBe(true);
   });
 
-  it('returns false for admin role', () => {
+  it('admin ロールの場合は false を返します', () => {
     expect(isViewer('admin')).toBe(false);
   });
 
-  it('returns false for editor role', () => {
+  it('editor ロールの場合は false を返します', () => {
     expect(isViewer('editor')).toBe(false);
   });
 });

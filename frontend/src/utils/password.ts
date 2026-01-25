@@ -1,3 +1,6 @@
+/**
+ * 指定された長さのセキュアなパスワードを生成します
+ */
 export function generateSecurePassword(length: number = 16): string {
   const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
   const array = new Uint8Array(length);
@@ -5,6 +8,9 @@ export function generateSecurePassword(length: number = 16): string {
   return Array.from(array, byte => charset[byte % charset.length]).join('');
 }
 
+/**
+ * テキストをクリップボードにコピーします
+ */
 export function copyToClipboard(text: string): Promise<void> {
   return navigator.clipboard.writeText(text);
 }

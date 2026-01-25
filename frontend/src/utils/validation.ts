@@ -1,14 +1,14 @@
 /**
- * Frontend Validation Utilities
+ * フロントエンドバリデーションユーティリティ
  * 共通のバリデーション関数とルール
  */
 
 // ============================================
-// Validation Constants
+// バリデーション定数
 // ============================================
 
 export const ValidationLimits = {
-  // User fields
+  // ユーザーフィールド
   NAME_MAX_LENGTH: 50,
   EMAIL_MAX_LENGTH: 254,
   PASSWORD_MIN_LENGTH: 8,
@@ -16,39 +16,39 @@ export const ValidationLimits = {
   EMPLOYEE_NUMBER_MAX_LENGTH: 20,
   DEPARTMENT_MAX_LENGTH: 50,
 
-  // Incident fields
+  // インシデントフィールド
   TITLE_MAX_LENGTH: 500,
   DESCRIPTION_MAX_LENGTH: 10000,
   IMPACT_SCOPE_MAX_LENGTH: 500,
 
-  // Comment/Activity fields
+  // コメント/アクティビティフィールド
   COMMENT_MIN_LENGTH: 1,
   COMMENT_MAX_LENGTH: 5000,
 
-  // Tag fields
+  // タグフィールド
   TAG_NAME_MAX_LENGTH: 50,
   TAG_COLOR_LENGTH: 7, // #RRGGBB
 
-  // Post-mortem fields
+  // ポストモーテムフィールド
   POSTMORTEM_TEXT_MAX_LENGTH: 10000,
   FIVE_WHYS_MAX_LENGTH: 1000,
 
-  // Action Item fields
+  // アクションアイテムフィールド
   ACTION_ITEM_TITLE_MIN_LENGTH: 1,
   ACTION_ITEM_TITLE_MAX_LENGTH: 500,
   ACTION_ITEM_DESCRIPTION_MAX_LENGTH: 5000,
   ACTION_ITEM_LINKS_MAX_LENGTH: 2000,
 
-  // Notification settings
+  // 通知設定
   SLACK_WEBHOOK_MAX_LENGTH: 500,
 } as const;
 
 // ============================================
-// Validation Helper Functions
+// バリデーションヘルパー関数
 // ============================================
 
 /**
- * Check if string contains emoji characters
+ * 文字列に絵文字が含まれているかチェックします
  */
 export const containsEmoji = (str: string): boolean => {
   const emojiRegex = /[\u{1F000}-\u{1F9FF}]|[\u{2600}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2702}-\u{27B0}]|[\u{FE00}-\u{FE0F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{2300}-\u{23FF}]/u;
@@ -56,7 +56,7 @@ export const containsEmoji = (str: string): boolean => {
 };
 
 /**
- * Validate employee number format (alphanumeric and hyphens only)
+ * 社員番号の形式をバリデーションします（英数字とハイフンのみ）
  */
 export const isValidEmployeeNumber = (str: string): boolean => {
   if (!str) return true;
@@ -64,7 +64,7 @@ export const isValidEmployeeNumber = (str: string): boolean => {
 };
 
 /**
- * Validate email format
+ * メールアドレスの形式をバリデーションします
  */
 export const isValidEmail = (str: string): boolean => {
   if (!str) return false;
@@ -72,7 +72,7 @@ export const isValidEmail = (str: string): boolean => {
 };
 
 /**
- * Validate password strength
+ * パスワードの強度をバリデーションします
  */
 export const validatePasswordStrength = (password: string): {
   isValid: boolean;
@@ -100,14 +100,14 @@ export const validatePasswordStrength = (password: string): {
 };
 
 /**
- * Validate hex color format
+ * 16進数カラーコードの形式をバリデーションします
  */
 export const isValidHexColor = (str: string): boolean => {
   return /^#[0-9A-Fa-f]{6}$/.test(str);
 };
 
 /**
- * Validate URL format
+ * URL 形式をバリデーションします
  */
 export const isValidUrl = (str: string): boolean => {
   if (!str) return true;
@@ -120,7 +120,7 @@ export const isValidUrl = (str: string): boolean => {
 };
 
 /**
- * Validate Slack webhook URL format
+ * Slack Webhook URL の形式をバリデーションします
  */
 export const isValidSlackWebhook = (str: string): boolean => {
   if (!str) return true;
@@ -128,10 +128,10 @@ export const isValidSlackWebhook = (str: string): boolean => {
 };
 
 /**
- * Check for potentially dangerous characters (XSS prevention)
+ * 潜在的に危険な文字をチェックします（XSS 防止）
  */
 export const containsDangerousChars = (str: string): boolean => {
-  // Check for script tags, event handlers, and other XSS vectors
+  // script タグ、イベントハンドラー、その他の XSS ベクターをチェック
   const dangerousPatterns = [
     /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
     /on\w+\s*=/gi,
@@ -143,7 +143,7 @@ export const containsDangerousChars = (str: string): boolean => {
 };
 
 /**
- * Sanitize input by removing dangerous characters
+ * 危険な文字を除去して入力をサニタイズします
  */
 export const sanitizeInput = (str: string): string => {
   return str
@@ -155,7 +155,7 @@ export const sanitizeInput = (str: string): string => {
 };
 
 // ============================================
-// Field-specific Validation Functions
+// フィールド固有のバリデーション関数
 // ============================================
 
 export interface ValidationResult {
@@ -164,7 +164,7 @@ export interface ValidationResult {
 }
 
 /**
- * Validate name field
+ * 名前フィールドをバリデーションします
  */
 export const validateName = (value: string, required = true): ValidationResult => {
   if (required && !value.trim()) {
@@ -183,7 +183,7 @@ export const validateName = (value: string, required = true): ValidationResult =
 };
 
 /**
- * Validate email field
+ * メールアドレスフィールドをバリデーションします
  */
 export const validateEmail = (value: string, required = true): ValidationResult => {
   if (required && !value.trim()) {
@@ -199,7 +199,7 @@ export const validateEmail = (value: string, required = true): ValidationResult 
 };
 
 /**
- * Validate password field
+ * パスワードフィールドをバリデーションします
  */
 export const validatePassword = (value: string, requireStrong = true): ValidationResult => {
   if (!value) {
@@ -221,7 +221,7 @@ export const validatePassword = (value: string, requireStrong = true): Validatio
 };
 
 /**
- * Validate employee number field
+ * 社員番号フィールドをバリデーションします
  */
 export const validateEmployeeNumber = (value: string): ValidationResult => {
   if (value && value.length > ValidationLimits.EMPLOYEE_NUMBER_MAX_LENGTH) {
@@ -234,7 +234,7 @@ export const validateEmployeeNumber = (value: string): ValidationResult => {
 };
 
 /**
- * Validate department field
+ * 所属部署フィールドをバリデーションします
  */
 export const validateDepartment = (value: string): ValidationResult => {
   if (value && value.length > ValidationLimits.DEPARTMENT_MAX_LENGTH) {
@@ -247,7 +247,7 @@ export const validateDepartment = (value: string): ValidationResult => {
 };
 
 /**
- * Validate incident title field
+ * インシデントタイトルフィールドをバリデーションします
  */
 export const validateIncidentTitle = (value: string): ValidationResult => {
   if (!value.trim()) {
@@ -263,7 +263,7 @@ export const validateIncidentTitle = (value: string): ValidationResult => {
 };
 
 /**
- * Validate incident description field
+ * インシデント説明フィールドをバリデーションします
  */
 export const validateIncidentDescription = (value: string): ValidationResult => {
   if (!value.trim()) {
@@ -276,7 +276,7 @@ export const validateIncidentDescription = (value: string): ValidationResult => 
 };
 
 /**
- * Validate impact scope field
+ * 影響範囲フィールドをバリデーションします
  */
 export const validateImpactScope = (value: string): ValidationResult => {
   if (value && value.length > ValidationLimits.IMPACT_SCOPE_MAX_LENGTH) {
@@ -286,7 +286,7 @@ export const validateImpactScope = (value: string): ValidationResult => {
 };
 
 /**
- * Validate comment field
+ * コメントフィールドをバリデーションします
  */
 export const validateComment = (value: string): ValidationResult => {
   if (!value.trim()) {
@@ -302,7 +302,7 @@ export const validateComment = (value: string): ValidationResult => {
 };
 
 /**
- * Validate tag name field
+ * タグ名フィールドをバリデーションします
  */
 export const validateTagName = (value: string): ValidationResult => {
   if (!value.trim()) {
@@ -321,7 +321,7 @@ export const validateTagName = (value: string): ValidationResult => {
 };
 
 /**
- * Validate tag color field
+ * タグカラーフィールドをバリデーションします
  */
 export const validateTagColor = (value: string): ValidationResult => {
   if (!value) {
@@ -334,7 +334,7 @@ export const validateTagColor = (value: string): ValidationResult => {
 };
 
 /**
- * Validate post-mortem text fields
+ * ポストモーテムテキストフィールドをバリデーションします
  */
 export const validatePostMortemText = (value: string, fieldName: string): ValidationResult => {
   if (value && value.length > ValidationLimits.POSTMORTEM_TEXT_MAX_LENGTH) {
@@ -344,7 +344,7 @@ export const validatePostMortemText = (value: string, fieldName: string): Valida
 };
 
 /**
- * Validate action item title field
+ * アクションアイテムタイトルフィールドをバリデーションします
  */
 export const validateActionItemTitle = (value: string): ValidationResult => {
   if (!value.trim()) {
@@ -360,7 +360,7 @@ export const validateActionItemTitle = (value: string): ValidationResult => {
 };
 
 /**
- * Validate action item description field
+ * アクションアイテム説明フィールドをバリデーションします
  */
 export const validateActionItemDescription = (value: string): ValidationResult => {
   if (value && value.length > ValidationLimits.ACTION_ITEM_DESCRIPTION_MAX_LENGTH) {
@@ -370,13 +370,13 @@ export const validateActionItemDescription = (value: string): ValidationResult =
 };
 
 /**
- * Validate action item related links field
+ * アクションアイテム関連リンクフィールドをバリデーションします
  */
 export const validateRelatedLinks = (value: string): ValidationResult => {
   if (value && value.length > ValidationLimits.ACTION_ITEM_LINKS_MAX_LENGTH) {
     return { isValid: false, error: `関連リンクは${ValidationLimits.ACTION_ITEM_LINKS_MAX_LENGTH}文字以内で入力してください` };
   }
-  // Validate each URL in comma-separated list
+  // カンマ区切りのリスト内の各 URL をバリデーション
   if (value) {
     const links = value.split(',').map((link) => link.trim()).filter(Boolean);
     for (const link of links) {
@@ -390,7 +390,7 @@ export const validateRelatedLinks = (value: string): ValidationResult => {
 };
 
 /**
- * Validate Slack webhook URL field
+ * Slack Webhook URL フィールドをバリデーションします
  */
 export const validateSlackWebhookUrl = (value: string): ValidationResult => {
   if (value && value.length > ValidationLimits.SLACK_WEBHOOK_MAX_LENGTH) {
@@ -403,7 +403,7 @@ export const validateSlackWebhookUrl = (value: string): ValidationResult => {
 };
 
 /**
- * Validate datetime field (must not be in future for certain fields)
+ * 日時フィールドをバリデーションします（特定のフィールドでは未来日時を許可しない）
  */
 export const validateDatetime = (value: string, allowFuture = true, fieldName = '日時'): ValidationResult => {
   if (!value) {
@@ -423,7 +423,7 @@ export const validateDatetime = (value: string, allowFuture = true, fieldName = 
 };
 
 // ============================================
-// Severity and Status Validation
+// 重要度とステータスのバリデーション
 // ============================================
 
 export const VALID_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
