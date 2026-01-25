@@ -12,14 +12,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// IncidentHandler はインシデント関連の HTTP handler を提供します
 type IncidentHandler struct {
 	incidentUsecase usecase.IncidentUsecase
 }
 
+// NewIncidentHandler は新しい IncidentHandler を作成します
 func NewIncidentHandler(u usecase.IncidentUsecase) *IncidentHandler {
 	return &IncidentHandler{incidentUsecase: u}
 }
 
+// CreateIncidentRequest はインシデント作成の request body を表します
 type CreateIncidentRequest struct {
 	Title       string   `json:"title" binding:"required,max=500"`
 	Description string   `json:"description" binding:"required"`
@@ -31,6 +34,7 @@ type CreateIncidentRequest struct {
 	TagIDs      []uint   `json:"tag_ids"`
 }
 
+// UpdateIncidentRequest はインシデント更新の request body を表します
 type UpdateIncidentRequest struct {
 	Title       string  `json:"title" binding:"required,max=500"`
 	Description string  `json:"description" binding:"required"`
@@ -42,11 +46,13 @@ type UpdateIncidentRequest struct {
 	TagIDs      []uint  `json:"tag_ids"`
 }
 
+// IncidentListResponse はインシデント一覧の response を表します
 type IncidentListResponse struct {
 	Incidents  []*domain.Incident       `json:"incidents"`
 	Pagination *domain.PaginationResult `json:"pagination"`
 }
 
+// Create は新しいインシデントを作成します
 func (h *IncidentHandler) Create(c *gin.Context) {
 	var req CreateIncidentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -54,7 +60,7 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Custom validation
+	// カスタムバリデーション
 	if err := validator.ValidateTitle(req.Title); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -76,7 +82,7 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from JWT context (set by middleware)
+	// JWT context からユーザー ID を取得（middleware で設定済み）
 	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
@@ -89,7 +95,7 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Parse detected_at
+	// detected_at をパース
 	detectedAt, err := time.Parse(time.RFC3339, req.DetectedAt)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid detected_at format (expected RFC3339)"})
@@ -116,8 +122,9 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, incident)
 }
 
+// GetAll はすべてのインシデントを取得します
 func (h *IncidentHandler) GetAll(c *gin.Context) {
-	// Parse query parameters
+	// クエリパラメータをパース
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	severity := c.Query("severity")
@@ -126,7 +133,7 @@ func (h *IncidentHandler) GetAll(c *gin.Context) {
 	sortBy := c.DefaultQuery("sort", "created_at")
 	order := c.DefaultQuery("order", "desc")
 
-	// Parse tag_ids (comma-separated)
+	// tag_ids をパース（カンマ区切り）
 	var tagIDs []uint
 	tagIDsStr := c.Query("tag_ids")
 	if tagIDsStr != "" {
@@ -138,7 +145,7 @@ func (h *IncidentHandler) GetAll(c *gin.Context) {
 		}
 	}
 
-	// Parse assigned_to_id
+	// assigned_to_id をパース
 	var assignedToID *uint
 	if assignedToIDStr := c.Query("assigned_to_id"); assignedToIDStr != "" {
 		id, err := strconv.ParseUint(assignedToIDStr, 10, 32)
@@ -177,6 +184,7 @@ func (h *IncidentHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetByID は指定された ID のインシデントを取得します
 func (h *IncidentHandler) GetByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -194,6 +202,7 @@ func (h *IncidentHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, incident)
 }
 
+// Update は既存のインシデントを更新します
 func (h *IncidentHandler) Update(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -208,7 +217,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Get user ID and role from JWT context
+	// JWT context からユーザー ID とロールを取得
 	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
@@ -233,7 +242,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Parse detected_at
+	// detected_at をパース
 	detectedAt, err := time.Parse(time.RFC3339, req.DetectedAt)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid detected_at format (expected RFC3339)"})
@@ -262,6 +271,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, incident)
 }
 
+// Delete は指定されたインシデントを削除します
 func (h *IncidentHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -270,7 +280,7 @@ func (h *IncidentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Get user role from JWT context
+	// JWT context からユーザーロールを取得
 	role, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
@@ -291,10 +301,12 @@ func (h *IncidentHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Incident deleted successfully"})
 }
 
+// AssignIncidentRequest はインシデント担当者割り当ての request body を表します
 type AssignIncidentRequest struct{
 	AssigneeID *uint `json:"assignee_id"`
 }
 
+// AssignIncident はインシデントに担当者を割り当てます
 func (h *IncidentHandler) AssignIncident(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -309,7 +321,7 @@ func (h *IncidentHandler) AssignIncident(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
+	// context からユーザー ID を取得
 	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found"})

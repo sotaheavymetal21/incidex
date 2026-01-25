@@ -10,10 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// IncidentActivityHandler はインシデントアクティビティ関連の HTTP handler を提供します
 type IncidentActivityHandler struct {
 	activityUsecase *usecase.IncidentActivityUsecase
 }
 
+// NewIncidentActivityHandler は新しい IncidentActivityHandler を作成します
 func NewIncidentActivityHandler(activityUsecase *usecase.IncidentActivityUsecase) *IncidentActivityHandler {
 	return &IncidentActivityHandler{
 		activityUsecase: activityUsecase,
@@ -21,13 +23,13 @@ func NewIncidentActivityHandler(activityUsecase *usecase.IncidentActivityUsecase
 }
 
 // AddComment godoc
-// @Summary Add a comment to an incident
-// @Description Add a comment to an incident
+// @Summary インシデントにコメントを追加します
+// @Description インシデントにコメントを追加します
 // @Tags incident-activities
 // @Accept json
 // @Produce json
-// @Param id path int true "Incident ID"
-// @Param comment body AddCommentRequest true "Comment"
+// @Param id path int true "インシデント ID"
+// @Param comment body AddCommentRequest true "コメント"
 // @Success 201 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -53,7 +55,7 @@ func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
 		return
 	}
 
-	// Convert to uint
+	// uint に変換
 	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
@@ -69,13 +71,13 @@ func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
 }
 
 // GetActivities godoc
-// @Summary Get activities for an incident
-// @Description Get all activities (comments, status changes, etc.) for an incident
+// @Summary インシデントのアクティビティを取得します
+// @Description インシデントのすべてのアクティビティ（コメント、ステータス変更など）を取得します
 // @Tags incident-activities
 // @Accept json
 // @Produce json
-// @Param id path int true "Incident ID"
-// @Param limit query int false "Limit number of activities" default(50)
+// @Param id path int true "インシデント ID"
+// @Param limit query int false "アクティビティの取得件数" default(50)
 // @Success 200 {array} domain.IncidentActivity
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -105,10 +107,12 @@ func (h *IncidentActivityHandler) GetActivities(c *gin.Context) {
 	c.JSON(http.StatusOK, activities)
 }
 
+// AddCommentRequest はコメント追加の request body を表します
 type AddCommentRequest struct {
 	Comment string `json:"comment" binding:"required,min=1,max=5000"`
 }
 
+// AddTimelineEventRequest はタイムラインイベント追加の request body を表します
 type AddTimelineEventRequest struct {
 	EventType   string `json:"event_type" binding:"required,oneof=detected investigation_started root_cause_identified mitigation timeline_resolved other"`
 	EventTime   string `json:"event_time" binding:"required"`
@@ -116,13 +120,13 @@ type AddTimelineEventRequest struct {
 }
 
 // AddTimelineEvent godoc
-// @Summary Add a timeline event to an incident
-// @Description Add a timeline event (detected, investigation_started, root_cause_identified, mitigation, timeline_resolved, other) to an incident
+// @Summary インシデントにタイムラインイベントを追加します
+// @Description インシデントにタイムラインイベント（detected, investigation_started, root_cause_identified, mitigation, timeline_resolved, other）を追加します
 // @Tags incident-activities
 // @Accept json
 // @Produce json
-// @Param id path int true "Incident ID"
-// @Param event body AddTimelineEventRequest true "Timeline Event"
+// @Param id path int true "インシデント ID"
+// @Param event body AddTimelineEventRequest true "タイムラインイベント"
 // @Success 201 {object} domain.IncidentActivity
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -148,14 +152,14 @@ func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
 		return
 	}
 
-	// Convert to uint
+	// uint に変換
 	userIDUint, ok := userID.(uint)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
 		return
 	}
 
-	// Parse event_time
+	// event_time をパース
 	eventTime, err := time.Parse(time.RFC3339, req.EventTime)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event_time format (expected RFC3339)"})

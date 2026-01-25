@@ -8,11 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuthHandler は認証関連の HTTP handler を提供します
 type AuthHandler struct {
 	authUsecase  usecase.AuthUsecase
 	isProduction bool
 }
 
+// NewAuthHandler は新しい AuthHandler を作成します
 func NewAuthHandler(authUsecase usecase.AuthUsecase, isProduction bool) *AuthHandler {
 	return &AuthHandler{
 		authUsecase:  authUsecase,
@@ -20,6 +22,7 @@ func NewAuthHandler(authUsecase usecase.AuthUsecase, isProduction bool) *AuthHan
 	}
 }
 
+// RegisterRequest はユーザー登録の request body を表します
 type RegisterRequest struct {
 	Name           string `json:"name" binding:"required,max=50"`
 	Email          string `json:"email" binding:"required,email,max=254"`
@@ -28,6 +31,7 @@ type RegisterRequest struct {
 	Department     string `json:"department" binding:"required,max=50"`
 }
 
+// Register は新規ユーザーを登録します
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,7 +39,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Custom validation
+	// カスタムバリデーション
 	if err := validator.ValidateName(req.Name); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -66,11 +70,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
+// LoginRequest はログインの request body を表します
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email,max=254"`
 	Password string `json:"password" binding:"required"`
 }
 
+// Login はユーザーを認証しトークンを発行します
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -78,7 +84,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Custom validation
+	// カスタムバリデーション
 	if err := validator.ValidateEmail(req.Email); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -90,17 +96,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Set refresh token as httpOnly cookie
+	// refresh token を httpOnly cookie として設定
 	c.SetCookie(
-		"refresh_token",           // name
-		authResponse.RefreshToken, // value
-		7*24*60*60,                // maxAge in seconds (7 days)
-		"/",                       // path
-		"",                        // domain (empty for current domain)
-		h.isProduction,            // secure (true in production with HTTPS)
+		"refresh_token",           // 名前
+		authResponse.RefreshToken, // 値
+		7*24*60*60,                // 有効期間（秒）: 7日間
+		"/",                       // パス
+		"",                        // ドメイン（空文字で現在のドメイン）
+		h.isProduction,            // secure（本番環境では HTTPS のため true）
 		true,                      // httpOnly
 	)
-	// Set SameSite attribute for CSRF protection
+	// CSRF 対策として SameSite 属性を設定
 	c.SetSameSite(http.SameSiteStrictMode)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -109,15 +115,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
+// RefreshRequest はトークン更新の request body を表します
 type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"` // Optional: can be sent in body or cookie
+	RefreshToken string `json:"refresh_token"` // オプション: body または cookie で送信可能
 }
 
+// Refresh はアクセストークンを更新します
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	// Try to get refresh token from cookie first
+	// まず cookie から refresh token の取得を試みる
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		// Fallback to request body
+		// request body にフォールバック
 		var req RefreshRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token required"})
@@ -137,17 +145,17 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	// Set new refresh token as httpOnly cookie
+	// 新しい refresh token を httpOnly cookie として設定
 	c.SetCookie(
-		"refresh_token",           // name
-		authResponse.RefreshToken, // value
-		7*24*60*60,                // maxAge in seconds (7 days)
-		"/",                       // path
-		"",                        // domain
-		h.isProduction,            // secure (true in production with HTTPS)
+		"refresh_token",           // 名前
+		authResponse.RefreshToken, // 値
+		7*24*60*60,                // 有効期間（秒）: 7日間
+		"/",                       // パス
+		"",                        // ドメイン
+		h.isProduction,            // secure（本番環境では HTTPS のため true）
 		true,                      // httpOnly
 	)
-	// Set SameSite attribute for CSRF protection
+	// CSRF 対策として SameSite 属性を設定
 	c.SetSameSite(http.SameSiteStrictMode)
 
 	c.JSON(http.StatusOK, gin.H{
@@ -156,23 +164,24 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	})
 }
 
+// Logout はユーザーをログアウトします
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// Try to get refresh token from cookie
+	// cookie から refresh token の取得を試みる
 	refreshToken, _ := c.Cookie("refresh_token")
 
 	if refreshToken != "" {
-		// Revoke the refresh token
+		// refresh token を無効化
 		if err := h.authUsecase.Logout(c.Request.Context(), refreshToken); err != nil {
-			// Log error but don't fail the logout
-			// User should still be logged out on the client side
+			// error をログに記録するが、ログアウトは失敗させない
+			// クライアント側ではユーザーはログアウトされた状態になるべき
 		}
 	}
 
-	// Clear the refresh token cookie
+	// refresh token cookie をクリア
 	c.SetCookie(
 		"refresh_token",
 		"",
-		-1, // maxAge -1 deletes the cookie
+		-1, // maxAge -1 で cookie を削除
 		"/",
 		"",
 		h.isProduction,

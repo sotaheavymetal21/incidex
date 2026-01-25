@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"incidex/internal/domain"
 	"incidex/internal/usecase"
 	"net/http"
@@ -9,17 +10,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AttachmentHandler は添付ファイル関連の HTTP handler を提供します
 type AttachmentHandler struct {
 	attachmentUsecase usecase.AttachmentUsecase
 }
 
+// NewAttachmentHandler は新しい AttachmentHandler を作成します
 func NewAttachmentHandler(attachmentUsecase usecase.AttachmentUsecase) *AttachmentHandler {
 	return &AttachmentHandler{
 		attachmentUsecase: attachmentUsecase,
 	}
 }
 
-// Upload handles file upload for an incident
+// Upload はインシデントへのファイルアップロードを処理します
 func (h *AttachmentHandler) Upload(c *gin.Context) {
 	incidentIDStr := c.Param("id")
 	incidentID, err := strconv.ParseUint(incidentIDStr, 10, 32)
@@ -28,7 +31,7 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	// Get user from context (set by JWT middleware)
+	// context からユーザーを取得（JWT middleware で設定済み）
 	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
@@ -41,14 +44,14 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	// Get file from form data
+	// フォームデータからファイルを取得
 	file, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
 		return
 	}
 
-	// Open the file
+	// ファイルを開く
 	fileReader, err := file.Open()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open file"})
@@ -56,13 +59,13 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 	}
 	defer fileReader.Close()
 
-	// Get content type
+	// Content-Type を取得
 	contentType := file.Header.Get("Content-Type")
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
 
-	// Upload attachment
+	// 添付ファイルをアップロード
 	attachment, err := h.attachmentUsecase.UploadAttachment(
 		c.Request.Context(),
 		uint(incidentID),
@@ -80,7 +83,7 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 	c.JSON(http.StatusCreated, attachment)
 }
 
-// GetByIncidentID retrieves all attachments for an incident
+// GetByIncidentID はインシデントのすべての添付ファイルを取得します
 func (h *AttachmentHandler) GetByIncidentID(c *gin.Context) {
 	incidentIDStr := c.Param("id")
 	incidentID, err := strconv.ParseUint(incidentIDStr, 10, 32)
@@ -98,7 +101,7 @@ func (h *AttachmentHandler) GetByIncidentID(c *gin.Context) {
 	c.JSON(http.StatusOK, attachments)
 }
 
-// Download handles file download
+// Download はファイルのダウンロードを処理します
 func (h *AttachmentHandler) Download(c *gin.Context) {
 	attachmentIDStr := c.Param("attachmentId")
 	attachmentID, err := strconv.ParseUint(attachmentIDStr, 10, 32)
@@ -107,14 +110,14 @@ func (h *AttachmentHandler) Download(c *gin.Context) {
 		return
 	}
 
-	// Get attachment metadata
+	// 添付ファイルのメタデータを取得
 	attachment, err := h.attachmentUsecase.GetAttachment(c.Request.Context(), uint(attachmentID))
 	if err != nil {
 		HandleError(c, err)
 		return
 	}
 
-	// Download file from storage
+	// ストレージからファイルをダウンロード
 	reader, err := h.attachmentUsecase.DownloadAttachment(c.Request.Context(), uint(attachmentID))
 	if err != nil {
 		HandleError(c, err)
@@ -122,18 +125,18 @@ func (h *AttachmentHandler) Download(c *gin.Context) {
 	}
 	defer reader.Close()
 
-	// Set headers for download
+	// ダウンロード用の header を設定
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
-	c.Header("Content-Disposition", "attachment; filename="+attachment.FileName)
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, attachment.FileName))
 	c.Header("Content-Type", attachment.MimeType)
 	c.Header("Content-Length", strconv.FormatInt(attachment.FileSize, 10))
 
-	// Stream the file
+	// ファイルをストリーミング
 	c.DataFromReader(http.StatusOK, attachment.FileSize, attachment.MimeType, reader, nil)
 }
 
-// Delete handles attachment deletion
+// Delete は添付ファイルの削除を処理します
 func (h *AttachmentHandler) Delete(c *gin.Context) {
 	incidentIDStr := c.Param("id")
 	_, err := strconv.ParseUint(incidentIDStr, 10, 32)
@@ -149,7 +152,7 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Get user from context
+	// context からユーザーを取得
 	userIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
@@ -174,7 +177,7 @@ func (h *AttachmentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Delete attachment
+	// 添付ファイルを削除
 	if err := h.attachmentUsecase.DeleteAttachment(
 		c.Request.Context(),
 		uint(attachmentID),
