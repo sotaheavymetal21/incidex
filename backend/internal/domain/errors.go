@@ -5,11 +5,11 @@ import (
 	"net/http"
 )
 
-// ErrorCode represents a specific error type
+// ErrorCode は特定の error タイプを表します
 type ErrorCode string
 
 const (
-	// Client errors (4xx)
+	// クライアント error (4xx)
 	ErrCodeNotFound      ErrorCode = "NOT_FOUND"
 	ErrCodeUnauthorized  ErrorCode = "UNAUTHORIZED"
 	ErrCodeForbidden     ErrorCode = "FORBIDDEN"
@@ -17,22 +17,22 @@ const (
 	ErrCodeConflict      ErrorCode = "CONFLICT"
 	ErrCodeBadRequest    ErrorCode = "BAD_REQUEST"
 
-	// Server errors (5xx)
+	// サーバー error (5xx)
 	ErrCodeInternal      ErrorCode = "INTERNAL_ERROR"
 	ErrCodeDatabaseError ErrorCode = "DATABASE_ERROR"
 	ErrCodeExternalAPI   ErrorCode = "EXTERNAL_API_ERROR"
 )
 
-// DomainError represents a domain-level error with user-friendly messaging
+// DomainError はユーザーフレンドリーなメッセージを持つドメインレベルの error を表します
 type DomainError struct {
 	Code       ErrorCode
 	Message    string
 	StatusCode int
 	Details    map[string]interface{}
-	Err        error // Original error for logging
+	Err        error // ロギング用の元 error
 }
 
-// Error implements the error interface
+// Error は error インターフェースを実装します
 func (e *DomainError) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("[%s] %s: %v", e.Code, e.Message, e.Err)
@@ -40,12 +40,12 @@ func (e *DomainError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
 }
 
-// Unwrap returns the underlying error
+// Unwrap は元の error を返します
 func (e *DomainError) Unwrap() error {
 	return e.Err
 }
 
-// NewDomainError creates a new DomainError
+// NewDomainError は新しい DomainError を作成します
 func NewDomainError(code ErrorCode, statusCode int, message string) *DomainError {
 	return &DomainError{
 		Code:       code,
@@ -55,21 +55,21 @@ func NewDomainError(code ErrorCode, statusCode int, message string) *DomainError
 	}
 }
 
-// WithDetails adds details to the error
+// WithDetails は error に詳細情報を追加します
 func (e *DomainError) WithDetails(key string, value interface{}) *DomainError {
 	e.Details[key] = value
 	return e
 }
 
-// WithError wraps an underlying error
+// WithError は元の error をラップします
 func (e *DomainError) WithError(err error) *DomainError {
 	e.Err = err
 	return e
 }
 
-// Helper functions for common error types
+// ヘルパー関数
 
-// ErrNotFound creates a not found error
+// ErrNotFound は not found error を作成します
 func ErrNotFound(resource string) *DomainError {
 	return NewDomainError(
 		ErrCodeNotFound,
@@ -78,7 +78,7 @@ func ErrNotFound(resource string) *DomainError {
 	)
 }
 
-// ErrUnauthorized creates an unauthorized error
+// ErrUnauthorized は unauthorized error を作成します
 func ErrUnauthorized(message string) *DomainError {
 	if message == "" {
 		message = "Unauthorized access"
@@ -90,7 +90,7 @@ func ErrUnauthorized(message string) *DomainError {
 	)
 }
 
-// ErrForbidden creates a forbidden error
+// ErrForbidden は forbidden error を作成します
 func ErrForbidden(message string) *DomainError {
 	if message == "" {
 		message = "Access forbidden"
@@ -102,7 +102,7 @@ func ErrForbidden(message string) *DomainError {
 	)
 }
 
-// ErrValidation creates a validation error
+// ErrValidation は バリデーション error を作成します
 func ErrValidation(message string) *DomainError {
 	return NewDomainError(
 		ErrCodeValidation,
@@ -111,7 +111,7 @@ func ErrValidation(message string) *DomainError {
 	)
 }
 
-// ErrConflict creates a conflict error
+// ErrConflict は conflict error を作成します
 func ErrConflict(message string) *DomainError {
 	return NewDomainError(
 		ErrCodeConflict,
@@ -120,7 +120,7 @@ func ErrConflict(message string) *DomainError {
 	)
 }
 
-// ErrBadRequest creates a bad request error
+// ErrBadRequest は bad request error を作成します
 func ErrBadRequest(message string) *DomainError {
 	return NewDomainError(
 		ErrCodeBadRequest,
@@ -129,7 +129,7 @@ func ErrBadRequest(message string) *DomainError {
 	)
 }
 
-// ErrInternal creates an internal server error
+// ErrInternal は internal server error を作成します
 func ErrInternal(message string, err error) *DomainError {
 	if message == "" {
 		message = "An internal error occurred"
@@ -141,7 +141,7 @@ func ErrInternal(message string, err error) *DomainError {
 	).WithError(err)
 }
 
-// ErrDatabase creates a database error
+// ErrDatabase は データベース error を作成します
 func ErrDatabase(message string, err error) *DomainError {
 	if message == "" {
 		message = "A database error occurred"
@@ -153,7 +153,7 @@ func ErrDatabase(message string, err error) *DomainError {
 	).WithError(err)
 }
 
-// ErrExternalAPI creates an external API error
+// ErrExternalAPI は外部 API error を作成します
 func ErrExternalAPI(service string, err error) *DomainError {
 	return NewDomainError(
 		ErrCodeExternalAPI,
@@ -162,13 +162,13 @@ func ErrExternalAPI(service string, err error) *DomainError {
 	).WithError(err)
 }
 
-// IsDomainError checks if an error is a DomainError
+// IsDomainError は error が DomainError かどうかを確認します
 func IsDomainError(err error) bool {
 	_, ok := err.(*DomainError)
 	return ok
 }
 
-// AsDomainError converts an error to DomainError if possible
+// AsDomainError は可能であれば error を DomainError に変換します
 func AsDomainError(err error) (*DomainError, bool) {
 	if err == nil {
 		return nil, false

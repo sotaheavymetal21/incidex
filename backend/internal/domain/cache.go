@@ -5,20 +5,20 @@ import (
 	"time"
 )
 
-// CacheRepository defines the interface for caching operations
+// CacheRepository はキャッシュ操作のインターフェースを定義します
 type CacheRepository interface {
-	// Get retrieves a value from cache
+	// Get はキャッシュから値を取得します
 	Get(ctx context.Context, key string) (string, error)
 
-	// Set stores a value in cache with optional TTL (0 = no expiration)
+	// Set は値をキャッシュに保存します（TTL 0 = 有効期限なし）
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 
-	// Delete removes a value from cache
+	// Delete はキャッシュから値を削除します
 	Delete(ctx context.Context, key string) error
 
-	// DeleteByPattern removes all keys matching the pattern
+	// DeleteByPattern はパターンに一致するすべてのキーを削除します
 	DeleteByPattern(ctx context.Context, pattern string) error
 
-	// Exists checks if a key exists in cache
+	// Exists はキーがキャッシュに存在するかを確認します
 	Exists(ctx context.Context, key string) (bool, error)
 }
