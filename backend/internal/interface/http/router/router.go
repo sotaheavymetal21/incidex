@@ -151,5 +151,5 @@ func RegisterRoutes(r *gin.Engine, authHandler *handler.AuthHandler, jwtMiddlewa
 			reports.GET("/custom", reportHandler.GetCustomReport)
 		}
 	}
-}
+	}
 }

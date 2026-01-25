@@ -30,8 +30,8 @@ type ValidationLimits struct {
 var Limits = ValidationLimits{
 	NameMaxLength:             50,
 	EmailMaxLength:            254,
-	PasswordMinLength:         6,
-	PasswordMinLengthStrict:   8,
+	PasswordMinLength:         8,
+	PasswordMinLengthStrict:   12,
 	EmployeeNumberMaxLength:   20,
 	DepartmentMaxLength:       50,
 	TitleMaxLength:            500,
