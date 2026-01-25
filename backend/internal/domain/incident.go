@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Severity represents the severity level of an incident.
+// Severity はインシデントの重要度を表します
 type Severity string
 
 const (
@@ -15,7 +15,7 @@ const (
 	SeverityLow      Severity = "low"
 )
 
-// Status represents the current status of an incident.
+// Status はインシデントの現在のステータスを表します
 type Status string
 
 const (
@@ -25,7 +25,7 @@ const (
 	StatusClosed        Status = "closed"
 )
 
-// Incident represents an incident entity.
+// Incident はインシデントエンティティを表します
 type Incident struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
 	Title       string    `gorm:"size:500;not null;index" json:"title"`
@@ -40,12 +40,12 @@ type Incident struct {
 	CreatedAt   time.Time `gorm:"index" json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
-	// SLA Fields
+	// SLA フィールド
 	SLATargetResolutionHours int        `gorm:"default:0" json:"sla_target_resolution_hours"` // SLA目標解決時間（時間単位）
 	SLADeadline              *time.Time `gorm:"index" json:"sla_deadline"`                     // SLA期限
 	SLAViolated              bool       `gorm:"default:false;index" json:"sla_violated"`       // SLA違反フラグ
 
-	// Relations
+	// リレーション
 	Assignee   *User       `gorm:"foreignKey:AssigneeID" json:"assignee"`
 	Assignees  []User      `gorm:"many2many:incident_assignees;" json:"assignees,omitempty"`
 	Creator    *User       `gorm:"foreignKey:CreatorID" json:"creator,omitempty"`
@@ -53,7 +53,7 @@ type Incident struct {
 	PostMortem *PostMortem `gorm:"foreignKey:IncidentID" json:"post_mortem,omitempty"`
 }
 
-// IncidentFilters represents filtering options for incidents.
+// IncidentFilters はインシデントのフィルタリングオプションを表します
 type IncidentFilters struct {
 	Severity     string
 	Status       string
@@ -61,16 +61,16 @@ type IncidentFilters struct {
 	Search       string
 	SortBy       string
 	Order        string
-	AssignedToID *uint  // Filter by assignee ID
+	AssignedToID *uint // 担当者IDでフィルタリング
 }
 
-// Pagination represents pagination parameters.
+// Pagination はページネーションパラメータを表します
 type Pagination struct {
 	Page  int
 	Limit int
 }
 
-// PaginationResult represents pagination metadata.
+// PaginationResult はページネーションのメタデータを表します
 type PaginationResult struct {
 	Page       int   `json:"page"`
 	Limit      int   `json:"limit"`
@@ -78,24 +78,24 @@ type PaginationResult struct {
 	TotalPages int   `json:"total_pages"`
 }
 
-// IncidentRepository defines the interface for incident data access.
-// GetDefaultSLAHours returns the default SLA resolution hours based on severity
+// IncidentRepository はインシデントデータアクセスのインターフェースを定義します
+// GetDefaultSLAHours は重要度に基づいてデフォルトのSLA解決時間を返します
 func GetDefaultSLAHours(severity Severity) int {
 	switch severity {
 	case SeverityCritical:
-		return 4 // 4 hours for critical incidents
+		return 4 // Critical インシデントは4時間
 	case SeverityHigh:
-		return 24 // 24 hours for high severity
+		return 24 // High は24時間
 	case SeverityMedium:
-		return 72 // 72 hours for medium severity
+		return 72 // Medium は72時間
 	case SeverityLow:
-		return 168 // 168 hours (1 week) for low severity
+		return 168 // Low は168時間（1週間）
 	default:
-		return 72 // Default to 72 hours
+		return 72 // デフォルトは72時間
 	}
 }
 
-// CalculateSLADeadline calculates the SLA deadline based on detected time and target hours
+// CalculateSLADeadline は検知時刻と目標時間に基づいてSLA期限を計算します
 func (i *Incident) CalculateSLADeadline() *time.Time {
 	if i.SLATargetResolutionHours <= 0 {
 		return nil
@@ -104,22 +104,22 @@ func (i *Incident) CalculateSLADeadline() *time.Time {
 	return &deadline
 }
 
-// CheckSLAViolation checks if the incident has violated its SLA
+// CheckSLAViolation はインシデントがSLAに違反しているかを確認します
 func (i *Incident) CheckSLAViolation() bool {
 	if i.SLADeadline == nil {
 		return false
 	}
 
-	// If resolved, check if it was resolved after the deadline
+	// 解決済みの場合、期限後に解決されたかを確認
 	if i.ResolvedAt != nil {
 		return i.ResolvedAt.After(*i.SLADeadline)
 	}
 
-	// If not resolved, check if current time is after the deadline
+	// 未解決の場合、現在時刻が期限を過ぎているかを確認
 	return time.Now().After(*i.SLADeadline)
 }
 
-// GetResolutionTime returns the time taken to resolve the incident (for MTTR calculation)
+// GetResolutionTime はインシデント解決にかかった時間を返します（MTTR計算用）
 func (i *Incident) GetResolutionTime() *time.Duration {
 	if i.ResolvedAt == nil {
 		return nil
@@ -128,20 +128,20 @@ func (i *Incident) GetResolutionTime() *time.Duration {
 	return &duration
 }
 
-// IsOpen returns true if the incident is not resolved or closed
+// IsOpen はインシデントが未解決または未クローズの場合に true を返します
 func (i *Incident) IsOpen() bool {
 	return i.Status == StatusOpen || i.Status == StatusInvestigating
 }
 
-// SLAMetrics represents SLA performance metrics
+// SLAMetrics はSLAパフォーマンスメトリクスを表します
 type SLAMetrics struct {
 	TotalIncidents      int64   `json:"total_incidents"`
 	ResolvedIncidents   int64   `json:"resolved_incidents"`
 	SLAViolatedCount    int64   `json:"sla_violated_count"`
-	SLAComplianceRate   float64 `json:"sla_compliance_rate"`    // Percentage of incidents resolved within SLA
-	AverageMTTR         float64 `json:"average_mttr"`            // Average Mean Time To Resolve (in hours)
-	MedianMTTR          float64 `json:"median_mttr"`             // Median resolution time (in hours)
-	CurrentlyOverdue    int64   `json:"currently_overdue"`       // Number of open incidents past their SLA deadline
+	SLAComplianceRate   float64 `json:"sla_compliance_rate"`    // SLA内で解決されたインシデントの割合
+	AverageMTTR         float64 `json:"average_mttr"`            // 平均解決時間（時間単位）
+	MedianMTTR          float64 `json:"median_mttr"`             // 解決時間の中央値（時間単位）
+	CurrentlyOverdue    int64   `json:"currently_overdue"`       // SLA期限を過ぎた未解決インシデント数
 }
 
 type IncidentRepository interface {
@@ -152,14 +152,14 @@ type IncidentRepository interface {
 	UpdateAssignee(ctx context.Context, incidentID uint, assigneeID *uint) error
 	Delete(ctx context.Context, id uint) error
 
-	// Stats methods
+	// 統計メソッド
 	Count(count *int64) error
 	CountBySeverity(severity Severity, count *int64) error
 	CountByStatus(status Status, count *int64) error
 	FindRecent(limit int) ([]*Incident, error)
 	GetAllIncidents() ([]*Incident, error)
 
-	// SLA methods
+	// SLA メソッド
 	CountSLAViolated(count *int64) error
 	GetSLAMetrics() (*SLAMetrics, error)
 }

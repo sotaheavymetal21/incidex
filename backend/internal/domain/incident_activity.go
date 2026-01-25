@@ -2,7 +2,7 @@ package domain
 
 import "time"
 
-// ActivityType represents the type of activity that occurred.
+// ActivityType は発生したアクティビティのタイプを表します
 type ActivityType string
 
 const (
@@ -13,7 +13,7 @@ const (
 	ActivityTypeAssigneeChange  ActivityType = "assignee_change"
 	ActivityTypeResolved        ActivityType = "resolved"
 	ActivityTypeReopened        ActivityType = "reopened"
-	// Timeline event types
+	// タイムラインイベントタイプ
 	ActivityTypeDetected              ActivityType = "detected"
 	ActivityTypeInvestigationStarted   ActivityType = "investigation_started"
 	ActivityTypeRootCauseIdentified    ActivityType = "root_cause_identified"
@@ -22,7 +22,7 @@ const (
 	ActivityTypeOther                  ActivityType = "other"
 )
 
-// IncidentActivity represents an activity or event related to an incident.
+// IncidentActivity はインシデントに関連するアクティビティまたはイベントを表します
 type IncidentActivity struct {
 	ID          uint         `gorm:"primaryKey" json:"id"`
 	IncidentID  uint         `gorm:"not null;index" json:"incident_id"`
@@ -33,12 +33,12 @@ type IncidentActivity struct {
 	NewValue    string       `gorm:"size:100" json:"new_value,omitempty"`
 	CreatedAt   time.Time    `gorm:"index" json:"created_at"`
 
-	// Relations
+	// リレーション
 	User     *User     `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Incident *Incident `gorm:"foreignKey:IncidentID" json:"-"`
 }
 
-// IncidentActivityRepository defines the interface for incident activity data access.
+// IncidentActivityRepository はインシデントアクティビティデータアクセスのインターフェースを定義します
 type IncidentActivityRepository interface {
 	Create(activity *IncidentActivity) error
 	FindByIncidentID(incidentID uint, limit int) ([]*IncidentActivity, error)
