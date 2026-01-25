@@ -336,6 +336,124 @@ func TestUserHandler_Create(t *testing.T) {
 		assert.Equal(t, http.StatusConflict, w.Code)
 		userUsecase.AssertExpectations(t)
 	})
+
+	t.Run("fails with weak password", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := CreateUserRequest{
+			Email:    "new@example.com",
+			Password: "weak",
+			Name:     "New User",
+			Role:     domain.RoleEditor,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "CreateUser")
+	})
+
+	t.Run("fails with missing required fields", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := map[string]any{
+			"email":    "new@example.com",
+			"password": "Password123!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "CreateUser")
+	})
+
+	t.Run("fails with invalid JSON", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBufferString("{invalid json"))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "CreateUser")
+	})
+
+	t.Run("fails with too long name", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		longName := "12345678901234567890123456789012345678901234567890X"
+
+		reqBody := CreateUserRequest{
+			Email:    "new@example.com",
+			Password: "Password123!",
+			Name:     longName,
+			Role:     domain.RoleEditor,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "CreateUser")
+	})
+
+	t.Run("fails with invalid employee number", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := CreateUserRequest{
+			Email:          "new@example.com",
+			Password:       "Password123!",
+			Name:           "New User",
+			Role:           domain.RoleEditor,
+			EmployeeNumber: "EMP@001!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/users", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "CreateUser")
+	})
 }
 
 func TestUserHandler_Update(t *testing.T) {
@@ -448,6 +566,97 @@ func TestUserHandler_Update(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, w.Code)
 		userUsecase.AssertExpectations(t)
 	})
+
+	t.Run("fails with invalid email format", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := UpdateUserRequest{
+			Name:  "Updated User",
+			Email: "invalid-email",
+			Role:  domain.RoleEditor,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.Update(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "Update")
+	})
+
+	t.Run("fails with invalid role", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := map[string]any{
+			"name":  "Updated User",
+			"email": "updated@example.com",
+			"role":  "invalid_role",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.Update(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "Update")
+	})
+
+	t.Run("fails with invalid JSON", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123", bytes.NewBufferString("{invalid json"))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.Update(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "Update")
+	})
+
+	t.Run("fails with missing required fields", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := map[string]any{
+			"email": "updated@example.com",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.Update(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "Update")
+	})
 }
 
 func TestUserHandler_Delete(t *testing.T) {
@@ -551,6 +760,32 @@ func TestUserHandler_ToggleActive(t *testing.T) {
 		userUsecase.AssertExpectations(t)
 	})
 
+	t.Run("successfully activates user", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		userUsecase.On("ToggleActive", mock.Anything, uint(1), uint(123), true).Return(nil)
+
+		reqBody := ToggleActiveRequest{
+			IsActive: true,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/users/123/toggle-active", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+		c.Set("userID", uint(1))
+
+		handler.ToggleActive(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		userUsecase.AssertExpectations(t)
+	})
+
 	t.Run("fails with missing user ID in context", func(t *testing.T) {
 		t.Parallel()
 
@@ -599,6 +834,100 @@ func TestUserHandler_ToggleActive(t *testing.T) {
 		handler.ToggleActive(c)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertExpectations(t)
+	})
+
+	t.Run("fails with invalid ID format", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := ToggleActiveRequest{
+			IsActive: false,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/users/invalid/toggle-active", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "invalid"}}
+		c.Set("userID", uint(1))
+
+		handler.ToggleActive(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "ToggleActive")
+	})
+
+	t.Run("fails with invalid JSON", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/users/123/toggle-active", bytes.NewBufferString("{invalid json"))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+		c.Set("userID", uint(1))
+
+		handler.ToggleActive(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "ToggleActive")
+	})
+
+	t.Run("fails when user ID context is wrong type", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := ToggleActiveRequest{
+			IsActive: false,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/users/123/toggle-active", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+		c.Set("userID", "not-a-uint")
+
+		handler.ToggleActive(c)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		userUsecase.AssertNotCalled(t, "ToggleActive")
+	})
+
+	t.Run("fails when user not found", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		userUsecase.On("ToggleActive", mock.Anything, uint(1), uint(999), false).
+			Return(domain.ErrNotFound("User"))
+
+		reqBody := ToggleActiveRequest{
+			IsActive: false,
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/users/999/toggle-active", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "999"}}
+		c.Set("userID", uint(1))
+
+		handler.ToggleActive(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
 		userUsecase.AssertExpectations(t)
 	})
 }
@@ -689,6 +1018,98 @@ func TestUserHandler_UpdatePassword(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		userUsecase.AssertNotCalled(t, "UpdatePassword")
 	})
+
+	t.Run("fails with invalid ID format", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := UpdatePasswordRequest{
+			OldPassword: "OldPassword123!",
+			NewPassword: "NewPassword456!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/invalid/password", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "invalid"}}
+
+		handler.UpdatePassword(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "UpdatePassword")
+	})
+
+	t.Run("fails with invalid JSON", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123/password", bytes.NewBufferString("{invalid json"))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.UpdatePassword(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "UpdatePassword")
+	})
+
+	t.Run("fails with missing old password", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := map[string]any{
+			"new_password": "NewPassword456!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123/password", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.UpdatePassword(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "UpdatePassword")
+	})
+
+	t.Run("fails when user not found", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		userUsecase.On("UpdatePassword", mock.Anything, uint(999), mock.Anything, mock.Anything).
+			Return(domain.ErrNotFound("User"))
+
+		reqBody := UpdatePasswordRequest{
+			OldPassword: "OldPassword123!",
+			NewPassword: "NewPassword456!",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/999/password", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "999"}}
+
+		handler.UpdatePassword(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		userUsecase.AssertExpectations(t)
+	})
 }
 
 func TestUserHandler_AdminResetPassword(t *testing.T) {
@@ -773,5 +1194,67 @@ func TestUserHandler_AdminResetPassword(t *testing.T) {
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 		userUsecase.AssertExpectations(t)
+	})
+
+	t.Run("fails with weak password", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := AdminResetPasswordRequest{
+			NewPassword: "weak",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123/reset-password", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.AdminResetPassword(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "AdminResetPassword")
+	})
+
+	t.Run("fails with invalid JSON", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123/reset-password", bytes.NewBufferString("{invalid json"))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.AdminResetPassword(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "AdminResetPassword")
+	})
+
+	t.Run("fails with missing new password", func(t *testing.T) {
+		t.Parallel()
+
+		userUsecase := NewMockUserUsecase()
+		handler := NewUserHandler(userUsecase)
+
+		reqBody := map[string]any{}
+		body, _ := json.Marshal(reqBody)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPut, "/api/v1/users/123/reset-password", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Params = gin.Params{gin.Param{Key: "id", Value: "123"}}
+
+		handler.AdminResetPassword(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		userUsecase.AssertNotCalled(t, "AdminResetPassword")
 	})
 }
