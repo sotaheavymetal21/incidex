@@ -56,10 +56,12 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       MIGRATIONS_DIR: ${MIGRATIONS_DIR:-/app/migrations}
-      DB_LOG_LEVEL: ${DB_LOG_LEVEL:-info}
-      # Test user password (for seeding)
+      # ログ設定
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DB_LOG_LEVEL: ${DB_LOG_LEVEL:-warn}
+      # テストユーザーのパスワード（シード用）
       TEST_USER_PASSWORD: ${TEST_USER_PASSWORD}
-      # SMTP Configuration (optional)
+      # SMTP 設定（オプション）
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME}

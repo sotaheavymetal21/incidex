@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	// Initialize Logger
+	// ロガーを初期化します
 	env := logger.GetEnv()
 	if err := logger.InitLogger(env); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
@@ -16,12 +16,9 @@ func main() {
 	defer logger.Sync()
 
 	cfg := config.Load()
-	
-	// Determine if production environment
-	isProduction := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
-	
-	// Connect to database with logger
-	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, isProduction)
+
+	// ロガーを使用してデータベースに接続します
+	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, cfg.DBLogLevel)
 
 	_, err := db.Seed(dbConn)
 	if err != nil {

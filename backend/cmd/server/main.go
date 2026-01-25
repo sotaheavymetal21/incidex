@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	// Initialize Logger
+	// ロガーを初期化します
 	env := logger.GetEnv()
 	if err := logger.InitLogger(env); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
@@ -36,11 +36,11 @@ func main() {
 
 	cfg := config.Load()
 
-	// Initialize Database with secure logging
+	// セキュアなロギングでデータベースを初期化します
 	isProduction := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
-	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, isProduction)
+	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, cfg.DBLogLevel)
 
-	// Run database migrations if AUTO_MIGRATE is enabled
+	// AUTO_MIGRATE が有効な場合はデータベースマイグレーションを実行します
 	if cfg.AutoMigrate {
 		log.Println("INFO: AUTO_MIGRATE is enabled. Running database migrations...")
 		if err := db.RunMigrations(cfg.MigrationsDir, cfg.DatabaseURL); err != nil {
@@ -53,8 +53,8 @@ func main() {
 		log.Println("To run migrations manually: 'make migrate-up' (local) or 'make migrate-docker-up' (Docker)")
 	}
 
-	// Initialize MinIO Storage
-	// Use SSL in production, disable in development for local testing
+	// MinIO ストレージを初期化します
+	// 本番環境では SSL を使用し、開発環境ではローカルテスト用に無効化します
 	useSSL := isProduction
 	minioStorage, err := storage.NewMinIOStorage(
 		cfg.MinioEndpoint,
@@ -67,106 +67,106 @@ func main() {
 		log.Fatalf("Failed to initialize MinIO storage: %v", err)
 	}
 
-	// Initialize Redis Cache
+	// Redis キャッシュを初期化します
 	redisClient := db.ConnectRedis(cfg.RedisURL)
 	cacheRepo := cache.NewRedisCache(redisClient)
 
-	// Dependency Injection
-	// Auth
+	// 依存性注入
+	// 認証
 	userRepo := persistence.NewUserRepository(dbConn)
 	refreshTokenRepo := persistence.NewRefreshTokenRepository(dbConn)
 
-	// Create initial admin user if configured and no users exist
+	// 設定されている場合、かつユーザーが存在しない場合に初期管理者ユーザーを作成します
 	createInitialAdminIfNeeded(dbConn, userRepo, cfg)
 
-	// JWT token expiry: 1 hour for access tokens (more secure)
+	// JWT token の有効期限: access token は1時間（よりセキュア）
 	authUsecase := usecase.NewAuthUsecase(userRepo, refreshTokenRepo, cfg.JWTSecret, 1*time.Hour)
 	authHandler := handler.NewAuthHandler(authUsecase, isProduction)
 	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
 
-	// Password Reset
+	// パスワードリセット
 	emailService := notification.NewEmailService(cfg.FrontendURL)
 	passwordResetTokenRepo := persistence.NewPasswordResetTokenRepository(dbConn)
 	passwordResetUsecase := usecase.NewPasswordResetUsecase(userRepo, passwordResetTokenRepo, emailService, cfg.FrontendURL)
 	passwordResetHandler := handler.NewPasswordResetHandler(passwordResetUsecase)
 
-	// Tags
+	// タグ
 	tagRepo := persistence.NewTagRepository(dbConn)
 	tagUsecase := usecase.NewTagUsecase(tagRepo)
 	tagHandler := handler.NewTagHandler(tagUsecase)
 
-	// Incident Activities
+	// インシデントアクティビティ
 	activityRepo := persistence.NewIncidentActivityRepository(dbConn)
 
-	// Notifications
+	// 通知
 	notificationRepo := persistence.NewNotificationSettingRepository(dbConn)
 	notificationService := notification.NewNotificationService(notificationRepo, userRepo, cfg.FrontendURL)
 	notificationUsecase := usecase.NewNotificationUsecase(notificationRepo)
 	notificationHandler := handler.NewNotificationHandler(notificationUsecase)
 
-	// Incidents
+	// インシデント
 	incidentRepo := persistence.NewIncidentRepository(dbConn)
 
-	// Users
+	// ユーザー
 	userUsecase := usecase.NewUserUsecase(userRepo)
 	userHandler := handler.NewUserHandler(userUsecase)
 
-	// Stats
+	// 統計
 	statsUsecase := usecase.NewStatsUsecase(incidentRepo, cacheRepo)
 	statsHandler := handler.NewStatsHandler(statsUsecase)
 
-	// Activity handler
+	// アクティビティ handler
 	activityUsecase := usecase.NewIncidentActivityUsecase(activityRepo, incidentRepo, userRepo, notificationService)
 	activityHandler := handler.NewIncidentActivityHandler(activityUsecase)
 
-	// Attachments
+	// 添付ファイル
 	attachmentRepo := persistence.NewAttachmentRepository(dbConn)
 	attachmentUsecase := usecase.NewAttachmentUsecase(attachmentRepo, incidentRepo, minioStorage)
 	attachmentHandler := handler.NewAttachmentHandler(attachmentUsecase)
 
-	// Post-mortems
+	// ポストモーテム
 	postMortemRepo := persistence.NewPostMortemRepository(dbConn)
 	postMortemUsecase := usecase.NewPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
 	postMortemHandler := handler.NewPostMortemHandler(postMortemUsecase)
 
-	// Initialize IncidentUsecase after PostMortemRepo is available
+	// PostMortemRepo が利用可能になった後に IncidentUsecase を初期化します
 	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, notificationService, cacheRepo)
 	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
 
-	// Export
+	// エクスポート
 	exportHandler := handler.NewExportHandler(incidentUsecase)
 
-	// Action items
+	// アクションアイテム
 	actionItemRepo := persistence.NewActionItemRepository(dbConn)
 	actionItemUsecase := usecase.NewActionItemUsecase(actionItemRepo, postMortemRepo)
 	actionItemHandler := handler.NewActionItemHandler(actionItemUsecase)
 
-	// Audit logs
+	// 監査ログ
 	auditLogRepo := persistence.NewAuditLogRepository(dbConn)
 	auditLogUsecase := usecase.NewAuditLogUsecase(auditLogRepo)
 	auditLogHandler := handler.NewAuditLogHandler(auditLogUsecase)
 	auditMiddleware := middleware.NewAuditMiddleware(auditLogRepo, userRepo)
 
-	// Reports
+	// レポート
 	reportRepo := persistence.NewReportRepository(dbConn)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
 	reportHandler := handler.NewReportHandler(reportUsecase)
 
-	// Health
+	// ヘルスチェック
 	healthHandler := handler.NewHealthHandler(dbConn)
 
-	// Rate limiters
-	// Login rate limit: 5 requests per minute
+	// レートリミッター
+	// ログインレート制限: 1分あたり5リクエスト
 	loginRateLimiter := middleware.NewRateLimitMiddleware(redisClient, 5, 1*time.Minute)
-	// General API rate limit: 100 requests per minute
+	// 一般 API レート制限: 1分あたり100リクエスト
 	apiRateLimiter := middleware.NewRateLimitMiddleware(redisClient, 100, 1*time.Minute)
 
 	r := gin.Default()
 
-	// Security headers middleware (first)
+	// セキュリティヘッダー middleware（最初に適用）
 	r.Use(middleware.SecurityHeaders())
 
-	// Audit log middleware
+	// 監査ログ middleware
 	r.Use(auditMiddleware.Log())
 
 	// CORS middleware
@@ -179,7 +179,7 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Register Routes
+	// ルートを登録します
 	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler, healthHandler, passwordResetHandler, loginRateLimiter, apiRateLimiter)
 
 	log.Printf("Server starting on port %s", cfg.Port)
@@ -188,19 +188,19 @@ func main() {
 	}
 }
 
-// createInitialAdminIfNeeded creates an initial admin user if:
-// 1. INITIAL_ADMIN_* environment variables are set
-// 2. No users exist in the database
+// createInitialAdminIfNeeded は以下の条件で初期管理者ユーザーを作成します:
+// 1. INITIAL_ADMIN_* 環境変数が設定されている
+// 2. データベースにユーザーが存在しない
 func createInitialAdminIfNeeded(dbConn *gorm.DB, userRepo domain.UserRepository, cfg *config.Config) {
 	ctx := context.Background()
 
-	// Check if initial admin configuration is provided
+	// 初期管理者設定が提供されているか確認します
 	if cfg.InitialAdminEmail == "" || cfg.InitialAdminPassword == "" || cfg.InitialAdminName == "" {
 		log.Println("INFO: Initial admin user not configured (INITIAL_ADMIN_* environment variables not set)")
 		return
 	}
 
-	// Check if any users already exist
+	// ユーザーが既に存在するか確認します
 	var userCount int64
 	if err := dbConn.Model(&domain.User{}).Count(&userCount).Error; err != nil {
 		log.Printf("WARNING: Failed to count users: %v", err)
@@ -212,14 +212,14 @@ func createInitialAdminIfNeeded(dbConn *gorm.DB, userRepo domain.UserRepository,
 		return
 	}
 
-	// Hash password
+	// パスワードをハッシュ化します
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(cfg.InitialAdminPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("ERROR: Failed to hash initial admin password: %v", err)
 		return
 	}
 
-	// Create initial admin user
+	// 初期管理者ユーザーを作成します
 	adminUser := &domain.User{
 		Email:        cfg.InitialAdminEmail,
 		PasswordHash: string(hashedPassword),
