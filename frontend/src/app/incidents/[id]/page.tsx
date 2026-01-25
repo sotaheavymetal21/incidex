@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { incidentApi, activityApi, attachmentApi, userApi } from '@/lib/api';
+import { incidentApi, activityApi, attachmentApi, userApi, exportApi } from '@/lib/api';
 import { Incident, Severity, Status } from '@/types/incident';
 import { IncidentActivity } from '@/types/activity';
 import { Attachment } from '@/types/attachment';
@@ -39,6 +39,7 @@ export default function IncidentDetailPage() {
   const [assigningUser, setAssigningUser] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -217,6 +218,17 @@ export default function IncidentDetailPage() {
       alert(err.message || 'Failed to delete incident');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      await exportApi.exportIncidentPDF(token!, parseInt(id));
+    } catch (err: any) {
+      alert(err.message || 'PDFのエクスポートに失敗しました');
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -409,6 +421,28 @@ export default function IncidentDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleExportPDF}
+                disabled={exportingPDF}
+                className="px-4 py-2.5 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  fontFamily: 'var(--font-body)',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!exportingPDF) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(99, 102, 241, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
+                }}
+              >
+                {exportingPDF ? 'PDF生成中...' : 'PDF'}
+              </button>
               <button
                 onClick={() => router.push(`/incidents/${id}/postmortem`)}
                 className="px-4 py-2.5 text-white rounded-xl font-semibold transition-all duration-200"

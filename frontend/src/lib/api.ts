@@ -22,32 +22,44 @@ import { User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest } fro
 import { AuditLog, AuditLogFilters, AuditLogResponse } from '../types/auditLog';
 import { MonthlyReport } from '../types/report';
 
-let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: 'POST',
-    credentials: 'include', // Include httpOnly cookies
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to refresh token');
+  // Return existing promise if already refreshing (prevents race condition)
+  if (refreshPromise) {
+    return refreshPromise;
   }
 
-  const data = await response.json();
-  const newToken = data.access_token;
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-  // Update token in localStorage
-  localStorage.setItem('token', newToken);
-  if (data.user) {
-    localStorage.setItem('user', JSON.stringify(data.user));
-  }
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
+      }
 
-  return newToken;
+      const data = await response.json();
+      const newToken = data.access_token;
+
+      localStorage.setItem('token', newToken);
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      return newToken;
+    } finally {
+      // Reset promise after completion (success or failure)
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -81,15 +93,7 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
       // 401エラー（認証エラー）の場合、リフレッシュトークンで再試行
       if (response.status === 401 && !endpoint.includes('/auth/') && !options.skipRefresh) {
         try {
-          // Prevent multiple simultaneous refresh requests
-          if (!isRefreshing) {
-            isRefreshing = true;
-            refreshPromise = refreshAccessToken();
-          }
-
-          const newToken = await refreshPromise!;
-          isRefreshing = false;
-          refreshPromise = null;
+          const newToken = await refreshAccessToken();
 
           // Retry the original request with new token
           return apiRequest<T>(endpoint, {
@@ -281,6 +285,37 @@ export const statsApi = {
     apiRequest<{ tag_stats: TagStats[] }>('/stats/tags', { token }),
 };
 
+// Helper for file requests with automatic token refresh
+async function fileRequestWithRefresh(
+  url: string,
+  token: string,
+  options: RequestInit = {},
+  retried = false
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${token}`,
+    ...options.headers as Record<string, string>,
+  };
+
+  const response = await fetch(url, { ...options, headers, credentials: 'include' });
+
+  if (response.status === 401 && !retried) {
+    try {
+      const newToken = await refreshAccessToken();
+      return fileRequestWithRefresh(url, newToken, options, true);
+    } catch {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      throw new Error('Authentication failed');
+    }
+  }
+
+  return response;
+}
+
 export const exportApi = {
   exportIncidentsCSV: async (token: string, params?: IncidentFilters): Promise<Blob> => {
     const queryParams = new URLSearchParams();
@@ -291,19 +326,44 @@ export const exportApi = {
       if (params.search) queryParams.append('search', params.search);
     }
     const queryString = queryParams.toString();
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/export/incidents${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_BASE_URL}/export/incidents${queryString ? `?${queryString}` : ''}`;
 
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${token}`,
-    };
-
-    const response = await fetch(url, { headers });
+    const response = await fileRequestWithRefresh(url, token);
 
     if (!response.ok) {
       throw new Error(`Export failed with status ${response.status}`);
     }
 
     return response.blob();
+  },
+
+  exportIncidentPDF: async (token: string, incidentId: number): Promise<void> => {
+    const url = `${API_BASE_URL}/export/incidents/${incidentId}/pdf`;
+
+    const response = await fileRequestWithRefresh(url, token);
+
+    if (!response.ok) {
+      throw new Error(`PDF export failed with status ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let fileName = `incident_${incidentId}.pdf`;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+      if (match && match[1]) {
+        fileName = match[1];
+      }
+    }
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
   },
 };
 
@@ -336,16 +396,13 @@ export const attachmentApi = {
     apiRequest<Attachment[]>(`/incidents/${incidentId}/attachments`, { token }),
 
   uploadAttachment: async (token: string, incidentId: number, file: File): Promise<Attachment> => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/incidents/${incidentId}/attachments`;
+    const url = `${API_BASE_URL}/incidents/${incidentId}/attachments`;
 
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(url, {
+    const response = await fileRequestWithRefresh(url, token, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
       body: formData,
     });
 
@@ -358,13 +415,9 @@ export const attachmentApi = {
   },
 
   downloadAttachment: async (token: string, incidentId: number, attachmentId: number, fileName: string): Promise<void> => {
-    const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/incidents/${incidentId}/attachments/${attachmentId}`;
+    const url = `${API_BASE_URL}/incidents/${incidentId}/attachments/${attachmentId}`;
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    const response = await fileRequestWithRefresh(url, token);
 
     if (!response.ok) {
       throw new Error(`Download failed with status ${response.status}`);
