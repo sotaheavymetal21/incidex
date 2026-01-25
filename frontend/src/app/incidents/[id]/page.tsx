@@ -48,7 +48,7 @@ export default function IncidentDetailPage() {
   }, [token, authLoading, router]);
 
   useEffect(() => {
-    // Scroll to top when page loads
+    // ページ読み込み時にトップへスクロールします
     window.scrollTo(0, 0);
   }, [id]);
 
@@ -61,7 +61,7 @@ export default function IncidentDetailPage() {
   }, [token, id]);
 
   useEffect(() => {
-    // Fetch users list for assignee selection
+    // 担当者選択用のユーザーリストを取得します
     if (token && permissions.canEdit) {
       fetchUsers();
     }
@@ -113,7 +113,7 @@ export default function IncidentDetailPage() {
     }
   };
 
-  // Fetch image blob URLs for attachments
+  // 添付ファイルの画像 blob URL を取得します
   useEffect(() => {
     if (token && attachments.length > 0) {
       const fetchImageUrls = async () => {
@@ -143,7 +143,7 @@ export default function IncidentDetailPage() {
       };
       fetchImageUrls();
 
-      // Clean up object URLs on unmount
+      // アンマウント時にオブジェクト URL をクリーンアップします
       return () => {
         Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
       };
@@ -157,8 +157,8 @@ export default function IncidentDetailPage() {
     setUploadingFile(true);
     try {
       await attachmentApi.uploadAttachment(token!, parseInt(id), file);
-      await fetchAttachments(); // Refresh attachments list
-      // Reset file input
+      await fetchAttachments(); // 添付ファイルリストを更新します
+      // ファイル入力をリセットします
       e.target.value = '';
     } catch (err: any) {
       alert(err.message || 'Failed to upload file');
@@ -182,7 +182,7 @@ export default function IncidentDetailPage() {
 
     try {
       await attachmentApi.deleteAttachment(token!, parseInt(id), attachmentId);
-      await fetchAttachments(); // Refresh attachments list
+      await fetchAttachments(); // 添付ファイルリストを更新します
     } catch (err: any) {
       alert(err.message || 'Failed to delete file');
     }
@@ -247,7 +247,7 @@ export default function IncidentDetailPage() {
       setTimelineEventTime('');
       setTimelineEventDescription('');
       setShowTimelineEventForm(false);
-      await fetchActivities(); // Refresh activities
+      await fetchActivities(); // アクティビティを更新します
     } catch (err: any) {
       alert(err.message || 'タイムラインイベントの追加に失敗しました');
     } finally {
@@ -259,10 +259,10 @@ export default function IncidentDetailPage() {
     setAssigningUser(true);
     try {
       const updatedIncident = await incidentApi.assignIncident(token!, parseInt(id), assigneeId);
-      // Update incident state with the full response
+      // 完全な response でインシデント state を更新します
       setIncident(updatedIncident);
-      await fetchActivities(); // Refresh activities to show assignment change
-      await fetchIncident(); // Refresh incident to ensure all data is up to date
+      await fetchActivities(); // アクティビティを更新します to show assignment change
+      await fetchIncident(); // すべてのデータが最新であることを確認するためにインシデントを更新します
     } catch (err: any) {
       alert(err.message || '担当者の変更に失敗しました');
     } finally {
@@ -365,7 +365,7 @@ export default function IncidentDetailPage() {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {/* ヘッダー */}
         <div className="mb-6 animate-slideDown">
           <button
             onClick={() => router.push('/incidents')}
@@ -511,11 +511,11 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* Content Sections */}
+        {/* コンテンツセクション */}
         <div className="space-y-6">
-          {/* Overview Section */}
+          {/* 概要セクション */}
           <div className="space-y-6 animate-fadeIn">
-              {/* Metadata Section */}
+              {/* メタデータセクション */}
               <div
                 className="rounded-2xl p-6 border animate-scaleIn"
                 style={{
@@ -604,7 +604,7 @@ export default function IncidentDetailPage() {
                 </div>
               </div>
 
-              {/* Description Section */}
+              {/* 説明セクション */}
               <div
                 className="rounded-2xl p-6 border animate-scaleIn"
                 style={{
@@ -634,7 +634,7 @@ export default function IncidentDetailPage() {
                 </p>
               </div>
 
-              {/* Impact Scope Section */}
+              {/* 影響範囲セクション */}
               {incident.impact_scope && (
                 <div
                   className="rounded-2xl p-6 border animate-scaleIn"
@@ -666,7 +666,7 @@ export default function IncidentDetailPage() {
                 </div>
               )}
 
-              {/* Tags Section */}
+              {/* タグセクション */}
               <div
                 className="rounded-2xl p-6 border animate-scaleIn"
                 style={{
@@ -705,7 +705,7 @@ export default function IncidentDetailPage() {
               </div>
             </div>
 
-          {/* Attachments Section */}
+          {/* 添付ファイルセクション */}
           <div className="animate-fadeIn">
               <div
                 className="rounded-2xl p-6 border"
@@ -725,7 +725,7 @@ export default function IncidentDetailPage() {
                   添付ファイル
                 </h2>
 
-                {/* Upload Form */}
+                {/* アップロードフォーム */}
                 <div className="mb-6 p-5 rounded-xl border-2 border-dashed transition-all" style={{ borderColor: 'var(--border)', background: 'var(--gray-50)' }}>
                   <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-body)' }}>
                     ファイルをアップロード
@@ -746,7 +746,7 @@ export default function IncidentDetailPage() {
                   </p>
                 </div>
 
-                {/* Attachments List */}
+                {/* 添付ファイルリスト */}
                 {loadingAttachments ? (
                   <div className="text-center py-8" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
                     読み込み中...
@@ -864,7 +864,7 @@ export default function IncidentDetailPage() {
               </div>
             </div>
 
-          {/* Unified Timeline Section */}
+          {/* 統合タイムラインセクション */}
           <div className="animate-fadeIn">
               <div
                 className="rounded-2xl p-6 border"
@@ -921,7 +921,7 @@ export default function IncidentDetailPage() {
                   )}
                 </div>
 
-                {/* Unified Entry Form */}
+                {/* 統合入力フォーム */}
                 {showTimelineEventForm && canEdit() && (
                   <form
                     onSubmit={(e) => {
@@ -1106,7 +1106,7 @@ export default function IncidentDetailPage() {
                   </form>
                 )}
 
-                {/* Timeline */}
+                {/* タイムライン */}
                 {loadingActivities ? (
                   <div className="text-center py-8" style={{ color: 'var(--foreground-secondary)', fontFamily: 'var(--font-body)' }}>
                     読み込み中...
@@ -1119,7 +1119,7 @@ export default function IncidentDetailPage() {
         </div>
       </div>
 
-      {/* Lightbox Modal */}
+      {/* ライトボックスモーダル */}
       {lightboxImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90"

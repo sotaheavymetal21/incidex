@@ -18,7 +18,7 @@ export default function EditIncidentPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState('');
 
-  // Form state
+  // フォーム state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState<Severity>('medium');
@@ -52,7 +52,7 @@ export default function EditIncidentPage() {
       setSeverity(incident.severity);
       setStatus(incident.status);
       setImpactScope(incident.impact_scope || '');
-      // Convert ISO string to datetime-local format
+      // ISO 文字列を datetime-local 形式に変換します
       setDetectedAt(new Date(incident.detected_at).toISOString().slice(0, 16));
       setResolvedAt(incident.resolved_at ? new Date(incident.resolved_at).toISOString().slice(0, 16) : '');
       setAssigneeId(incident.assignee_id || '');
@@ -92,7 +92,7 @@ export default function EditIncidentPage() {
     e.preventDefault();
     setError('');
 
-    // Validation
+    // バリデーション
     if (!title.trim()) {
       setError('Title is required');
       return;
@@ -164,7 +164,7 @@ export default function EditIncidentPage() {
         )}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
-          {/* Title */}
+          {/* タイトル */}
           <div className="mb-4">
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
               Title <span className="text-red-500">*</span>
@@ -180,7 +180,7 @@ export default function EditIncidentPage() {
             />
           </div>
 
-          {/* Description */}
+          {/* 説明 */}
           <div className="mb-4">
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
               Description <span className="text-red-500">*</span>
@@ -195,7 +195,7 @@ export default function EditIncidentPage() {
             />
           </div>
 
-          {/* Severity and Status */}
+          {/* 深刻度とステータス */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label htmlFor="severity" className="block text-sm font-medium text-gray-700 mb-1">
@@ -234,7 +234,7 @@ export default function EditIncidentPage() {
             </div>
           </div>
 
-          {/* Impact Scope */}
+          {/* 影響範囲 */}
           <div className="mb-4">
             <label htmlFor="impactScope" className="block text-sm font-medium text-gray-700 mb-1">
               Impact Scope
@@ -249,7 +249,7 @@ export default function EditIncidentPage() {
             />
           </div>
 
-          {/* Detected At and Resolved At */}
+          {/* 検出日時と解決日時 */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label htmlFor="detectedAt" className="block text-sm font-medium text-gray-700 mb-1">
@@ -279,7 +279,7 @@ export default function EditIncidentPage() {
             </div>
           </div>
 
-          {/* Assignee */}
+          {/* 担当者 */}
           <div className="mb-4">
             <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
               Assignee
@@ -299,7 +299,7 @@ export default function EditIncidentPage() {
             </select>
           </div>
 
-          {/* Tags */}
+          {/* タグ */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
             <div className="flex flex-wrap gap-2">
@@ -325,7 +325,7 @@ export default function EditIncidentPage() {
             </div>
           </div>
 
-          {/* Submit Buttons */}
+          {/* 送信ボタン */}
           <div className="flex gap-4">
             <button
               type="submit"

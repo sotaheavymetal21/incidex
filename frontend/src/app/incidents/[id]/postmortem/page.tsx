@@ -15,7 +15,7 @@ export default function PostMortemPage() {
   const id = params.id as string;
   const incidentId = parseInt(id);
 
-  // State management
+  // state 管理
   const [postMortem, setPostMortem] = useState<PostMortem | null>(null);
   const [incident, setIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ export default function PostMortemPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Validate incidentId
+  // incidentId のバリデーション
   if (isNaN(incidentId)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -35,7 +35,7 @@ export default function PostMortemPage() {
     );
   }
 
-  // Form state
+  // フォーム state
   const [rootCause, setRootCause] = useState('');
   const [impactAnalysis, setImpactAnalysis] = useState('');
   const [whatWentWell, setWhatWentWell] = useState('');
@@ -50,7 +50,7 @@ export default function PostMortemPage() {
     why5: '',
   });
 
-  // Action Item form state
+  // アクションアイテムフォーム state
   const [showActionItemForm, setShowActionItemForm] = useState(false);
   const [editingActionItem, setEditingActionItem] = useState<ActionItem | null>(null);
   const [actionItemForm, setActionItemForm] = useState({
@@ -64,7 +64,7 @@ export default function PostMortemPage() {
   });
 
   useEffect(() => {
-    // Scroll to top when page loads
+    // ページ読み込み時にトップへスクロールします
     window.scrollTo(0, 0);
   }, [incidentId]);
 
@@ -82,20 +82,20 @@ export default function PostMortemPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch incident
+      // インシデントを取得します
       const incidentData = await incidentApi.getById(token!, incidentId);
       setIncident(incidentData);
 
-      // Fetch users for assignee selection
+      // 担当者選択用のユーザーを取得します
       const usersData = await userApi.getAll(token!);
       setUsers(usersData);
 
-      // Try to fetch existing post-mortem
+      // 既存の post-mortem を取得を試みます
       try {
         const pmData = await postMortemApi.getByIncidentId(token!, incidentId);
         setPostMortem(pmData);
 
-        // Populate form with existing data
+        // 既存のデータでフォームを埋めます
         setRootCause(pmData.root_cause || '');
         setImpactAnalysis(pmData.impact_analysis || '');
         setWhatWentWell(pmData.what_went_well || '');
@@ -103,7 +103,7 @@ export default function PostMortemPage() {
         setLessonsLearned(pmData.lessons_learned || '');
         setIsDraft(pmData.status === 'draft');
 
-        // Parse five whys
+        // 5回のなぜをパースします
         if (pmData.five_whys_analysis) {
           try {
             const parsedFiveWhys = JSON.parse(pmData.five_whys_analysis);
@@ -113,11 +113,11 @@ export default function PostMortemPage() {
           }
         }
 
-        // Fetch action items
+        // アクションアイテムを取得します
         const actionItemsData = await actionItemApi.getByPostMortemId(token!, pmData.id);
         setActionItems(actionItemsData);
       } catch (err: any) {
-        // Post-mortem doesn't exist yet, that's okay
+        // Post-mortem がまだ存在しません。これは問題ありません
         if (!err.message.includes('404') && !err.message.includes('not found')) {
           console.error('Error fetching post-mortem:', err);
         }
@@ -145,33 +145,33 @@ export default function PostMortemPage() {
       };
 
       if (postMortem) {
-        // Update existing
+        // 既存を更新します
         await postMortemApi.update(token!, postMortem.id, data);
 
-        // Update status if needed
+        // 必要に応じてステータスを更新します
         if (isDraft && postMortem.status === 'published') {
           await postMortemApi.unpublish(token!, postMortem.id);
         } else if (!isDraft && postMortem.status === 'draft') {
           await postMortemApi.publish(token!, postMortem.id);
         }
 
-        // Reload post-mortem data
+        // post-mortem データを再読み込みします
         const updated = await postMortemApi.getByIncidentId(token!, incidentId);
         setPostMortem(updated);
         alert('Post-Mortemを保存しました');
       } else {
-        // Create new
+        // 新規作成します
         const created = await postMortemApi.create(token!, {
           incident_id: incidentId,
           ...data,
         });
 
-        // Set status if not draft
+        // ドラフトでない場合はステータスを設定します
         if (!isDraft) {
           await postMortemApi.publish(token!, created.id);
         }
 
-        // Reload post-mortem data
+        // post-mortem データを再読み込みします
         const final = await postMortemApi.getByIncidentId(token!, incidentId);
         setPostMortem(final);
         alert('Post-Mortemを作成しました');
@@ -203,7 +203,7 @@ export default function PostMortemPage() {
       };
 
       if (editingActionItem) {
-        // Update existing
+        // 既存を更新します
         const updated = await actionItemApi.update(token!, editingActionItem.id, {
           ...data,
           status: actionItemForm.status,
@@ -211,13 +211,13 @@ export default function PostMortemPage() {
         setActionItems(actionItems.map(item => item.id === updated.id ? updated : item));
         alert('アクションアイテムを更新しました');
       } else {
-        // Create new
+        // 新規作成します
         const created = await actionItemApi.create(token!, data);
         setActionItems([...actionItems, created]);
         alert('アクションアイテムを作成しました');
       }
 
-      // Reset form
+      // フォームをリセットします
       setActionItemForm({
         title: '',
         description: '',
@@ -316,7 +316,7 @@ export default function PostMortemPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
+        {/* ヘッダー */}
         <div className="mb-6">
           <button
             onClick={() => router.push(`/incidents/${incidentId}`)}
@@ -354,7 +354,7 @@ export default function PostMortemPage() {
           </div>
         )}
 
-        {/* Root Cause Section */}
+        {/* 根本原因セクション */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">根本原因</h2>
           <textarea
@@ -366,7 +366,7 @@ export default function PostMortemPage() {
           />
         </section>
 
-        {/* Impact Analysis */}
+        {/* 影響分析 */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">影響分析</h2>
           <textarea
@@ -378,7 +378,7 @@ export default function PostMortemPage() {
           />
         </section>
 
-        {/* What Went Well/Wrong */}
+        {/* うまくいったこと/問題点 */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -408,7 +408,7 @@ export default function PostMortemPage() {
           </div>
         </section>
 
-        {/* Lessons Learned */}
+        {/* 教訓 */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">教訓</h2>
           <textarea
@@ -420,7 +420,7 @@ export default function PostMortemPage() {
           />
         </section>
 
-        {/* 5 Whys Analysis */}
+        {/* 5回のなぜ分析 */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">5回のなぜ分析</h2>
           <div className="space-y-4">
@@ -443,7 +443,7 @@ export default function PostMortemPage() {
           </div>
         </section>
 
-        {/* Action Items */}
+        {/* アクションアイテム */}
         <section className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -471,7 +471,7 @@ export default function PostMortemPage() {
             )}
           </div>
 
-          {/* Action Items List */}
+          {/* アクションアイテムリスト */}
           <div className="space-y-4 mb-4">
             {actionItems.map((item) => (
               <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50">
@@ -572,7 +572,7 @@ export default function PostMortemPage() {
             )}
           </div>
 
-          {/* Action Item Form */}
+          {/* アクションアイテムフォーム */}
           {showActionItemForm && (
             <form onSubmit={handleCreateActionItem} className="border-t pt-4">
               <h3 className="font-semibold text-gray-900 mb-4">
@@ -729,7 +729,7 @@ export default function PostMortemPage() {
           )}
         </section>
 
-        {/* Save Button with Draft Checkbox */}
+        {/* ドラフトチェックボックス付き保存ボタン */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">

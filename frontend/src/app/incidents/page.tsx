@@ -42,18 +42,18 @@ function IncidentsPageContent() {
     total_pages: 0,
   });
 
-  // Filters
+  // フィルター
   const [search, setSearch] = useState('');
   const [severity, setSeverity] = useState<Severity | ''>('');
   const [status, setStatus] = useState<Status | ''>('');
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
 
-  // Sorting
+  // ソート
   const [sortBy, setSortBy] = useState<SortField>('detected_at');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Load filters from URL params
+  // URL パラメータからフィルターを読み込みます
   useEffect(() => {
     const paramSeverity = searchParams.get('severity') as Severity | null;
     const paramStatus = searchParams.get('status') as Status | null;
@@ -223,8 +223,8 @@ function IncidentsPageContent() {
         setStatus('open');
         break;
       case 'my-assigned':
-        // Note: This requires API support for assignee filter
-        // For now, we'll just use the user state
+        // 注意: これは担当者フィルターの API サポートが必要です
+        // 現時点では user state を使用します
         break;
       case 'critical':
         setSeverity('critical');
@@ -297,7 +297,7 @@ function IncidentsPageContent() {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* ヘッダー */}
         <div className="mb-8 flex justify-between items-center animate-slideDown">
           <div>
             <h1
@@ -363,11 +363,11 @@ function IncidentsPageContent() {
           </div>
         </div>
 
-        {/* Severity Guide */}
+        {/* 重要度ガイド */}
         <SeverityGuide />
 
         <div className="flex gap-6">
-          {/* Sidebar Filter Panel */}
+          {/* サイドバーフィルターパネル */}
           {showSidebar && (
             <div className="w-64 flex-shrink-0 animate-slideUp">
               <div className="rounded-2xl p-6 sticky top-8 border card-green-accent transition-all duration-200" style={{
@@ -404,7 +404,7 @@ function IncidentsPageContent() {
                   </button>
                 </div>
 
-                {/* Filter Presets */}
+                {/* フィルタープリセット */}
                 <div className="mb-6">
                   <h3
                     className="text-sm font-semibold mb-3"
@@ -484,7 +484,7 @@ function IncidentsPageContent() {
                   </div>
                 </div>
 
-                {/* Search */}
+                {/* 検索 */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     検索
@@ -511,7 +511,7 @@ function IncidentsPageContent() {
                   />
                 </div>
 
-                {/* Severity Filter */}
+                {/* 深刻度フィルター */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     深刻度
@@ -550,7 +550,7 @@ function IncidentsPageContent() {
                   </div>
                 </div>
 
-                {/* Status Filter */}
+                {/* ステータスフィルター */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     ステータス
@@ -589,7 +589,7 @@ function IncidentsPageContent() {
                   </div>
                 </div>
 
-                {/* Tag Filter */}
+                {/* タグフィルター */}
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                     タグ
@@ -617,9 +617,9 @@ function IncidentsPageContent() {
             </div>
           )}
 
-          {/* Main Content */}
+          {/* メインコンテンツ */}
           <div className="flex-1 min-w-0">
-            {/* Toggle Sidebar Button (Mobile) */}
+            {/* サイドバー切り替えボタン（モバイル） */}
             {!showSidebar && (
               <button
                 onClick={() => setShowSidebar(true)}
@@ -635,7 +635,7 @@ function IncidentsPageContent() {
               </button>
             )}
 
-            {/* Filter Chips */}
+            {/* フィルターチップ */}
             {hasActiveFilters && (
               <div className="mb-4 p-4 rounded-xl shadow-lg border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                 <div className="flex items-center justify-between mb-2">
@@ -722,14 +722,14 @@ function IncidentsPageContent() {
               </div>
             )}
 
-            {/* Error Message */}
+            {/* error メッセージ */}
             {error && (
               <div className="px-4 py-3 rounded-xl mb-4 border-2" style={{ background: 'var(--error-light)', borderColor: 'var(--error)', color: 'var(--error)' }}>
                 {error}
               </div>
             )}
 
-            {/* Incidents Table */}
+            {/* インシデントテーブル */}
             {loading ? (
               <div className="text-center py-8" style={{ color: 'var(--secondary)' }}>Loading incidents...</div>
             ) : incidents.length === 0 ? (
@@ -875,7 +875,7 @@ function IncidentsPageContent() {
                   </tbody>
                 </table>
 
-                {/* Pagination */}
+                {/* ページネーション */}
                 <div className="px-4 py-3.5 flex items-center justify-between border-t sm:px-6" style={{ background: 'var(--secondary-light)', borderColor: 'var(--border)' }}>
                   <div className="flex-1 flex justify-between sm:hidden">
                     <button

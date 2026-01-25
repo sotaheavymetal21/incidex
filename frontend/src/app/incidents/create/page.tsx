@@ -30,7 +30,7 @@ function CreateIncidentForm() {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  // Form state
+  // フォーム state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [severity, setSeverity] = useState<Severity>('medium');
@@ -49,7 +49,7 @@ function CreateIncidentForm() {
     if (token) {
       fetchTags();
       fetchUsers();
-      // Set default detected_at to current time
+      // デフォルトの detected_at を現在時刻に設定します
       const now = new Date();
       const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
         .toISOString()
@@ -181,7 +181,7 @@ function CreateIncidentForm() {
         )}
 
         <form onSubmit={handleSubmit} className="rounded-xl shadow-lg p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          {/* Title */}
+          {/* タイトル */}
           <div className="mb-5">
             <label htmlFor="title" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               タイトル <span style={{ color: 'var(--error)' }}>*</span>
@@ -215,7 +215,7 @@ function CreateIncidentForm() {
             <p className="mt-1 text-xs" style={{ color: 'var(--secondary)' }}>{ValidationLimits.TITLE_MAX_LENGTH}文字以内</p>
           </div>
 
-          {/* Description */}
+          {/* 説明 */}
           <div className="mb-5">
             <label htmlFor="description" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               説明 <span style={{ color: 'var(--error)' }}>*</span>
@@ -249,7 +249,7 @@ function CreateIncidentForm() {
             <p className="mt-1 text-xs" style={{ color: 'var(--secondary)' }}>{ValidationLimits.DESCRIPTION_MAX_LENGTH}文字以内</p>
           </div>
 
-          {/* Severity */}
+          {/* 深刻度 */}
           <div className="mb-5">
             <label htmlFor="severity" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               重要度 <span style={{ color: 'var(--error)' }}>*</span>
@@ -284,7 +284,7 @@ function CreateIncidentForm() {
             </p>
           </div>
 
-          {/* Impact Scope */}
+          {/* 影響範囲 */}
           <div className="mb-5">
             <label htmlFor="impactScope" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               影響範囲
@@ -317,7 +317,7 @@ function CreateIncidentForm() {
             <p className="mt-1 text-xs" style={{ color: 'var(--secondary)' }}>{ValidationLimits.IMPACT_SCOPE_MAX_LENGTH}文字以内</p>
           </div>
 
-          {/* Detected At */}
+          {/* 検出日時 */}
           <div className="mb-5">
             <label htmlFor="detectedAt" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               検出日時 <span style={{ color: 'var(--error)' }}>*</span>
@@ -349,7 +349,7 @@ function CreateIncidentForm() {
             )}
           </div>
 
-          {/* Assignee */}
+          {/* 担当者 */}
           <div className="mb-5">
             <label htmlFor="assignee" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               担当者
@@ -382,7 +382,7 @@ function CreateIncidentForm() {
             </select>
           </div>
 
-          {/* Tags */}
+          {/* タグ */}
           <div className="mb-6">
             <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--foreground)' }}>タグ</label>
             <div className="flex flex-wrap gap-2">
@@ -416,7 +416,7 @@ function CreateIncidentForm() {
             </div>
           </div>
 
-          {/* Submit Buttons */}
+          {/* 送信ボタン */}
           <div className="flex gap-4">
             <button
               type="submit"
