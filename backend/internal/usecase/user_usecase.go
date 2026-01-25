@@ -47,7 +47,7 @@ func (u *userUsecase) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Filter out deleted users
+	// 削除済みユーザーを除外
 	activeUsers := make([]*domain.User, 0)
 	for _, user := range users {
 		if user.DeletedAt == nil {
@@ -58,17 +58,17 @@ func (u *userUsecase) GetAllUsers(ctx context.Context) ([]*domain.User, error) {
 }
 
 func (u *userUsecase) CreateUser(ctx context.Context, email, password, name string, role domain.Role, employeeNumber, department string) (*domain.User, error) {
-	// Validate user input
+	// ユーザー入力をバリデーション
 	if err := domain.ValidateUserInput(name, email, employeeNumber, department); err != nil {
 		return nil, err
 	}
 
-	// Validate password strength
+	// パスワード強度をバリデーション
 	if err := domain.ValidatePasswordStrength(password); err != nil {
 		return nil, domain.ErrValidation(err.Error())
 	}
 
-	// Check if email already exists
+	// メールアドレスが既に存在するかチェック
 	existingUser, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return nil, err
@@ -77,13 +77,13 @@ func (u *userUsecase) CreateUser(ctx context.Context, email, password, name stri
 		return nil, domain.ErrConflict("Email already exists")
 	}
 
-	// Hash password
+	// パスワードをhash化
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create user
+	// ユーザーを作成
 	user := &domain.User{
 		Email:        email,
 		PasswordHash: string(hashedPassword),
@@ -91,7 +91,7 @@ func (u *userUsecase) CreateUser(ctx context.Context, email, password, name stri
 		Role:         role,
 		IsActive:     true,
 	}
-	// Set optional fields only if not empty
+	// 空でない場合のみオプションフィールドを設定
 	if employeeNumber != "" {
 		user.EmployeeNumber = &employeeNumber
 	}
@@ -107,12 +107,12 @@ func (u *userUsecase) CreateUser(ctx context.Context, email, password, name stri
 }
 
 func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, role domain.Role, employeeNumber, department string) (*domain.User, error) {
-	// Validate user input
+	// ユーザー入力をバリデーション
 	if err := domain.ValidateUserInput(name, email, employeeNumber, department); err != nil {
 		return nil, err
 	}
 
-	// Find existing user
+	// 既存のユーザーを検索
 	user, err := u.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, r
 		return nil, domain.ErrValidation("Cannot update deleted user")
 	}
 
-	// Check if email is being changed to one that already exists
+	// メールアドレスが既に存在するものに変更されていないかチェック
 	if user.Email != email {
 		existingUser, err := u.userRepo.FindByEmail(ctx, email)
 		if err != nil {
@@ -135,11 +135,11 @@ func (u *userUsecase) Update(ctx context.Context, id uint, name, email string, r
 		}
 	}
 
-	// Update user fields
+	// ユーザーフィールドを更新
 	user.Name = name
 	user.Email = email
 	user.Role = role
-	// Set optional fields only if not empty, otherwise nil
+	// 空でない場合のみオプションフィールドを設定、それ以外はnil
 	if employeeNumber != "" {
 		user.EmployeeNumber = &employeeNumber
 	} else {
@@ -170,28 +170,28 @@ func (u *userUsecase) UpdatePassword(ctx context.Context, id uint, oldPassword, 
 		return domain.ErrValidation("Cannot update password for deleted user")
 	}
 
-	// Verify old password
+	// 古いパスワードを検証
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
 		return domain.ErrUnauthorized("Invalid old password")
 	}
 
-	// Validate new password strength
+	// 新しいパスワード強度をバリデーション
 	if err := domain.ValidatePasswordStrength(newPassword); err != nil {
 		return err
 	}
 
-	// Hash new password
+	// 新しいパスワードをhash化
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	// Update only the password field to avoid unique constraint violations
+	// 一意制約違反を避けるため、パスワードフィールドのみを更新
 	return u.userRepo.UpdatePassword(ctx, id, string(hashedPassword))
 }
 
 func (u *userUsecase) AdminResetPassword(ctx context.Context, id uint, newPassword string) error {
-	// Validate password strength
+	// パスワード強度をバリデーション
 	if err := domain.ValidatePasswordStrength(newPassword); err != nil {
 		return err
 	}
@@ -207,13 +207,13 @@ func (u *userUsecase) AdminResetPassword(ctx context.Context, id uint, newPasswo
 		return domain.ErrValidation("Cannot reset password for deleted user")
 	}
 
-	// Hash new password
+	// 新しいパスワードをhash化
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	// Update only the password field to avoid unique constraint violations
+	// 一意制約違反を避けるため、パスワードフィールドのみを更新
 	return u.userRepo.UpdatePassword(ctx, id, string(hashedPassword))
 }
 
@@ -233,7 +233,7 @@ func (u *userUsecase) Delete(ctx context.Context, id uint) error {
 }
 
 func (u *userUsecase) ToggleActive(ctx context.Context, currentUserID uint, id uint, isActive bool) error {
-	// Prevent users from deactivating themselves
+	// ユーザーが自分自身を無効化するのを防止
 	if currentUserID == id && !isActive {
 		return domain.ErrValidation("Cannot deactivate your own account")
 	}
@@ -249,7 +249,7 @@ func (u *userUsecase) ToggleActive(ctx context.Context, currentUserID uint, id u
 		return domain.ErrValidation("Cannot toggle active status of deleted user")
 	}
 
-	// Prevent deactivating the last active admin
+	// 最後のアクティブな管理者を無効化するのを防止
 	if !isActive && user.Role == domain.RoleAdmin && user.IsActive {
 		activeAdmins, err := u.userRepo.FindAll(ctx)
 		if err != nil {

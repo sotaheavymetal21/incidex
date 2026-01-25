@@ -41,7 +41,7 @@ func NewPostMortemUsecase(
 
 const maxFiveWhysFieldLength = 1000
 
-// validateFiveWhys validates the length of each field in FiveWhysAnalysis
+// validateFiveWhys はFiveWhysAnalysisの各フィールドの長さをバリデーションします
 func validateFiveWhys(fiveWhys *domain.FiveWhysAnalysis) error {
 	if len(fiveWhys.Why1) > maxFiveWhysFieldLength {
 		return domain.ErrValidation("Why1 must be at most 1000 characters")
@@ -68,26 +68,26 @@ func (u *postMortemUsecase) CreatePostMortem(
 	rootCause, impactAnalysis, whatWentWell, whatWentWrong, lessonsLearned string,
 	fiveWhys *domain.FiveWhysAnalysis,
 ) (*domain.PostMortem, error) {
-	// Validate FiveWhysAnalysis field lengths
+	// FiveWhysAnalysisのフィールド長をバリデーション
 	if fiveWhys != nil {
 		if err := validateFiveWhys(fiveWhys); err != nil {
 			return nil, err
 		}
 	}
 
-	// Check if incident exists
+	// インシデントが存在するかチェック
 	_, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
 		return nil, domain.ErrNotFound("incident")
 	}
 
-	// Check if post-mortem already exists for this incident
+	// このインシデントにポストモーテムが既に存在するかチェック
 	existingPM, _ := u.postMortemRepo.FindByIncidentID(ctx, incidentID)
 	if existingPM != nil {
 		return nil, domain.ErrConflict("Post-mortem already exists for this incident")
 	}
 
-	// Marshal Five Whys analysis to JSON
+	// Five Whys分析をJSONにマーシャル
 	var fiveWhysJSON string
 	if fiveWhys != nil {
 		fiveWhysBytes, err := json.Marshal(fiveWhys)
@@ -97,7 +97,7 @@ func (u *postMortemUsecase) CreatePostMortem(
 		fiveWhysJSON = string(fiveWhysBytes)
 	}
 
-	// Create post-mortem
+	// ポストモーテムを作成
 	pm := &domain.PostMortem{
 		IncidentID:       incidentID,
 		AuthorID:         authorID,
@@ -114,7 +114,7 @@ func (u *postMortemUsecase) CreatePostMortem(
 		return nil, err
 	}
 
-	// Reload with relations
+	// リレーションを含めてリロード
 	return u.postMortemRepo.FindByID(ctx, pm.ID)
 }
 
@@ -134,25 +134,25 @@ func (u *postMortemUsecase) UpdatePostMortem(
 	rootCause, impactAnalysis, whatWentWell, whatWentWrong, lessonsLearned string,
 	fiveWhys *domain.FiveWhysAnalysis,
 ) (*domain.PostMortem, error) {
-	// Validate FiveWhysAnalysis field lengths
+	// FiveWhysAnalysisのフィールド長をバリデーション
 	if fiveWhys != nil {
 		if err := validateFiveWhys(fiveWhys); err != nil {
 			return nil, err
 		}
 	}
 
-	// Get existing post-mortem
+	// 既存のポストモーテムを取得
 	pm, err := u.postMortemRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check permissions
+	// 権限をチェック
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
 		return nil, domain.ErrForbidden("You can only update your own post-mortems")
 	}
 
-	// Marshal Five Whys analysis to JSON
+	// Five Whys分析をJSONにマーシャル
 	var fiveWhysJSON string
 	if fiveWhys != nil {
 		fiveWhysBytes, err := json.Marshal(fiveWhys)
@@ -162,7 +162,7 @@ func (u *postMortemUsecase) UpdatePostMortem(
 		fiveWhysJSON = string(fiveWhysBytes)
 	}
 
-	// Update fields
+	// フィールドを更新
 	pm.RootCause = rootCause
 	pm.ImpactAnalysis = impactAnalysis
 	pm.WhatWentWell = whatWentWell
@@ -174,7 +174,7 @@ func (u *postMortemUsecase) UpdatePostMortem(
 		return nil, err
 	}
 
-	// Reload with relations
+	// リレーションを含めてリロード
 	return u.postMortemRepo.FindByID(ctx, id)
 }
 
@@ -184,23 +184,23 @@ func (u *postMortemUsecase) PublishPostMortem(
 	userRole domain.Role,
 	id uint,
 ) (*domain.PostMortem, error) {
-	// Get existing post-mortem
+	// 既存のポストモーテムを取得
 	pm, err := u.postMortemRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if already published
+	// 既に公開済みかチェック
 	if pm.Status == domain.PMStatusPublished {
 		return nil, domain.ErrValidation("Post-mortem is already published")
 	}
 
-	// Check permissions
+	// 権限をチェック
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
 		return nil, domain.ErrForbidden("You can only publish your own post-mortems")
 	}
 
-	// Update status
+	// ステータスを更新
 	now := time.Now()
 	pm.Status = domain.PMStatusPublished
 	pm.PublishedAt = &now
@@ -209,7 +209,7 @@ func (u *postMortemUsecase) PublishPostMortem(
 		return nil, err
 	}
 
-	// Reload with relations
+	// リレーションを含めてリロード
 	return u.postMortemRepo.FindByID(ctx, id)
 }
 
@@ -219,23 +219,23 @@ func (u *postMortemUsecase) UnpublishPostMortem(
 	userRole domain.Role,
 	id uint,
 ) (*domain.PostMortem, error) {
-	// Get existing post-mortem
+	// 既存のポストモーテムを取得
 	pm, err := u.postMortemRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if already draft
+	// 既にドラフトかチェック
 	if pm.Status == domain.PMStatusDraft {
 		return nil, domain.ErrValidation("Post-mortem is already in draft status")
 	}
 
-	// Check permissions (only author or admin can unpublish)
+	// 権限をチェック（作者または管理者のみ非公開可能）
 	if userRole == domain.RoleEditor && pm.AuthorID != userID {
 		return nil, domain.ErrForbidden("You can only unpublish your own post-mortems")
 	}
 
-	// Update status back to draft
+	// ステータスをドラフトに戻す
 	pm.Status = domain.PMStatusDraft
 	pm.PublishedAt = nil
 
@@ -243,12 +243,12 @@ func (u *postMortemUsecase) UnpublishPostMortem(
 		return nil, err
 	}
 
-	// Reload with relations
+	// リレーションを含めてリロード
 	return u.postMortemRepo.FindByID(ctx, id)
 }
 
 func (u *postMortemUsecase) DeletePostMortem(ctx context.Context, userRole domain.Role, id uint) error {
-	// Only admin can delete
+	// 管理者のみ削除可能
 	if userRole != domain.RoleAdmin {
 		return domain.ErrForbidden("Only admin can delete post-mortems")
 	}

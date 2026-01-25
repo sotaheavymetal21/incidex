@@ -37,35 +37,35 @@ func NewPasswordResetUsecase(
 }
 
 func (u *passwordResetUsecase) RequestPasswordReset(ctx context.Context, email string) error {
-	// Find user by email
+	// メールアドレスでユーザーを検索します
 	user, err := u.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.ErrDatabase("Failed to find user", err)
 	}
 
-	// Always return success to prevent email enumeration attacks
-	// but only send email if user exists
+	// メール列挙攻撃を防ぐため常に成功を返しますが、
+	// ユーザーが存在する場合のみメールを送信します
 	if user == nil {
 		return nil
 	}
 
-	// Check if user is active
+	// ユーザーがアクティブかどうかを確認します
 	if !user.IsActive {
 		return nil
 	}
 
-	// Delete any existing tokens for this user
+	// このユーザーの既存の token を削除します
 	if err := u.tokenRepo.DeleteByUserID(ctx, user.ID); err != nil {
 		return domain.ErrDatabase("Failed to delete existing tokens", err)
 	}
 
-	// Generate new token
+	// 新しい token を生成します
 	tokenString, err := domain.GenerateToken()
 	if err != nil {
 		return domain.ErrInternal("Failed to generate token", err)
 	}
 
-	// Create token record
+	// token レコードを作成します
 	resetToken := &domain.PasswordResetToken{
 		UserID:    user.ID,
 		Token:     tokenString,
@@ -76,7 +76,7 @@ func (u *passwordResetUsecase) RequestPasswordReset(ctx context.Context, email s
 		return domain.ErrDatabase("Failed to create reset token", err)
 	}
 
-	// Send email
+	// メールを送信します
 	if err := u.emailService.SendPasswordResetEmail(user.Email, user.Name, tokenString, u.frontendURL); err != nil {
 		return domain.ErrInternal("Failed to send reset email", err)
 	}
@@ -85,7 +85,7 @@ func (u *passwordResetUsecase) RequestPasswordReset(ctx context.Context, email s
 }
 
 func (u *passwordResetUsecase) ResetPassword(ctx context.Context, token, newPassword string) error {
-	// Find token
+	// token を検索します
 	resetToken, err := u.tokenRepo.FindByToken(ctx, token)
 	if err != nil {
 		return domain.ErrDatabase("Failed to find token", err)
@@ -95,7 +95,7 @@ func (u *passwordResetUsecase) ResetPassword(ctx context.Context, token, newPass
 		return domain.ErrBadRequest("無効なトークンです")
 	}
 
-	// Check if token is valid
+	// token が有効かどうかを確認します
 	if !resetToken.IsValid() {
 		if resetToken.IsExpired() {
 			return domain.ErrBadRequest("トークンの有効期限が切れています")
@@ -105,23 +105,23 @@ func (u *passwordResetUsecase) ResetPassword(ctx context.Context, token, newPass
 		}
 	}
 
-	// Validate password strength
+	// パスワード強度をバリデーションします
 	if err := domain.ValidatePasswordStrength(newPassword); err != nil {
 		return domain.ErrValidation(err.Error())
 	}
 
-	// Hash new password
+	// 新しいパスワードを hash 化します
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return domain.ErrInternal("Failed to hash password", err)
 	}
 
-	// Update password
+	// パスワードを更新します
 	if err := u.userRepo.UpdatePassword(ctx, resetToken.UserID, string(hashedPassword)); err != nil {
 		return domain.ErrDatabase("Failed to update password", err)
 	}
 
-	// Mark token as used
+	// token を使用済みとしてマークします
 	if err := u.tokenRepo.MarkAsUsed(ctx, resetToken.ID); err != nil {
 		return domain.ErrDatabase("Failed to mark token as used", err)
 	}

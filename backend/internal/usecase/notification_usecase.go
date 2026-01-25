@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"errors"
 	"incidex/internal/domain"
 )
 
@@ -41,13 +40,13 @@ func (u *NotificationUsecase) GetSettingByUserID(userID uint) (*domain.Notificat
 // CreateSetting は新しい通知設定を作成します
 func (u *NotificationUsecase) CreateSetting(setting *domain.NotificationSetting) error {
 	if setting.UserID == 0 {
-		return errors.New("user_id is required")
+		return domain.ErrValidation("user_id is required")
 	}
 
 	// 既存の設定があるかチェック
 	existing, _ := u.notificationRepo.GetByUserID(setting.UserID)
 	if existing != nil {
-		return errors.New("notification setting already exists for this user")
+		return domain.ErrConflict("notification setting already exists for this user")
 	}
 
 	return u.notificationRepo.Create(setting)
@@ -56,7 +55,7 @@ func (u *NotificationUsecase) CreateSetting(setting *domain.NotificationSetting)
 // UpdateSetting は通知設定を更新します
 func (u *NotificationUsecase) UpdateSetting(userID uint, setting *domain.NotificationSetting) error {
 	if userID == 0 {
-		return errors.New("user_id is required")
+		return domain.ErrValidation("user_id is required")
 	}
 
 	// 既存の設定を取得

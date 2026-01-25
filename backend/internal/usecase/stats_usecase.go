@@ -45,16 +45,16 @@ func (u *StatsUsecase) GetDashboardStats(period string) (*DashboardStats, error)
 	ctx := context.Background()
 	cacheKey := fmt.Sprintf("stats:dashboard:%s", period)
 
-	// Try to get from cache
+	// キャッシュから取得を試みます
 	if cachedData, err := u.cacheRepo.Get(ctx, cacheKey); err == nil {
 		var stats DashboardStats
 		if err := json.Unmarshal([]byte(cachedData), &stats); err == nil {
-			fmt.Printf("Cache hit for dashboard stats (period: %s)\n", period)
+			fmt.Printf("キャッシュヒット: ダッシュボード統計 (期間: %s)\n", period)
 			return &stats, nil
 		}
 	}
 
-	fmt.Printf("Cache miss for dashboard stats (period: %s), computing...\n", period)
+	fmt.Printf("キャッシュミス: ダッシュボード統計 (期間: %s)、計算中...\n", period)
 
 	// 総件数
 	var totalCount int64
@@ -114,10 +114,10 @@ func (u *StatsUsecase) GetDashboardStats(period string) (*DashboardStats, error)
 		TrendData:       trendData,
 	}
 
-	// Cache the result for 5 minutes
+	// 結果を5分間キャッシュします
 	if statsJSON, err := json.Marshal(stats); err == nil {
 		if err := u.cacheRepo.Set(ctx, cacheKey, string(statsJSON), 5*time.Minute); err != nil {
-			fmt.Printf("Warning: Failed to cache dashboard stats: %v\n", err)
+			fmt.Printf("警告: ダッシュボード統計のキャッシュに失敗しました: %v\n", err)
 		}
 	}
 
@@ -206,61 +206,61 @@ func (u *StatsUsecase) generateTrendData(period string) ([]TrendDataPoint, error
 	return trendData, nil
 }
 
-// GetSLAMetrics returns SLA performance metrics
+// GetSLAMetrics は SLA パフォーマンスメトリクスを返します
 func (u *StatsUsecase) GetSLAMetrics() (*domain.SLAMetrics, error) {
 	ctx := context.Background()
 	cacheKey := "stats:sla"
 
-	// Try to get from cache
+	// キャッシュから取得を試みます
 	if cachedData, err := u.cacheRepo.Get(ctx, cacheKey); err == nil {
 		var metrics domain.SLAMetrics
 		if err := json.Unmarshal([]byte(cachedData), &metrics); err == nil {
-			fmt.Println("Cache hit for SLA metrics")
+			fmt.Println("キャッシュヒット: SLA メトリクス")
 			return &metrics, nil
 		}
 	}
 
-	fmt.Println("Cache miss for SLA metrics, computing...")
+	fmt.Println("キャッシュミス: SLA メトリクス、計算中...")
 
-	// Get fresh data
+	// 最新のデータを取得します
 	metrics, err := u.incidentRepo.GetSLAMetrics()
 	if err != nil {
 		return nil, err
 	}
 
-	// Cache the result for 5 minutes
+	// 結果を5分間キャッシュします
 	if metricsJSON, err := json.Marshal(metrics); err == nil {
 		if err := u.cacheRepo.Set(ctx, cacheKey, string(metricsJSON), 5*time.Minute); err != nil {
-			fmt.Printf("Warning: Failed to cache SLA metrics: %v\n", err)
+			fmt.Printf("警告: SLA メトリクスのキャッシュに失敗しました: %v\n", err)
 		}
 	}
 
 	return metrics, nil
 }
 
-// GetTagStats returns incident statistics by tag
+// GetTagStats はタグ別のインシデント統計を返します
 func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
 	ctx := context.Background()
 	cacheKey := "stats:tags"
 
-	// Try to get from cache
+	// キャッシュから取得を試みます
 	if cachedData, err := u.cacheRepo.Get(ctx, cacheKey); err == nil {
 		var stats []TagStats
 		if err := json.Unmarshal([]byte(cachedData), &stats); err == nil {
-			fmt.Println("Cache hit for tag stats")
+			fmt.Println("キャッシュヒット: タグ統計")
 			return stats, nil
 		}
 	}
 
-	fmt.Println("Cache miss for tag stats, computing...")
+	fmt.Println("キャッシュミス: タグ統計、計算中...")
 
-	// Get all incidents with tags preloaded
+	// タグがプリロードされた全インシデントを取得します
 	allIncidents, err := u.incidentRepo.GetAllIncidents()
 	if err != nil {
 		return nil, err
 	}
 
-	// Count incidents by tag
+	// タグ別にインシデントをカウントします
 	tagCountMap := make(map[uint]struct {
 		name  string
 		color string
@@ -288,7 +288,7 @@ func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
 		}
 	}
 
-	// Convert map to slice
+	// map をスライスに変換します
 	tagStats := make([]TagStats, 0, len(tagCountMap))
 	for tagID, entry := range tagCountMap {
 		percentage := 0.0
@@ -305,7 +305,7 @@ func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
 		})
 	}
 
-	// Sort by count (descending)
+	// カウント順（降順）でソートします
 	for i := 0; i < len(tagStats); i++ {
 		for j := i + 1; j < len(tagStats); j++ {
 			if tagStats[j].Count > tagStats[i].Count {
@@ -314,10 +314,10 @@ func (u *StatsUsecase) GetTagStats() ([]TagStats, error) {
 		}
 	}
 
-	// Cache the result for 10 minutes
+	// 結果を10分間キャッシュします
 	if statsJSON, err := json.Marshal(tagStats); err == nil {
 		if err := u.cacheRepo.Set(ctx, cacheKey, string(statsJSON), 10*time.Minute); err != nil {
-			fmt.Printf("Warning: Failed to cache tag stats: %v\n", err)
+			fmt.Printf("警告: タグ統計のキャッシュに失敗しました: %v\n", err)
 		}
 	}
 

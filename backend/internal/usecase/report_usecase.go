@@ -22,9 +22,9 @@ func NewReportUsecase(reportRepo domain.ReportRepository) ReportUsecase {
 }
 
 func (u *reportUsecase) GetMonthlyReport(ctx context.Context, year, month int) (*domain.MonthlyReport, error) {
-	// Calculate start and end dates for the month
+	// 月の開始日と終了日を計算します
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
-	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second) // Last second of the month
+	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second) // 月の最後の秒
 
 	return u.reportRepo.GetMonthlyReport(startDate, endDate)
 }
