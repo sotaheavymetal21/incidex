@@ -1,0 +1,38 @@
+export const testUsers = {
+  admin: {
+    id: 1,
+    email: 'admin@example.com',
+    name: 'Admin User',
+    role: 'admin' as const,
+    is_active: true,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
+  editor: {
+    id: 2,
+    email: 'editor@example.com',
+    name: 'Editor User',
+    role: 'editor' as const,
+    is_active: true,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
+  viewer: {
+    id: 3,
+    email: 'viewer@example.com',
+    name: 'Viewer User',
+    role: 'viewer' as const,
+    is_active: true,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
+  inactive: {
+    id: 4,
+    email: 'inactive@example.com',
+    name: 'Inactive User',
+    role: 'viewer' as const,
+    is_active: false,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z',
+  },
+};
