@@ -12,8 +12,8 @@ type redisCache struct {
 	client *redis.Client
 }
 
-// NewRedisCache creates a new Redis cache repository
-// If client is nil, returns a no-op cache that always returns cache misses
+// NewRedisCache は新しいRedisキャッシュリポジトリを作成します
+// clientがnilの場合、常にキャッシュミスを返すno-opキャッシュを返します
 func NewRedisCache(client *redis.Client) domain.CacheRepository {
 	if client == nil {
 		return &noOpCache{}
@@ -52,8 +52,8 @@ func (r *redisCache) Exists(ctx context.Context, key string) (bool, error) {
 	return result > 0, err
 }
 
-// noOpCache is a no-op implementation that always returns cache misses
-// Used when Redis is unavailable to ensure system continues to function
+// noOpCache は常にキャッシュミスを返すno-op実装です
+// Redisが利用できない場合にシステムが動作し続けることを保証するために使用されます
 type noOpCache struct{}
 
 func (n *noOpCache) Get(ctx context.Context, key string) (string, error) {
@@ -61,15 +61,15 @@ func (n *noOpCache) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (n *noOpCache) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
-	return nil // No-op
+	return nil // 何もしません
 }
 
 func (n *noOpCache) Delete(ctx context.Context, key string) error {
-	return nil // No-op
+	return nil // 何もしません
 }
 
 func (n *noOpCache) DeleteByPattern(ctx context.Context, pattern string) error {
-	return nil // No-op
+	return nil // 何もしません
 }
 
 func (n *noOpCache) Exists(ctx context.Context, key string) (bool, error) {
