@@ -41,7 +41,7 @@ type UserRepository interface {
 	ToggleActive(ctx context.Context, id uint, isActive bool) error
 }
 
-// User validation constants
+// ユーザーバリデーション定数
 const (
 	MaxNameLength           = 50
 	MaxEmailLength          = 254
@@ -49,25 +49,25 @@ const (
 	MaxDepartmentLength     = 50
 )
 
-// Regular expressions for validation
+// バリデーション用の正規表現
 var (
 	employeeNumberRegex = regexp.MustCompile(`^[a-zA-Z0-9\-]*$`)
 	emailRegex          = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 )
 
-// containsEmoji checks if a string contains emoji characters
+// containsEmoji は文字列に絵文字が含まれているかを確認します
 func containsEmoji(s string) bool {
 	for _, r := range s {
-		if r > 0x1F000 || // Most emojis are in this range
-			(r >= 0x2600 && r <= 0x27BF) || // Misc symbols
-			(r >= 0x1F300 && r <= 0x1F9FF) { // Various emoji blocks
+		if r > 0x1F000 || // ほとんどの絵文字はこの範囲
+			(r >= 0x2600 && r <= 0x27BF) || // その他のシンボル
+			(r >= 0x1F300 && r <= 0x1F9FF) { // 各種絵文字ブロック
 			return true
 		}
 	}
 	return false
 }
 
-// containsControlChars checks if a string contains control characters
+// containsControlChars は文字列に制御文字が含まれているかを確認します
 func containsControlChars(s string) bool {
 	for _, r := range s {
 		if unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t' {
@@ -77,7 +77,7 @@ func containsControlChars(s string) bool {
 	return false
 }
 
-// ValidateName validates user name
+// ValidateName はユーザー名をバリデーションします
 func ValidateName(name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -95,7 +95,7 @@ func ValidateName(name string) error {
 	return nil
 }
 
-// ValidateEmail validates email address
+// ValidateEmail はメールアドレスをバリデーションします
 func ValidateEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
@@ -110,10 +110,10 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-// ValidateEmployeeNumber validates employee number
+// ValidateEmployeeNumber は社員番号をバリデーションします
 func ValidateEmployeeNumber(employeeNumber string) error {
 	if employeeNumber == "" {
-		return nil // Optional field
+		return nil // オプションフィールド
 	}
 	if len(employeeNumber) > MaxEmployeeNumberLength {
 		return ErrValidation("社員番号は20文字以内で入力してください")
@@ -124,10 +124,10 @@ func ValidateEmployeeNumber(employeeNumber string) error {
 	return nil
 }
 
-// ValidateDepartment validates department name
+// ValidateDepartment は部署名をバリデーションします
 func ValidateDepartment(department string) error {
 	if department == "" {
-		return nil // Optional field
+		return nil // オプションフィールド
 	}
 	if len(department) > MaxDepartmentLength {
 		return ErrValidation("所属部署は50文字以内で入力してください")
@@ -141,7 +141,7 @@ func ValidateDepartment(department string) error {
 	return nil
 }
 
-// ValidateUserInput validates all user input fields
+// ValidateUserInput はすべてのユーザー入力フィールドをバリデーションします
 func ValidateUserInput(name, email, employeeNumber, department string) error {
 	if err := ValidateName(name); err != nil {
 		return err

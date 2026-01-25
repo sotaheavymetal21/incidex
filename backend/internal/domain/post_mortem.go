@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// PostMortem represents a post-mortem analysis for an incident.
+// PostMortem はインシデントのポストモーテム分析を表します
 type PostMortem struct {
 	ID               uint       `gorm:"primaryKey" json:"id"`
 	IncidentID       uint       `gorm:"uniqueIndex;not null" json:"incident_id"` // 1対1の関係
@@ -21,13 +21,13 @@ type PostMortem struct {
 	UpdatedAt        time.Time  `json:"updated_at"`
 	PublishedAt      *time.Time `json:"published_at"`
 
-	// Relations
+	// リレーション
 	Incident    *Incident    `gorm:"foreignKey:IncidentID" json:"incident,omitempty"`
 	Author      *User        `gorm:"foreignKey:AuthorID" json:"author,omitempty"`
 	ActionItems []ActionItem `gorm:"foreignKey:PostMortemID" json:"action_items,omitempty"`
 }
 
-// PMStatus represents the status of a post-mortem
+// PMStatus はポストモーテムのステータスを表します
 type PMStatus string
 
 const (
@@ -35,7 +35,7 @@ const (
 	PMStatusPublished PMStatus = "published"
 )
 
-// FiveWhysAnalysis represents the Five Whys structure
+// FiveWhysAnalysis は「なぜなぜ分析」の構造を表します
 type FiveWhysAnalysis struct {
 	Why1 string `json:"why1" binding:"max=1000"`
 	Why2 string `json:"why2" binding:"max=1000"`
@@ -44,7 +44,7 @@ type FiveWhysAnalysis struct {
 	Why5 string `json:"why5" binding:"max=1000"`
 }
 
-// PostMortemRepository defines the interface for post-mortem data access.
+// PostMortemRepository はポストモーテムデータアクセスのインターフェースを定義します
 type PostMortemRepository interface {
 	Create(ctx context.Context, pm *PostMortem) error
 	FindByID(ctx context.Context, id uint) (*PostMortem, error)
@@ -54,7 +54,7 @@ type PostMortemRepository interface {
 	FindAll(ctx context.Context, filters PostMortemFilters, pagination Pagination) ([]*PostMortem, *PaginationResult, error)
 }
 
-// PostMortemFilters represents filtering options for post-mortems.
+// PostMortemFilters はポストモーテムのフィルタリングオプションを表します
 type PostMortemFilters struct {
 	Status   string
 	AuthorID uint

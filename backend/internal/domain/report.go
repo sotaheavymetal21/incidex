@@ -2,7 +2,7 @@ package domain
 
 import "time"
 
-// MonthlyReport represents a comprehensive monthly incident report
+// MonthlyReport は包括的な月次インシデントレポートを表します
 type MonthlyReport struct {
 	Period           ReportPeriod            `json:"period"`
 	Summary          IncidentSummary         `json:"summary"`
@@ -14,7 +14,7 @@ type MonthlyReport struct {
 	Comparison       *PeriodComparison       `json:"comparison,omitempty"`
 }
 
-// ReportPeriod defines the time period for the report
+// ReportPeriod はレポートの期間を定義します
 type ReportPeriod struct {
 	StartDate time.Time `json:"start_date"`
 	EndDate   time.Time `json:"end_date"`
@@ -22,7 +22,7 @@ type ReportPeriod struct {
 	Year      int       `json:"year"`
 }
 
-// IncidentSummary provides high-level statistics
+// IncidentSummary は高レベルの統計情報を提供します
 type IncidentSummary struct {
 	TotalIncidents    int `json:"total_incidents"`
 	NewIncidents      int `json:"new_incidents"`
@@ -31,25 +31,25 @@ type IncidentSummary struct {
 	CriticalIncidents int `json:"critical_incidents"`
 }
 
-// DailyIncidentCount tracks incidents per day
+// DailyIncidentCount は日ごとのインシデント数を追跡します
 type DailyIncidentCount struct {
 	Date  time.Time `json:"date"`
 	Count int       `json:"count"`
 }
 
-// TagStatistic shows tag usage statistics
+// TagStatistic はタグ使用統計を表示します
 type TagStatistic struct {
 	TagID   uint   `json:"tag_id"`
 	TagName string `json:"tag_name"`
 	Count   int    `json:"count"`
 }
 
-// PerformanceMetrics tracks performance indicators
+// PerformanceMetrics はパフォーマンス指標を追跡します
 type PerformanceMetrics struct {
 	AverageResolutionTime float64 `json:"average_resolution_time_hours"`
 }
 
-// PeriodComparison compares current period with previous period
+// PeriodComparison は現在の期間と前の期間を比較します
 type PeriodComparison struct {
 	PreviousPeriod    ReportPeriod `json:"previous_period"`
 	TotalIncidentsChange    int    `json:"total_incidents_change"`
@@ -58,7 +58,7 @@ type PeriodComparison struct {
 	ResolvedIncidentsChangePercent float64 `json:"resolved_incidents_change_percent"`
 }
 
-// ReportRepository defines operations for generating reports
+// ReportRepository はレポート生成のための操作を定義します
 type ReportRepository interface {
 	GetMonthlyReport(startDate, endDate time.Time) (*MonthlyReport, error)
 	GetIncidentCountByDay(startDate, endDate time.Time) ([]DailyIncidentCount, error)
