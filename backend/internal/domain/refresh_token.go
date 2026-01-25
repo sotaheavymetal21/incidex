@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// RefreshToken represents a refresh token for JWT authentication
+// RefreshToken は JWT 認証用のリフレッシュ token を表します
 type RefreshToken struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	Token     string         `gorm:"uniqueIndex;not null" json:"token"`
@@ -19,7 +19,7 @@ type RefreshToken struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// RefreshTokenRepository defines the interface for refresh token data operations
+// RefreshTokenRepository はリフレッシュ token データ操作のインターフェースを定義します
 type RefreshTokenRepository interface {
 	Create(ctx context.Context, token *RefreshToken) error
 	FindByToken(ctx context.Context, token string) (*RefreshToken, error)
@@ -28,17 +28,17 @@ type RefreshTokenRepository interface {
 	DeleteExpired(ctx context.Context) error
 }
 
-// IsExpired checks if the refresh token has expired
+// IsExpired はリフレッシュ token が期限切れかを確認します
 func (rt *RefreshToken) IsExpired() bool {
 	return time.Now().After(rt.ExpiresAt)
 }
 
-// IsRevoked checks if the refresh token has been revoked
+// IsRevoked はリフレッシュ token が無効化されているかを確認します
 func (rt *RefreshToken) IsRevoked() bool {
 	return rt.RevokedAt != nil
 }
 
-// IsValid checks if the refresh token is valid (not expired and not revoked)
+// IsValid はリフレッシュ token が有効か（期限切れでなく無効化されていないか）を確認します
 func (rt *RefreshToken) IsValid() bool {
 	return !rt.IsExpired() && !rt.IsRevoked()
 }

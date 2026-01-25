@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-// PasswordPolicy defines password validation rules
+// PasswordPolicy はパスワードバリデーションルールを定義します
 type PasswordPolicy struct {
 	MinLength      int
 	RequireUpper   bool
@@ -15,7 +15,7 @@ type PasswordPolicy struct {
 	RequireSpecial bool
 }
 
-// DefaultPasswordPolicy is the default password policy
+// DefaultPasswordPolicy はデフォルトのパスワードポリシーです
 var DefaultPasswordPolicy = PasswordPolicy{
 	MinLength:      12,
 	RequireUpper:   true,
@@ -24,7 +24,7 @@ var DefaultPasswordPolicy = PasswordPolicy{
 	RequireSpecial: true,
 }
 
-// Validate checks if a password meets the policy requirements
+// Validate はパスワードがポリシー要件を満たしているかを確認します
 func (p *PasswordPolicy) Validate(password string) error {
 	if len(password) < p.MinLength {
 		return ErrValidation("Password must be at least 12 characters long")
@@ -66,14 +66,14 @@ func (p *PasswordPolicy) Validate(password string) error {
 	return nil
 }
 
-// ValidatePassword validates a password using the default policy
+// ValidatePassword はデフォルトポリシーを使用してパスワードをバリデーションします
 func ValidatePassword(password string) error {
 	return DefaultPasswordPolicy.Validate(password)
 }
 
-// IsCommonPassword checks if the password is in a list of common passwords
+// IsCommonPassword はパスワードが一般的なパスワードリストに含まれているかを確認します
 func IsCommonPassword(password string) bool {
-	// Top 100 most common passwords
+	// よく使われるパスワード上位100件
 	commonPasswords := []string{
 		"password", "123456", "12345678", "qwerty", "abc123",
 		"monkey", "1234567", "letmein", "trustno1", "dragon",
@@ -101,13 +101,13 @@ func IsCommonPassword(password string) bool {
 	return slices.Contains(commonPasswords, password)
 }
 
-// ValidatePasswordStrength validates password strength including common password check
+// ValidatePasswordStrength は一般的なパスワードチェックを含めてパスワード強度をバリデーションします
 func ValidatePasswordStrength(password string) error {
-	// Check common passwords first
+	// まず一般的なパスワードかをチェック
 	if IsCommonPassword(password) {
 		return errors.New("password is too common, please choose a stronger password")
 	}
 
-	// Validate against policy
+	// ポリシーに対してバリデーション
 	return ValidatePassword(password)
 }
