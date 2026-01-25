@@ -25,7 +25,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 	var user domain.User
 	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // Return nil if found nothing, let usecase handle not found error if needed or treat as standard
+			return nil, nil // 見つからない場合はnilを返します。必要に応じてusecase側で未検出errorをハンドリングします
 		}
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (r *userRepository) FindByID(ctx context.Context, id uint) (*domain.User, e
 
 func (r *userRepository) FindAll(ctx context.Context) ([]*domain.User, error) {
 	var users []*domain.User
-	// Get all users including inactive ones (deleted users are excluded by default GORM soft delete)
+	// 非アクティブなユーザーを含むすべてのユーザーを取得します（削除されたユーザーはGORMのソフトデリートによりデフォルトで除外されます）
 	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
 		return nil, err
 	}

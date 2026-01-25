@@ -25,49 +25,49 @@ func (r *reportRepository) GetMonthlyReport(startDate, endDate time.Time) (*doma
 		},
 	}
 
-	// Get summary statistics
+	// サマリー統計を取得します
 	summary, err := r.getIncidentSummary(startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 	report.Summary = *summary
 
-	// Get severity breakdown
+	// 重大度別の内訳を取得します
 	severityBreakdown, err := r.getSeverityBreakdown(startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 	report.SeverityBreakdown = severityBreakdown
 
-	// Get status breakdown
+	// ステータス別の内訳を取得します
 	statusBreakdown, err := r.getStatusBreakdown(startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 	report.StatusBreakdown = statusBreakdown
 
-	// Get daily trend
+	// 日別トレンドを取得します
 	dailyTrend, err := r.GetIncidentCountByDay(startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 	report.DailyTrend = dailyTrend
 
-	// Get top tags
+	// 上位タグを取得します
 	topTags, err := r.GetTopTags(startDate, endDate, 10)
 	if err != nil {
 		return nil, err
 	}
 	report.TopTags = topTags
 
-	// Get performance metrics
+	// パフォーマンスメトリクスを取得します
 	metrics, err := r.getPerformanceMetrics(startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 	report.PerformanceMetrics = *metrics
 
-	// Get comparison with previous period
+	// 前期間との比較を取得します
 	comparison, err := r.getPeriodComparison(startDate, endDate)
 	if err == nil {
 		report.Comparison = comparison
@@ -79,7 +79,7 @@ func (r *reportRepository) GetMonthlyReport(startDate, endDate time.Time) (*doma
 func (r *reportRepository) getIncidentSummary(startDate, endDate time.Time) (*domain.IncidentSummary, error) {
 	var summary domain.IncidentSummary
 
-	// Total incidents created in period
+	// 期間中に作成された総インシデント数
 	err := r.db.Model(&domain.Incident{}).
 		Where("created_at BETWEEN ? AND ?", startDate, endDate).
 		Count(&[]int64{int64(summary.TotalIncidents)}[0]).Error
@@ -95,9 +95,9 @@ func (r *reportRepository) getIncidentSummary(startDate, endDate time.Time) (*do
 		return nil, err
 	}
 	summary.TotalIncidents = int(totalCount)
-	summary.NewIncidents = int(totalCount) // Same as total for the period
+	summary.NewIncidents = int(totalCount) // 期間中は合計と同じです
 
-	// Resolved incidents in period
+	// 期間中に解決されたインシデント
 	var resolvedCount int64
 	err = r.db.Model(&domain.Incident{}).
 		Where("created_at BETWEEN ? AND ?", startDate, endDate).
@@ -108,7 +108,7 @@ func (r *reportRepository) getIncidentSummary(startDate, endDate time.Time) (*do
 	}
 	summary.ResolvedIncidents = int(resolvedCount)
 
-	// Open incidents (created in period and still open)
+	// オープン中のインシデント（期間中に作成され、まだオープン状態のもの）
 	var openCount int64
 	err = r.db.Model(&domain.Incident{}).
 		Where("created_at BETWEEN ? AND ?", startDate, endDate).
@@ -122,7 +122,7 @@ func (r *reportRepository) getIncidentSummary(startDate, endDate time.Time) (*do
 	}
 	summary.OpenIncidents = int(openCount)
 
-	// Critical incidents
+	// クリティカルインシデント
 	var criticalCount int64
 	err = r.db.Model(&domain.Incident{}).
 		Where("created_at BETWEEN ? AND ?", startDate, endDate).
@@ -248,7 +248,7 @@ func (r *reportRepository) GetTopTags(startDate, endDate time.Time, limit int) (
 func (r *reportRepository) getPerformanceMetrics(startDate, endDate time.Time) (*domain.PerformanceMetrics, error) {
 	metrics := &domain.PerformanceMetrics{}
 
-	// Get resolved incidents
+	// 解決済みインシデントを取得します
 	var resolvedIncidents []domain.Incident
 	err := r.db.Where("created_at BETWEEN ? AND ?", startDate, endDate).
 		Where("status = ?", domain.StatusResolved).
@@ -259,15 +259,15 @@ func (r *reportRepository) getPerformanceMetrics(startDate, endDate time.Time) (
 	}
 
 	if len(resolvedIncidents) > 0 {
-		// Calculate average resolution time
+		// 平均解決時間を計算します
 		var totalHours float64
 		var count int
 
 		for _, incident := range resolvedIncidents {
 			if incident.ResolvedAt != nil {
-				// Use DetectedAt instead of CreatedAt for accurate resolution time
+				// 正確な解決時間のためにCreatedAtではなくDetectedAtを使用します
 				hours := incident.ResolvedAt.Sub(incident.DetectedAt).Hours()
-				// Only include positive values
+				// 正の値のみを含めます
 				if hours >= 0 {
 					totalHours += hours
 					count++
@@ -284,12 +284,12 @@ func (r *reportRepository) getPerformanceMetrics(startDate, endDate time.Time) (
 }
 
 func (r *reportRepository) getPeriodComparison(startDate, endDate time.Time) (*domain.PeriodComparison, error) {
-	// Calculate previous period (same duration)
+	// 前期間を計算します（同じ期間の長さ）
 	duration := endDate.Sub(startDate)
 	prevStartDate := startDate.Add(-duration)
 	prevEndDate := startDate
 
-	// Get current period totals
+	// 現在期間の合計を取得します
 	var currentTotal int64
 	err := r.db.Model(&domain.Incident{}).
 		Where("created_at BETWEEN ? AND ?", startDate, endDate).
@@ -307,7 +307,7 @@ func (r *reportRepository) getPeriodComparison(startDate, endDate time.Time) (*d
 		return nil, err
 	}
 
-	// Get previous period totals
+	// 前期間の合計を取得します
 	var previousTotal int64
 	err = r.db.Model(&domain.Incident{}).
 		Where("created_at BETWEEN ? AND ?", prevStartDate, prevEndDate).
@@ -336,18 +336,18 @@ func (r *reportRepository) getPeriodComparison(startDate, endDate time.Time) (*d
 		ResolvedIncidentsChange: int(currentResolved - previousResolved),
 	}
 
-	// Calculate percentage changes
+	// パーセンテージ変化を計算します
 	if previousTotal > 0 {
 		comparison.TotalIncidentsChangePercent = float64(currentTotal-previousTotal) / float64(previousTotal) * 100
 	} else if currentTotal > 0 {
-		// If previous period had no data but current has, show 100% increase
+		// 前期間にデータがなく現在期間にデータがある場合、100%増加として表示します
 		comparison.TotalIncidentsChangePercent = 100.0
 	}
 
 	if previousResolved > 0 {
 		comparison.ResolvedIncidentsChangePercent = float64(currentResolved-previousResolved) / float64(previousResolved) * 100
 	} else if currentResolved > 0 {
-		// If previous period had no data but current has, show 100% increase
+		// 前期間にデータがなく現在期間にデータがある場合、100%増加として表示します
 		comparison.ResolvedIncidentsChangePercent = 100.0
 	}
 

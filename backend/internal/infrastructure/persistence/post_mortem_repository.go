@@ -66,10 +66,10 @@ func (r *postMortemRepository) FindAll(ctx context.Context, filters domain.PostM
 	var postMortems []*domain.PostMortem
 	var total int64
 
-	// Build query
+	// クエリを構築します
 	query := r.db.WithContext(ctx).Model(&domain.PostMortem{})
 
-	// Apply filters
+	// フィルタを適用します
 	if filters.Status != "" {
 		query = query.Where("status = ?", filters.Status)
 	}
@@ -82,12 +82,12 @@ func (r *postMortemRepository) FindAll(ctx context.Context, filters domain.PostM
 			searchPattern, searchPattern, searchPattern)
 	}
 
-	// Count total records
+	// 合計レコード数をカウントします
 	if err := query.Count(&total).Error; err != nil {
 		return nil, nil, err
 	}
 
-	// Apply sorting
+	// ソートを適用します
 	sortBy := filters.SortBy
 	if sortBy == "" {
 		sortBy = "created_at"
@@ -98,7 +98,7 @@ func (r *postMortemRepository) FindAll(ctx context.Context, filters domain.PostM
 	}
 	query = query.Order(sortBy + " " + order)
 
-	// Apply pagination
+	// ページネーションを適用します
 	if pagination.Limit == 0 {
 		pagination.Limit = 20
 	}
@@ -108,15 +108,15 @@ func (r *postMortemRepository) FindAll(ctx context.Context, filters domain.PostM
 	offset := (pagination.Page - 1) * pagination.Limit
 	query = query.Offset(offset).Limit(pagination.Limit)
 
-	// Preload relations
+	// リレーションをプリロードします
 	query = query.Preload("Incident").Preload("Author").Preload("ActionItems").Preload("ActionItems.Assignee")
 
-	// Execute query
+	// クエリを実行します
 	if err := query.Find(&postMortems).Error; err != nil {
 		return nil, nil, err
 	}
 
-	// Calculate total pages
+	// 総ページ数を計算します
 	totalPages := int(total) / pagination.Limit
 	if int(total)%pagination.Limit > 0 {
 		totalPages++

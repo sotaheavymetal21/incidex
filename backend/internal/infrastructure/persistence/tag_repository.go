@@ -35,6 +35,17 @@ func (r *tagRepository) FindByID(ctx context.Context, id uint) (*domain.Tag, err
 	return &tag, nil
 }
 
+func (r *tagRepository) FindByIDs(ctx context.Context, ids []uint) ([]domain.Tag, error) {
+	if len(ids) == 0 {
+		return []domain.Tag{}, nil
+	}
+	var tags []domain.Tag
+	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&tags).Error; err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
 func (r *tagRepository) Update(ctx context.Context, tag *domain.Tag) error {
 	return r.db.WithContext(ctx).Save(tag).Error
 }
