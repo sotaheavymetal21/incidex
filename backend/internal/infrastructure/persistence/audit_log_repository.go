@@ -25,7 +25,7 @@ func (r *auditLogRepository) FindAll(ctx context.Context, filters domain.AuditLo
 
 	query := r.db.WithContext(ctx).Model(&domain.AuditLog{})
 
-	// Apply filters
+	// フィルタを適用します
 	if filters.UserID != nil {
 		query = query.Where("user_id = ?", *filters.UserID)
 	}
@@ -42,12 +42,12 @@ func (r *auditLogRepository) FindAll(ctx context.Context, filters domain.AuditLo
 		query = query.Where("created_at <= ?", *filters.EndDate)
 	}
 
-	// Count total
+	// 合計をカウントします
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// Apply pagination
+	// ページネーションを適用します
 	page := filters.Page
 	limit := filters.Limit
 	if page < 1 {
@@ -58,7 +58,7 @@ func (r *auditLogRepository) FindAll(ctx context.Context, filters domain.AuditLo
 	}
 	offset := (page - 1) * limit
 
-	// Fetch logs
+	// ログを取得します
 	if err := query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}

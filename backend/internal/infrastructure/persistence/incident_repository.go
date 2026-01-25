@@ -24,10 +24,10 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 	var incidents []*domain.Incident
 	var total int64
 
-	// Build query
+	// クエリを構築します
 	query := r.db.WithContext(ctx).Model(&domain.Incident{})
 
-	// Apply filters
+	// フィルタを適用します
 	if filters.Severity != "" {
 		query = query.Where("severity = ?", filters.Severity)
 	}
@@ -43,24 +43,24 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 			Distinct()
 	}
 	if filters.Search != "" {
-		// Try full-text search first (if search_vector column exists)
-		// Format search query for tsquery
+		// まず全文検索を試みます（search_vectorカラムが存在する場合）
+		// tsquery用に検索クエリをフォーマットします
 		searchTerms := strings.Fields(filters.Search)
 		if len(searchTerms) > 0 {
-			// Build tsquery from search terms
+			// 検索語からtsqueryを構築します
 			tsquery := strings.Join(searchTerms, " & ")
 
-			// Try full-text search with search_vector
+			// search_vectorを使用した全文検索を試みます
 			var testCount int64
 			testQuery := r.db.WithContext(ctx).Model(&domain.Incident{}).
 				Where("search_vector @@ to_tsquery('simple', ?)", tsquery)
 
 			testErr := testQuery.Count(&testCount).Error
 			if testErr == nil && testCount > 0 {
-				// Full-text search available and found results, use it
+				// 全文検索が利用可能で結果が見つかった場合、それを使用します
 				query = query.Where("search_vector @@ to_tsquery('simple', ?)", tsquery)
 			} else {
-				// Fall back to LIKE search (for non-English text like Japanese, or when no full-text results)
+				// LIKE検索にフォールバックします（日本語などの非英語テキスト、または全文検索で結果がない場合）
 				searchPattern := "%" + strings.ToLower(filters.Search) + "%"
 				query = query.Where("LOWER(title) LIKE ? OR LOWER(description) LIKE ? OR LOWER(impact_scope) LIKE ?",
 					searchPattern, searchPattern, searchPattern)
@@ -68,18 +68,18 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 		}
 	}
 
-	// Count total records
+	// 合計レコード数をカウントします
 	if err := query.Count(&total).Error; err != nil {
 		return nil, nil, err
 	}
 
-	// Apply sorting with whitelist validation to prevent SQL injection
+	// SQLインジェクション防止のためホワイトリストでバリデーションしてソートを適用します
 	sortBy := filters.SortBy
 	if sortBy == "" {
 		sortBy = "created_at"
 	}
 
-	// Whitelist of allowed sort columns
+	// 許可されたソートカラムのホワイトリスト
 	allowedSortColumns := map[string]bool{
 		"id":          true,
 		"title":       true,
@@ -92,17 +92,17 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 	}
 
 	if !allowedSortColumns[sortBy] {
-		sortBy = "created_at" // Default to safe value
+		sortBy = "created_at" // 安全なデフォルト値を使用します
 	}
 
 	order := strings.ToLower(filters.Order)
 	if order != "asc" && order != "desc" {
-		order = "desc" // Default to safe value
+		order = "desc" // 安全なデフォルト値を使用します
 	}
 
 	query = query.Order(sortBy + " " + order)
 
-	// Apply pagination
+	// ページネーションを適用します
 	if pagination.Limit == 0 {
 		pagination.Limit = 20
 	}
@@ -112,15 +112,15 @@ func (r *incidentRepository) FindAll(ctx context.Context, filters domain.Inciden
 	offset := (pagination.Page - 1) * pagination.Limit
 	query = query.Offset(offset).Limit(pagination.Limit)
 
-	// Preload relations
+	// リレーションをプリロードします
 	query = query.Preload("Assignee").Preload("Creator").Preload("Tags")
 
-	// Execute query
+	// クエリを実行します
 	if err := query.Find(&incidents).Error; err != nil {
 		return nil, nil, err
 	}
 
-	// Calculate total pages
+	// 総ページ数を計算します
 	totalPages := int(total) / pagination.Limit
 	if int(total)%pagination.Limit > 0 {
 		totalPages++
@@ -160,7 +160,7 @@ func (r *incidentRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&domain.Incident{}, id).Error
 }
 
-// Stats methods
+// 統計メソッド
 
 func (r *incidentRepository) Count(count *int64) error {
 	return r.db.Model(&domain.Incident{}).Count(count).Error
@@ -190,45 +190,45 @@ func (r *incidentRepository) FindRecent(limit int) ([]*domain.Incident, error) {
 
 func (r *incidentRepository) GetAllIncidents() ([]*domain.Incident, error) {
 	var incidents []*domain.Incident
-	if err := r.db.Find(&incidents).Error; err != nil {
+	if err := r.db.Preload("Tags").Find(&incidents).Error; err != nil {
 		return nil, err
 	}
 	return incidents, nil
 }
 
-// CountSLAViolated counts the number of incidents that violated their SLA
+// CountSLAViolated はSLAに違反したインシデント数をカウントします
 func (r *incidentRepository) CountSLAViolated(count *int64) error {
 	return r.db.Model(&domain.Incident{}).Where("sla_violated = ?", true).Count(count).Error
 }
 
-// GetSLAMetrics calculates and returns SLA performance metrics
+// GetSLAMetrics はSLAパフォーマンスメトリクスを計算して返します
 func (r *incidentRepository) GetSLAMetrics() (*domain.SLAMetrics, error) {
 	var metrics domain.SLAMetrics
 
-	// Total incidents
+	// 総インシデント数
 	if err := r.db.Model(&domain.Incident{}).Count(&metrics.TotalIncidents).Error; err != nil {
 		return nil, err
 	}
 
-	// Resolved incidents
+	// 解決済みインシデント数
 	if err := r.db.Model(&domain.Incident{}).
 		Where("status IN ?", []string{string(domain.StatusResolved), string(domain.StatusClosed)}).
 		Count(&metrics.ResolvedIncidents).Error; err != nil {
 		return nil, err
 	}
 
-	// SLA violated count
+	// SLA違反件数
 	if err := r.CountSLAViolated(&metrics.SLAViolatedCount); err != nil {
 		return nil, err
 	}
 
-	// Calculate SLA compliance rate
+	// SLA遵守率を計算します
 	if metrics.ResolvedIncidents > 0 {
 		compliantIncidents := metrics.ResolvedIncidents - metrics.SLAViolatedCount
 		metrics.SLAComplianceRate = (float64(compliantIncidents) / float64(metrics.ResolvedIncidents)) * 100
 	}
 
-	// Get all resolved incidents for MTTR calculation
+	// MTTR計算用にすべての解決済みインシデントを取得します
 	var resolvedIncidents []*domain.Incident
 	if err := r.db.Where("status IN ? AND resolved_at IS NOT NULL",
 		[]string{string(domain.StatusResolved), string(domain.StatusClosed)}).
@@ -236,7 +236,7 @@ func (r *incidentRepository) GetSLAMetrics() (*domain.SLAMetrics, error) {
 		return nil, err
 	}
 
-	// Calculate MTTR
+	// MTTRを計算します
 	if len(resolvedIncidents) > 0 {
 		var totalResolutionTime float64
 		var resolutionTimes []float64
@@ -249,14 +249,14 @@ func (r *incidentRepository) GetSLAMetrics() (*domain.SLAMetrics, error) {
 			}
 		}
 
-		// Average MTTR
+		// 平均MTTR
 		if len(resolutionTimes) > 0 {
 			metrics.AverageMTTR = totalResolutionTime / float64(len(resolutionTimes))
 		}
 
-		// Median MTTR (simple median calculation)
+		// 中央値MTTR（シンプルな中央値計算）
 		if len(resolutionTimes) > 0 {
-			// Sort resolution times for median calculation
+			// 中央値計算用に解決時間をソートします
 			for i := 0; i < len(resolutionTimes); i++ {
 				for j := i + 1; j < len(resolutionTimes); j++ {
 					if resolutionTimes[i] > resolutionTimes[j] {
@@ -274,7 +274,7 @@ func (r *incidentRepository) GetSLAMetrics() (*domain.SLAMetrics, error) {
 		}
 	}
 
-	// Count currently overdue incidents (open and past SLA deadline)
+	// 現在期限超過のインシデントをカウントします（オープン状態でSLA期限を過ぎたもの）
 	if err := r.db.Model(&domain.Incident{}).
 		Where("status IN ? AND sla_deadline IS NOT NULL AND sla_deadline < ?",
 			[]string{string(domain.StatusOpen), string(domain.StatusInvestigating)},
