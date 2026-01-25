@@ -105,7 +105,7 @@ export default function SignupPage() {
         background: 'linear-gradient(135deg, #f0fdf4 0%, #d1fae5 50%, #a7f3d0 100%)'
       }}
     >
-      {/* Animated gradient orbs */}
+      {/* アニメーショングラデーションの装飾 */}
       <div
         className="absolute top-20 left-20 w-96 h-96 rounded-full opacity-20 blur-3xl"
         style={{
@@ -122,7 +122,7 @@ export default function SignupPage() {
       />
 
       <div className="w-full max-w-md relative z-10 animate-slideUp">
-        {/* Logo Section */}
+        {/* ロゴセクション */}
         <div className="flex flex-col items-center mb-12 animate-fadeIn">
           <div
             className="mb-6 p-6 rounded-3xl shadow-2xl relative overflow-hidden"
@@ -166,7 +166,7 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* Signup Card */}
+        {/* サインアップカード */}
         <div
           className="rounded-2xl p-8 relative overflow-hidden animate-scaleIn stagger-1"
           style={{
@@ -175,7 +175,7 @@ export default function SignupPage() {
             border: '1px solid var(--border)'
           }}
         >
-          {/* Decorative corner accents */}
+          {/* 装飾用のコーナーアクセント */}
           <div
             className="absolute top-0 left-0 w-20 h-20 opacity-30"
             style={{
@@ -480,7 +480,7 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* フッター */}
         <p
           className="mt-8 text-center text-sm font-medium animate-fadeIn stagger-2"
           style={{
