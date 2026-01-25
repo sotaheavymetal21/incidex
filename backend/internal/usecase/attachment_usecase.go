@@ -39,35 +39,35 @@ func NewAttachmentUsecase(
 	}
 }
 
-// UploadAttachment uploads a file to MinIO and creates an attachment record
+// UploadAttachment はファイルをMinIOにアップロードし、添付ファイルレコードを作成します
 func (u *attachmentUsecase) UploadAttachment(ctx context.Context, incidentID, userID uint, fileName string, fileSize int64, mimeType string, reader io.Reader) (*domain.Attachment, error) {
-	// Validate incident exists
+	// インシデントが存在するかバリデーション
 	_, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
 		return nil, domain.ErrNotFound("Incident")
 	}
 
-	// Validate file size (max 50MB)
+	// ファイルサイズをバリデーション（最大50MB）
 	const maxFileSize = 50 * 1024 * 1024 // 50MB
 	if fileSize > maxFileSize {
 		return nil, domain.ErrValidation("file size exceeds maximum allowed size of 50MB")
 	}
 
-	// Validate file extension
+	// ファイル拡張子をバリデーション
 	if !isAllowedFileType(fileName) {
 		return nil, domain.ErrValidation("file type not allowed")
 	}
 
-	// Generate unique storage key
+	// 一意のストレージキーを生成
 	ext := filepath.Ext(fileName)
 	storageKey := fmt.Sprintf("incidents/%d/%s%s", incidentID, uuid.New().String(), ext)
 
-	// Upload to MinIO
+	// MinIOにアップロード
 	if err := u.storage.Upload(ctx, storageKey, reader, fileSize, mimeType); err != nil {
 		return nil, domain.ErrInternal("failed to upload file", err)
 	}
 
-	// Create attachment record
+	// 添付ファイルレコードを作成
 	attachment := &domain.Attachment{
 		IncidentID: incidentID,
 		UserID:     userID,
@@ -79,26 +79,26 @@ func (u *attachmentUsecase) UploadAttachment(ctx context.Context, incidentID, us
 	}
 
 	if err := u.attachmentRepo.Create(attachment); err != nil {
-		// Attempt to delete the uploaded file if database insert fails
+		// データベース挿入が失敗した場合、アップロードしたファイルの削除を試みる
 		_ = u.storage.Delete(ctx, storageKey)
 		return nil, domain.ErrInternal("failed to create attachment record", err)
 	}
 
-	// Reload to get user relation
+	// ユーザーリレーションを取得するためにリロード
 	return u.attachmentRepo.FindByID(attachment.ID)
 }
 
-// GetAttachmentsByIncidentID retrieves all attachments for an incident
+// GetAttachmentsByIncidentID はインシデントの全ての添付ファイルを取得します
 func (u *attachmentUsecase) GetAttachmentsByIncidentID(ctx context.Context, incidentID uint) ([]*domain.Attachment, error) {
 	return u.attachmentRepo.FindByIncidentID(incidentID)
 }
 
-// GetAttachment retrieves an attachment by ID
+// GetAttachment はIDで添付ファイルを取得します
 func (u *attachmentUsecase) GetAttachment(ctx context.Context, id uint) (*domain.Attachment, error) {
 	return u.attachmentRepo.FindByID(id)
 }
 
-// DownloadAttachment downloads a file from MinIO
+// DownloadAttachment はMinIOからファイルをダウンロードします
 func (u *attachmentUsecase) DownloadAttachment(ctx context.Context, id uint) (io.ReadCloser, error) {
 	attachment, err := u.attachmentRepo.FindByID(id)
 	if err != nil {
@@ -113,36 +113,36 @@ func (u *attachmentUsecase) DownloadAttachment(ctx context.Context, id uint) (io
 	return reader, nil
 }
 
-// DeleteAttachment deletes an attachment (both from MinIO and database)
+// DeleteAttachment は添付ファイルを削除します（MinIOとデータベースの両方から）
 func (u *attachmentUsecase) DeleteAttachment(ctx context.Context, id, userID uint, userRole domain.Role) error {
 	attachment, err := u.attachmentRepo.FindByID(id)
 	if err != nil {
 		return domain.ErrNotFound("Attachment")
 	}
 
-	// Check permissions: Only admin or the uploader can delete
+	// 権限をチェック: 管理者またはアップロード者のみ削除可能
 	if userRole != domain.RoleAdmin && attachment.UserID != userID {
 		return domain.ErrForbidden("you can only delete your own attachments")
 	}
 
-	// Delete from MinIO
+	// MinIOから削除
 	if err := u.storage.Delete(ctx, attachment.StorageKey); err != nil {
-		// Log error but continue with database deletion
+		// errorをログに記録するが、データベース削除は続行
 		fmt.Printf("Warning: failed to delete file from storage: %v\n", err)
 	}
 
-	// Delete from database
+	// データベースから削除
 	return u.attachmentRepo.Delete(id)
 }
 
-// isAllowedFileType checks if the file extension is allowed
+// isAllowedFileType はファイル拡張子が許可されているかチェックします
 func isAllowedFileType(fileName string) bool {
 	allowedExtensions := []string{
-		".jpg", ".jpeg", ".png", ".gif", ".webp", // Images
+		".jpg", ".jpeg", ".png", ".gif", ".webp", // 画像
 		".pdf", // PDF
-		".txt", ".log", ".md", // Text files
-		".json", ".xml", ".yaml", ".yml", // Config files
-		".zip", ".tar", ".gz", // Archives
+		".txt", ".log", ".md", // テキストファイル
+		".json", ".xml", ".yaml", ".yml", // 設定ファイル
+		".zip", ".tar", ".gz", // アーカイブ
 	}
 
 	ext := strings.ToLower(filepath.Ext(fileName))

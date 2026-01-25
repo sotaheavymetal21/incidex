@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/notification"
@@ -47,32 +46,33 @@ func NewIncidentUsecase(incidentRepo domain.IncidentRepository, tagRepo domain.T
 }
 
 func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error) {
-	// Validate severity
+	// 重要度をバリデーション
 	if !isValidSeverity(severity) {
-		return nil, errors.New("invalid severity")
+		return nil, domain.ErrValidation("invalid severity value")
 	}
 
-	// Validate status
+	// ステータスをバリデーション
 	if !isValidStatus(status) {
-		return nil, errors.New("invalid status")
+		return nil, domain.ErrValidation("invalid status value")
 	}
 
-	// Fetch tags if tag IDs are provided
+	// タグIDが指定されている場合はタグを取得（N+1を回避するためにバッチクエリ）
 	var tags []domain.Tag
 	if len(tagIDs) > 0 {
-		for _, tagID := range tagIDs {
-			tag, err := u.tagRepo.FindByID(ctx, tagID)
-			if err != nil {
-				return nil, fmt.Errorf("tag with ID %d not found", tagID)
-			}
-			tags = append(tags, *tag)
+		var err error
+		tags, err = u.tagRepo.FindByIDs(ctx, tagIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch tags: %w", err)
+		}
+		if len(tags) != len(tagIDs) {
+			return nil, domain.ErrValidation("one or more tags not found")
 		}
 	}
 
-	// Set default SLA based on severity
+	// 重要度に基づいてデフォルトのSLAを設定
 	slaHours := domain.GetDefaultSLAHours(severity)
 
-	// Create incident
+	// インシデントを作成
 	incident := &domain.Incident{
 		Title:                    title,
 		Description:              description,
@@ -86,14 +86,14 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		SLATargetResolutionHours: slaHours,
 	}
 
-	// Calculate and set SLA deadline
+	// SLA期限を計算して設定
 	incident.SLADeadline = incident.CalculateSLADeadline()
 
 	if err := u.incidentRepo.Create(ctx, incident); err != nil {
 		return nil, err
 	}
 
-	// Log creation activity
+	// 作成アクティビティをログに記録
 	activity := &domain.IncidentActivity{
 		IncidentID:   incident.ID,
 		UserID:       creatorID,
@@ -101,11 +101,11 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		CreatedAt:    time.Now(),
 	}
 	if err := u.activityRepo.Create(activity); err != nil {
-		// Log error but don't fail the incident creation
+		// errorをログに記録するが、インシデント作成は失敗させない
 		logger.Log.Error("Failed to log creation activity", zap.Error(err))
 	}
 
-	// Send notification
+	// 通知を送信
 	if u.notificationService != nil {
 		creator, err := u.userRepo.FindByID(ctx, creatorID)
 		if err == nil {
@@ -115,19 +115,19 @@ func (u *incidentUsecase) CreateIncident(ctx context.Context, creatorID uint, ti
 		}
 	}
 
-	// Invalidate caches
+	// キャッシュを無効化
 	u.invalidateStatsCache(ctx)
 	u.invalidateSearchCache(ctx)
 
-	// Reload to get all relations
+	// 全リレーションを取得するためにリロード
 	return u.incidentRepo.FindByID(ctx, incident.ID)
 }
 
 func (u *incidentUsecase) GetAllIncidents(ctx context.Context, filters domain.IncidentFilters, pagination domain.Pagination) ([]*domain.Incident, *domain.PaginationResult, error) {
-	// Generate cache key from filters and pagination
+	// フィルターとページネーションからキャッシュキーを生成
 	cacheKey, err := u.generateSearchCacheKey(filters, pagination)
 	if err == nil {
-		// Try to get from cache
+		// キャッシュから取得を試みる
 		if cachedData, cacheErr := u.cacheRepo.Get(ctx, cacheKey); cacheErr == nil {
 			type CachedSearchResult struct {
 				Incidents []*domain.Incident       `json:"incidents"`
@@ -143,13 +143,13 @@ func (u *incidentUsecase) GetAllIncidents(ctx context.Context, filters domain.In
 
 	logger.Log.Debug("Cache miss for search, querying database")
 
-	// Get from database
+	// データベースから取得
 	incidents, result, err := u.incidentRepo.FindAll(ctx, filters, pagination)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Cache the result for 3 minutes
+	// 結果を3分間キャッシュ
 	if cacheKey != "" {
 		type CachedSearchResult struct {
 			Incidents []*domain.Incident       `json:"incidents"`
@@ -174,62 +174,62 @@ func (u *incidentUsecase) GetIncidentByID(ctx context.Context, id uint) (*domain
 }
 
 func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userRole domain.Role, id uint, title, description string, severity domain.Severity, status domain.Status, impactScope string, detectedAt time.Time, assigneeID *uint, tagIDs []uint) (*domain.Incident, error) {
-	// Fetch existing incident
+	// 既存のインシデントを取得
 	incident, err := u.incidentRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check permissions: Editor can only edit own incidents, Admin can edit all
+	// 権限をチェック: Editorは自分のインシデントのみ編集可能、Adminは全て編集可能
 	if userRole == domain.RoleEditor && incident.CreatorID != userID {
-		return nil, errors.New("permission denied: you can only edit your own incidents")
+		return nil, domain.ErrForbidden("you can only edit your own incidents")
 	}
 	if userRole == domain.RoleViewer {
-		return nil, errors.New("permission denied: viewers cannot edit incidents")
+		return nil, domain.ErrForbidden("viewers cannot edit incidents")
 	}
 
-	// Validate severity
+	// 重要度をバリデーション
 	if !isValidSeverity(severity) {
-		return nil, errors.New("invalid severity")
+		return nil, domain.ErrValidation("invalid severity value")
 	}
 
-	// Validate status
+	// ステータスをバリデーション
 	if !isValidStatus(status) {
-		return nil, errors.New("invalid status")
+		return nil, domain.ErrValidation("invalid status value")
 	}
 
-	// Auto-set resolved_at based on status change
+	// ステータス変更に基づいてresolved_atを自動設定
 	var resolvedAt *time.Time
 	if status == domain.StatusResolved || status == domain.StatusClosed {
-		// Set resolved_at to current time if status changed to resolved/closed
+		// ステータスがresolved/closedに変更された場合、resolved_atを現在時刻に設定
 		if incident.Status != domain.StatusResolved && incident.Status != domain.StatusClosed {
 			now := time.Now()
 			resolvedAt = &now
 		} else {
-			// Keep existing resolved_at if already resolved/closed
+			// 既にresolved/closedの場合は既存のresolved_atを維持
 			resolvedAt = incident.ResolvedAt
 		}
 	} else {
-		// Clear resolved_at if status is not resolved/closed
+		// ステータスがresolved/closedでない場合はresolved_atをクリア
 		resolvedAt = nil
 	}
 
-	// Fetch tags if tag IDs are provided
+	// タグIDが指定されている場合はタグを取得（N+1を回避するためにバッチクエリ）
 	var tags []domain.Tag
 	if len(tagIDs) > 0 {
-		for _, tagID := range tagIDs {
-			tag, err := u.tagRepo.FindByID(ctx, tagID)
-			if err != nil {
-				return nil, fmt.Errorf("tag with ID %d not found", tagID)
-			}
-			tags = append(tags, *tag)
+		tags, err = u.tagRepo.FindByIDs(ctx, tagIDs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch tags: %w", err)
+		}
+		if len(tags) != len(tagIDs) {
+			return nil, domain.ErrValidation("one or more tags not found")
 		}
 	}
 
-	// Track changes and log activities
+	// 変更を追跡してアクティビティをログに記録
 	var activities []*domain.IncidentActivity
 
-	// Check severity change
+	// 重要度変更をチェック
 	if incident.Severity != severity {
 		activities = append(activities, &domain.IncidentActivity{
 			IncidentID:   incident.ID,
@@ -241,7 +241,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		})
 	}
 
-	// Check status change
+	// ステータス変更をチェック
 	if incident.Status != status {
 		activities = append(activities, &domain.IncidentActivity{
 			IncidentID:   incident.ID,
@@ -252,7 +252,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 			CreatedAt:    time.Now(),
 		})
 
-		// Log resolved activity if status changed to resolved
+		// ステータスがresolvedに変更された場合、resolvedアクティビティをログに記録
 		if status == domain.StatusResolved && incident.Status != domain.StatusResolved {
 			activities = append(activities, &domain.IncidentActivity{
 				IncidentID:   incident.ID,
@@ -262,7 +262,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 			})
 		}
 
-		// Log reopened activity if status changed from resolved/closed to open/investigating
+		// ステータスがresolved/closedからopen/investigatingに変更された場合、reopenedアクティビティをログに記録
 		if (incident.Status == domain.StatusResolved || incident.Status == domain.StatusClosed) &&
 			(status == domain.StatusOpen || status == domain.StatusInvestigating) {
 			activities = append(activities, &domain.IncidentActivity{
@@ -274,7 +274,11 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		}
 	}
 
-	// Check assignee change
+	// 通知用に古い値を保存（フィールド更新前に）
+	oldSeverity := incident.Severity
+	oldStatus := incident.Status
+
+	// 担当者変更をチェック
 	oldAssigneeID := incident.AssigneeID
 	if (oldAssigneeID == nil && assigneeID != nil) ||
 		(oldAssigneeID != nil && assigneeID == nil) ||
@@ -302,7 +306,7 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 		})
 	}
 
-	// Update incident fields
+	// インシデントフィールドを更新
 	incident.Title = title
 	incident.Description = description
 	incident.Severity = severity
@@ -313,32 +317,32 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 	incident.AssigneeID = assigneeID
 	incident.Tags = tags
 
-	// Update SLA if severity changed
-	if incident.Severity != severity {
+	// 重要度が変更された場合はSLAを更新
+	if oldSeverity != severity {
 		incident.SLATargetResolutionHours = domain.GetDefaultSLAHours(severity)
 		incident.SLADeadline = incident.CalculateSLADeadline()
 	}
 
-	// Check and update SLA violation status
+	// SLA違反ステータスをチェックして更新
 	incident.SLAViolated = incident.CheckSLAViolation()
 
 	if err := u.incidentRepo.Update(ctx, incident); err != nil {
 		return nil, err
 	}
 
-	// Save all activities
+	// 全てのアクティビティを保存
 	for _, activity := range activities {
 		if err := u.activityRepo.Create(activity); err != nil {
-			// Log error but don't fail the update
+			// errorをログに記録するが、更新は失敗させない
 			logger.Log.Error("Failed to log activity", zap.Error(err))
 		}
 	}
 
-	// Send notifications
+	// 通知を送信
 	if u.notificationService != nil {
 		updater, _ := u.userRepo.FindByID(ctx, userID)
 
-		// Notify assignee change
+		// 担当者変更を通知
 		if (oldAssigneeID == nil && assigneeID != nil) ||
 			(oldAssigneeID != nil && assigneeID != nil && *oldAssigneeID != *assigneeID) {
 			if assigneeID != nil {
@@ -351,43 +355,52 @@ func (u *incidentUsecase) UpdateIncident(ctx context.Context, userID uint, userR
 			}
 		}
 
-		// Notify status change
-		if incident.Status != status {
-			oldStatusStr := string(incident.Status)
+		// ステータス変更を通知
+		if oldStatus != status {
+			oldStatusStr := string(oldStatus)
 			newStatusStr := string(status)
 			if notifyErr := u.notificationService.NotifyStatusChange(incident, oldStatusStr, newStatusStr); notifyErr != nil {
 				logger.Log.Error("Failed to send status change notification", zap.Error(notifyErr))
 			}
 
-			// Notify resolved
-			if status == domain.StatusResolved && incident.Status != domain.StatusResolved && updater != nil {
+			// 解決を通知
+			if status == domain.StatusResolved && oldStatus != domain.StatusResolved && updater != nil {
 				if notifyErr := u.notificationService.NotifyResolved(incident, updater); notifyErr != nil {
 					logger.Log.Error("Failed to send resolved notification", zap.Error(notifyErr))
 				}
 			}
 		}
+
+		// 重要度変更を通知
+		if oldSeverity != severity {
+			oldSeverityStr := string(oldSeverity)
+			newSeverityStr := string(severity)
+			if notifyErr := u.notificationService.NotifySeverityChange(incident, oldSeverityStr, newSeverityStr); notifyErr != nil {
+				logger.Log.Error("Failed to send severity change notification", zap.Error(notifyErr))
+			}
+		}
 	}
 
-	// Invalidate caches
+	// キャッシュを無効化
 	u.invalidateStatsCache(ctx)
 	u.invalidateSearchCache(ctx)
 
-	// Reload to get all relations
+	// 全リレーションを取得するためにリロード
 	return u.incidentRepo.FindByID(ctx, incident.ID)
 }
 
 func (u *incidentUsecase) DeleteIncident(ctx context.Context, userRole domain.Role, id uint) error {
-	// Only admins can delete incidents
+	// 管理者のみインシデントを削除可能
 	if userRole != domain.RoleAdmin {
-		return errors.New("permission denied: only admins can delete incidents")
+		return domain.ErrForbidden("only admins can delete incidents")
 	}
 
-	// Check if incident exists
+	// インシデントが存在するかチェック
 	if _, err := u.incidentRepo.FindByID(ctx, id); err != nil {
 		return err
 	}
 
-	// Invalidate caches
+	// キャッシュを無効化
 	u.invalidateStatsCache(ctx)
 	u.invalidateSearchCache(ctx)
 
@@ -395,40 +408,43 @@ func (u *incidentUsecase) DeleteIncident(ctx context.Context, userRole domain.Ro
 }
 
 func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incidentID uint, assigneeID *uint) (*domain.Incident, error) {
-	// Get the incident
+	// インシデントを取得
 	incident, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
 		return nil, err
 	}
 	if incident == nil {
-		return nil, errors.New("incident not found")
+		return nil, domain.ErrNotFound("incident")
 	}
 
-	// Validate that assignee exists if assigneeID is provided
+	// 担当者IDが指定されている場合、担当者が存在するかをバリデーション（後で使用するため結果をキャッシュ）
+	var newAssignee *domain.User
 	if assigneeID != nil {
-		assignee, err := u.userRepo.FindByID(ctx, *assigneeID)
+		newAssignee, err = u.userRepo.FindByID(ctx, *assigneeID)
 		if err != nil {
 			logger.Log.Error("Failed to find assignee", zap.Uint("assignee_id", *assigneeID), zap.Error(err))
 			return nil, domain.ErrInternal("Failed to validate assignee", err)
 		}
-		if assignee == nil {
+		if newAssignee == nil {
 			logger.Log.Warn("Assignee user not found", zap.Uint("assignee_id", *assigneeID))
 			return nil, domain.ErrNotFound(fmt.Sprintf("User with ID %d", *assigneeID))
 		}
 	}
 
-	// Store old assignee for activity log
+	// アクティビティログ用に古い担当者を保存し、古い担当者情報を一度取得
 	var oldAssigneeID *uint
+	var oldAssignee *domain.User
 	if incident.AssigneeID != nil {
 		oldAssigneeID = incident.AssigneeID
+		oldAssignee, _ = u.userRepo.FindByID(ctx, *oldAssigneeID)
 	}
 
-	// Update assignee - only update the AssigneeID field
+	// 担当者を更新 - AssigneeIDフィールドのみを更新
 	if err := u.incidentRepo.UpdateAssignee(ctx, incidentID, assigneeID); err != nil {
 		return nil, err
 	}
 
-	// Get user info for activity log
+	// アクティビティログ用にユーザー情報を取得
 	user, err := u.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		logger.Log.Error("Failed to find user", zap.Uint("user_id", userID), zap.Error(err))
@@ -439,41 +455,35 @@ func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incid
 		return nil, domain.ErrUnauthorized("Your session is invalid. Please log in again")
 	}
 
-	// Create activity log for assignment change
+	// 担当者名を準備（N+1を回避するためにキャッシュされたユーザーデータを使用）
+	oldAssigneeName := "Unknown"
+	if oldAssignee != nil {
+		oldAssigneeName = oldAssignee.Name
+	}
+	newAssigneeName := "Unknown"
+	if newAssignee != nil {
+		newAssigneeName = newAssignee.Name
+	}
+
+	// 担当者変更のアクティビティログを作成
 	var activityDescription string
 	if assigneeID == nil {
-		// Unassigned
+		// 担当者を解除
 		if oldAssigneeID != nil {
-			oldAssignee, _ := u.userRepo.FindByID(ctx, *oldAssigneeID)
-			oldAssigneeName := "Unknown"
-			if oldAssignee != nil {
-				oldAssigneeName = oldAssignee.Name
-			}
 			activityDescription = fmt.Sprintf("%s が担当者を解除しました（以前の担当者: %s）", user.Name, oldAssigneeName)
 		} else {
 			activityDescription = fmt.Sprintf("%s が担当者を解除しました", user.Name)
 		}
 	} else {
-		// Assigned to someone
-		newAssignee, _ := u.userRepo.FindByID(ctx, *assigneeID)
-		newAssigneeName := "Unknown"
-		if newAssignee != nil {
-			newAssigneeName = newAssignee.Name
-		}
-
+		// 誰かに割り当て
 		if oldAssigneeID == nil {
 			activityDescription = fmt.Sprintf("%s が %s を担当者に割り当てました", user.Name, newAssigneeName)
 		} else {
-			oldAssignee, _ := u.userRepo.FindByID(ctx, *oldAssigneeID)
-			oldAssigneeName := "Unknown"
-			if oldAssignee != nil {
-				oldAssigneeName = oldAssignee.Name
-			}
 			activityDescription = fmt.Sprintf("%s が担当者を %s から %s に変更しました", user.Name, oldAssigneeName, newAssigneeName)
 		}
 	}
 
-	// Create activity log
+	// アクティビティログを作成
 	activity := &domain.IncidentActivity{
 		IncidentID:   incidentID,
 		UserID:       userID,
@@ -481,17 +491,17 @@ func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incid
 		Comment:      activityDescription,
 	}
 	if err := u.activityRepo.Create(activity); err != nil {
-		// Log error but don't fail the operation
+		// errorをログに記録するが、操作は失敗させない
 		logger.Log.Error("Failed to create activity log", zap.Error(err))
 	}
 
-	// Reload incident with relationships
+	// リレーションを含めてインシデントをリロード
 	reloadedIncident, err := u.incidentRepo.FindByID(ctx, incidentID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Debug log
+	// デバッグログ
 	logger.Log.Info("AssignIncident response",
 		zap.Uint("incident_id", incidentID),
 		zap.Any("assignee_id", reloadedIncident.AssigneeID),
@@ -501,7 +511,7 @@ func (u *incidentUsecase) AssignIncident(ctx context.Context, userID uint, incid
 	return reloadedIncident, nil
 }
 
-// Helper functions
+// ヘルパー関数
 
 func isValidSeverity(severity domain.Severity) bool {
 	switch severity {
@@ -521,9 +531,9 @@ func isValidStatus(status domain.Status) bool {
 	}
 }
 
-// invalidateStatsCache invalidates all statistics cache keys
+// invalidateStatsCache は全ての統計キャッシュキーを無効化します
 func (u *incidentUsecase) invalidateStatsCache(ctx context.Context) {
-	// Invalidate all dashboard stats caches
+	// 全てのダッシュボード統計キャッシュを無効化
 	patterns := []string{
 		"stats:dashboard:*",
 		"stats:sla",
@@ -537,7 +547,7 @@ func (u *incidentUsecase) invalidateStatsCache(ctx context.Context) {
 	}
 }
 
-// invalidateSearchCache invalidates all search result caches
+// invalidateSearchCache は全ての検索結果キャッシュを無効化します
 func (u *incidentUsecase) invalidateSearchCache(ctx context.Context) {
 	pattern := "search:incidents:*"
 	if err := u.cacheRepo.DeleteByPattern(ctx, pattern); err != nil {
@@ -545,9 +555,9 @@ func (u *incidentUsecase) invalidateSearchCache(ctx context.Context) {
 	}
 }
 
-// generateSearchCacheKey generates a cache key for search results
+// generateSearchCacheKey は検索結果用のキャッシュキーを生成します
 func (u *incidentUsecase) generateSearchCacheKey(filters domain.IncidentFilters, pagination domain.Pagination) (string, error) {
-	// Create a struct with all cache-relevant fields
+	// キャッシュに関連する全フィールドを含むstructを作成
 	type CacheKeyData struct {
 		Filters    domain.IncidentFilters `json:"filters"`
 		Pagination domain.Pagination      `json:"pagination"`
@@ -558,16 +568,16 @@ func (u *incidentUsecase) generateSearchCacheKey(filters domain.IncidentFilters,
 		Pagination: pagination,
 	}
 
-	// Marshal to JSON
+	// JSONにマーシャル
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}
 
-	// Generate SHA256 hash
+	// SHA256 hashを生成
 	hash := sha256.Sum256(jsonData)
 	hashStr := hex.EncodeToString(hash[:])
 
-	// Return cache key
+	// キャッシュキーを返却
 	return fmt.Sprintf("search:incidents:%s", hashStr), nil
 }

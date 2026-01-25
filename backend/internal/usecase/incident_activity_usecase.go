@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
 	"incidex/internal/domain"
 	"incidex/internal/infrastructure/notification"
@@ -28,7 +29,7 @@ func NewIncidentActivityUsecase(
 	}
 }
 
-// AddComment adds a comment to an incident.
+// AddComment はインシデントにコメントを追加します
 func (u *IncidentActivityUsecase) AddComment(incidentID uint, userID uint, comment string) error {
 	activity := &domain.IncidentActivity{
 		IncidentID:   incidentID,
@@ -42,11 +43,12 @@ func (u *IncidentActivityUsecase) AddComment(incidentID uint, userID uint, comme
 		return err
 	}
 
-	// Send notification
+	// 通知を送信
 	if u.notificationService != nil && u.incidentRepo != nil && u.userRepo != nil {
-		incident, err := u.incidentRepo.FindByID(nil, incidentID)
+		ctx := context.Background()
+		incident, err := u.incidentRepo.FindByID(ctx, incidentID)
 		if err == nil {
-			commenter, err := u.userRepo.FindByID(nil, userID)
+			commenter, err := u.userRepo.FindByID(ctx, userID)
 			if err == nil {
 				if notifyErr := u.notificationService.NotifyComment(incident, commenter, comment); notifyErr != nil {
 					fmt.Printf("Failed to send comment notification: %v\n", notifyErr)
@@ -58,7 +60,7 @@ func (u *IncidentActivityUsecase) AddComment(incidentID uint, userID uint, comme
 	return nil
 }
 
-// LogActivityChange logs a change to an incident (status, severity, assignee, etc.).
+// LogActivityChange はインシデントの変更（ステータス、重要度、担当者など）をログに記録します
 func (u *IncidentActivityUsecase) LogActivityChange(incidentID uint, userID uint, activityType domain.ActivityType, oldValue, newValue string) error {
 	activity := &domain.IncidentActivity{
 		IncidentID:   incidentID,
@@ -72,7 +74,7 @@ func (u *IncidentActivityUsecase) LogActivityChange(incidentID uint, userID uint
 	return u.activityRepo.Create(activity)
 }
 
-// LogCreation logs the creation of an incident.
+// LogCreation はインシデントの作成をログに記録します
 func (u *IncidentActivityUsecase) LogCreation(incidentID uint, userID uint) error {
 	activity := &domain.IncidentActivity{
 		IncidentID:   incidentID,
@@ -84,19 +86,19 @@ func (u *IncidentActivityUsecase) LogCreation(incidentID uint, userID uint) erro
 	return u.activityRepo.Create(activity)
 }
 
-// GetActivities retrieves all activities for an incident.
+// GetActivities はインシデントの全てのアクティビティを取得します
 func (u *IncidentActivityUsecase) GetActivities(incidentID uint, limit int) ([]*domain.IncidentActivity, error) {
 	return u.activityRepo.FindByIncidentID(incidentID, limit)
 }
 
-// GetRecentActivities retrieves recent activities across all incidents.
+// GetRecentActivities は全インシデントの最近のアクティビティを取得します
 func (u *IncidentActivityUsecase) GetRecentActivities(limit int) ([]*domain.IncidentActivity, error) {
 	return u.activityRepo.FindRecent(limit)
 }
 
-// AddTimelineEvent adds a timeline event to an incident.
+// AddTimelineEvent はインシデントにタイムラインイベントを追加します
 func (u *IncidentActivityUsecase) AddTimelineEvent(incidentID uint, userID uint, eventType domain.ActivityType, eventTime time.Time, description string) (*domain.IncidentActivity, error) {
-	// Validate event type
+	// イベントタイプをバリデーション
 	validEventTypes := []domain.ActivityType{
 		domain.ActivityTypeDetected,
 		domain.ActivityTypeInvestigationStarted,
@@ -121,7 +123,7 @@ func (u *IncidentActivityUsecase) AddTimelineEvent(incidentID uint, userID uint,
 		UserID:       userID,
 		ActivityType: eventType,
 		Comment:      description,
-		CreatedAt:    eventTime, // Use eventTime as CreatedAt
+		CreatedAt:    eventTime, // eventTimeをCreatedAtとして使用
 	}
 
 	if err := u.activityRepo.Create(activity); err != nil {

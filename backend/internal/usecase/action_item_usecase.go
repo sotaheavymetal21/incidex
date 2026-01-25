@@ -39,18 +39,18 @@ func (u *actionItemUsecase) CreateActionItem(
 	dueDate *time.Time,
 	relatedLinks string,
 ) (*domain.ActionItem, error) {
-	// Check if post-mortem exists
+	// ポストモーテムが存在するかチェック
 	_, err := u.postMortemRepo.FindByID(ctx, postMortemID)
 	if err != nil {
 		return nil, domain.ErrNotFound("Post-mortem").WithError(err)
 	}
 
-	// Validate priority
+	// 優先度をバリデーション
 	if priority != domain.PriorityHigh && priority != domain.PriorityMedium && priority != domain.PriorityLow {
 		return nil, domain.ErrValidation("Invalid priority value")
 	}
 
-	// Create action item
+	// アクションアイテムを作成
 	item := &domain.ActionItem{
 		PostMortemID: postMortemID,
 		Title:        title,
@@ -66,7 +66,7 @@ func (u *actionItemUsecase) CreateActionItem(
 		return nil, domain.ErrDatabase("Failed to create action item", err)
 	}
 
-	// Reload with relations
+	// リレーションを含めてリロード
 	return u.actionItemRepo.FindByID(ctx, item.ID)
 }
 
@@ -88,26 +88,26 @@ func (u *actionItemUsecase) UpdateActionItem(
 	dueDate *time.Time,
 	relatedLinks string,
 ) (*domain.ActionItem, error) {
-	// Get existing action item
+	// 既存のアクションアイテムを取得
 	item, err := u.actionItemRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, domain.ErrNotFound("Action item").WithError(err)
 	}
 
-	// Validate priority
+	// 優先度をバリデーション
 	if priority != domain.PriorityHigh && priority != domain.PriorityMedium && priority != domain.PriorityLow {
 		return nil, domain.ErrValidation("Invalid priority value")
 	}
 
-	// Validate status
+	// ステータスをバリデーション
 	if status != domain.ActionStatusPending && status != domain.ActionStatusInProgress && status != domain.ActionStatusCompleted {
 		return nil, domain.ErrValidation("Invalid status value")
 	}
 
-	// Track old status
+	// 古いステータスを追跡
 	oldStatus := item.Status
 
-	// Update fields
+	// フィールドを更新
 	item.Title = title
 	item.Description = description
 	item.AssigneeID = assigneeID
@@ -116,13 +116,13 @@ func (u *actionItemUsecase) UpdateActionItem(
 	item.DueDate = dueDate
 	item.RelatedLinks = relatedLinks
 
-	// Set CompletedAt when status changes to completed
+	// ステータスがcompletedに変更された場合、CompletedAtを設定
 	if status == domain.ActionStatusCompleted && oldStatus != domain.ActionStatusCompleted {
 		now := time.Now()
 		item.CompletedAt = &now
 	}
 
-	// Clear CompletedAt if status changes from completed to something else
+	// ステータスがcompletedから他に変更された場合、CompletedAtをクリア
 	if status != domain.ActionStatusCompleted && oldStatus == domain.ActionStatusCompleted {
 		item.CompletedAt = nil
 	}
@@ -131,12 +131,12 @@ func (u *actionItemUsecase) UpdateActionItem(
 		return nil, domain.ErrDatabase("Failed to update action item", err)
 	}
 
-	// Reload with relations
+	// リレーションを含めてリロード
 	return u.actionItemRepo.FindByID(ctx, id)
 }
 
 func (u *actionItemUsecase) DeleteActionItem(ctx context.Context, userRole domain.Role, id uint) error {
-	// Only admin can delete
+	// 管理者のみ削除可能
 	if userRole != domain.RoleAdmin {
 		return domain.ErrForbidden("Only admin can delete action items")
 	}

@@ -38,12 +38,12 @@ func NewAuthUsecase(userRepo domain.UserRepository, refreshTokenRepo domain.Refr
 		refreshTokenRepo: refreshTokenRepo,
 		jwtSecret:        []byte(jwtSecret),
 		jwtExpiry:        jwtExpiry,
-		refreshExpiry:    7 * 24 * time.Hour, // 7 days for refresh tokens
+		refreshExpiry:    7 * 24 * time.Hour, // refresh tokenは7日間有効
 	}
 }
 
 func (u *authUsecase) Register(ctx context.Context, name, email, password, employeeNumber, department string) (*domain.User, error) {
-	// Validate user input
+	// ユーザー入力をバリデーション
 	if err := domain.ValidateUserInput(name, email, employeeNumber, department); err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password, emplo
 		return nil, domain.ErrConflict("Email already exists")
 	}
 
-	// Validate password strength
+	// パスワード強度をバリデーション
 	if err := domain.ValidatePasswordStrength(password); err != nil {
 		return nil, domain.ErrValidation(err.Error())
 	}
@@ -70,10 +70,10 @@ func (u *authUsecase) Register(ctx context.Context, name, email, password, emplo
 		Name:         name,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
-		Role:         domain.RoleViewer, // Default role
+		Role:         domain.RoleViewer, // デフォルトのロール
 		IsActive:     true,
 	}
-	// Set optional fields only if not empty
+	// 空でない場合のみオプションフィールドを設定
 	if employeeNumber != "" {
 		user.EmployeeNumber = &employeeNumber
 	}
@@ -101,18 +101,18 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (*AuthR
 		return nil, domain.ErrUnauthorized("Invalid credentials")
 	}
 
-	// Check if user is active
+	// ユーザーがアクティブかチェック
 	if !user.IsActive {
 		return nil, domain.ErrForbidden("Account is disabled")
 	}
 
-	// Generate access token (JWT)
+	// access token（JWT）を生成
 	accessToken, err := u.generateAccessToken(user)
 	if err != nil {
 		return nil, err
 	}
 
-	// Generate refresh token
+	// refresh tokenを生成
 	refreshToken, err := u.generateRefreshToken(ctx, user.ID)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (*AuthR
 }
 
 func (u *authUsecase) RefreshAccessToken(ctx context.Context, refreshTokenStr string) (*AuthResponse, error) {
-	// Find refresh token
+	// refresh tokenを検索
 	refreshToken, err := u.refreshTokenRepo.FindByToken(ctx, refreshTokenStr)
 	if err != nil {
 		return nil, domain.ErrDatabase("Failed to find refresh token", err)
@@ -135,12 +135,12 @@ func (u *authUsecase) RefreshAccessToken(ctx context.Context, refreshTokenStr st
 		return nil, domain.ErrUnauthorized("Invalid refresh token")
 	}
 
-	// Validate refresh token
+	// refresh tokenをバリデーション
 	if !refreshToken.IsValid() {
 		return nil, domain.ErrUnauthorized("Refresh token is expired or revoked")
 	}
 
-	// Get user
+	// ユーザーを取得
 	user, err := u.userRepo.FindByID(ctx, refreshToken.UserID)
 	if err != nil {
 		return nil, domain.ErrDatabase("Failed to find user", err)
@@ -149,24 +149,24 @@ func (u *authUsecase) RefreshAccessToken(ctx context.Context, refreshTokenStr st
 		return nil, domain.ErrUnauthorized("User not found")
 	}
 
-	// Check if user is active
+	// ユーザーがアクティブかチェック
 	if !user.IsActive {
 		return nil, domain.ErrForbidden("Account is disabled")
 	}
 
-	// Generate new access token
+	// 新しいaccess tokenを生成
 	accessToken, err := u.generateAccessToken(user)
 	if err != nil {
 		return nil, err
 	}
 
-	// Optionally: Generate new refresh token and revoke old one (rotation)
+	// オプション: 新しいrefresh tokenを生成し、古いものを無効化（ローテーション）
 	newRefreshToken, err := u.generateRefreshToken(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Revoke old refresh token
+	// 古いrefresh tokenを無効化
 	if err := u.refreshTokenRepo.RevokeByToken(ctx, refreshTokenStr); err != nil {
 		return nil, domain.ErrDatabase("Failed to revoke old refresh token", err)
 	}
@@ -180,10 +180,10 @@ func (u *authUsecase) RefreshAccessToken(ctx context.Context, refreshTokenStr st
 
 func (u *authUsecase) Logout(ctx context.Context, refreshToken string) error {
 	if refreshToken == "" {
-		return nil // Nothing to revoke
+		return nil // 無効化するものがない
 	}
 
-	// Revoke the refresh token
+	// refresh tokenを無効化
 	if err := u.refreshTokenRepo.RevokeByToken(ctx, refreshToken); err != nil {
 		return domain.ErrDatabase("Failed to revoke refresh token", err)
 	}
@@ -191,7 +191,7 @@ func (u *authUsecase) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
-// generateAccessToken creates a new JWT access token
+// generateAccessToken は新しいJWT access tokenを作成します
 func (u *authUsecase) generateAccessToken(user *domain.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
@@ -207,16 +207,16 @@ func (u *authUsecase) generateAccessToken(user *domain.User) (string, error) {
 	return tokenString, nil
 }
 
-// generateRefreshToken creates a new refresh token and stores it in the database
+// generateRefreshToken は新しいrefresh tokenを作成し、データベースに保存します
 func (u *authUsecase) generateRefreshToken(ctx context.Context, userID uint) (string, error) {
-	// Generate a secure random token
+	// セキュアなランダムtokenを生成
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return "", domain.ErrInternal("Failed to generate refresh token", err)
 	}
 	tokenString := base64.URLEncoding.EncodeToString(tokenBytes)
 
-	// Create refresh token in database
+	// データベースにrefresh tokenを作成
 	refreshToken := &domain.RefreshToken{
 		Token:     tokenString,
 		UserID:    userID,
