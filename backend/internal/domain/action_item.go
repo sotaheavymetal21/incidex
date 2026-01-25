@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// ActionItem represents an action item from a post-mortem.
+// ActionItem はポストモーテムからのアクションアイテムを表します
 type ActionItem struct {
 	ID           uint         `gorm:"primaryKey" json:"id"`
 	PostMortemID uint         `gorm:"not null;index" json:"post_mortem_id"`
@@ -15,17 +15,17 @@ type ActionItem struct {
 	Priority     Priority     `gorm:"size:20;not null;default:'medium';index" json:"priority"`
 	Status       ActionStatus `gorm:"size:20;not null;default:'pending';index" json:"status"`
 	DueDate      *time.Time   `json:"due_date"`
-	RelatedLinks string       `gorm:"type:jsonb;default:'[]'" json:"related_links"` // JSON array of links
+	RelatedLinks string       `gorm:"type:jsonb;default:'[]'" json:"related_links"` // リンクの JSON 配列
 	CreatedAt    time.Time    `gorm:"index" json:"created_at"`
 	UpdatedAt    time.Time    `json:"updated_at"`
 	CompletedAt  *time.Time   `json:"completed_at"`
 
-	// Relations
+	// リレーション
 	PostMortem *PostMortem `gorm:"foreignKey:PostMortemID" json:"-"`
 	Assignee   *User       `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
 }
 
-// Priority represents the priority level of an action item
+// Priority はアクションアイテムの優先度を表します
 type Priority string
 
 const (
@@ -34,7 +34,7 @@ const (
 	PriorityLow    Priority = "low"
 )
 
-// ActionStatus represents the status of an action item
+// ActionStatus はアクションアイテムのステータスを表します
 type ActionStatus string
 
 const (
@@ -43,7 +43,7 @@ const (
 	ActionStatusCompleted  ActionStatus = "completed"
 )
 
-// ActionItemRepository defines the interface for action item data access.
+// ActionItemRepository はアクションアイテムデータアクセスのインターフェースを定義します
 type ActionItemRepository interface {
 	Create(ctx context.Context, item *ActionItem) error
 	FindByID(ctx context.Context, id uint) (*ActionItem, error)
@@ -53,7 +53,7 @@ type ActionItemRepository interface {
 	FindAll(ctx context.Context, filters ActionItemFilters, pagination Pagination) ([]*ActionItem, *PaginationResult, error)
 }
 
-// ActionItemFilters represents filtering options for action items.
+// ActionItemFilters はアクションアイテムのフィルタリングオプションを表します
 type ActionItemFilters struct {
 	Status     string
 	Priority   string

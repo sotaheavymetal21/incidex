@@ -16,20 +16,21 @@ const (
 	AuditActionLogout AuditAction = "logout"
 )
 
+// AuditLog は監査ログを表します
 type AuditLog struct {
 	ID           uint        `gorm:"primaryKey" json:"id"`
 	UserID       *uint       `json:"user_id"`
 	UserName     string      `json:"user_name"`
 	UserEmail    string      `json:"user_email"`
 	Action       AuditAction `gorm:"not null" json:"action"`
-	ResourceType string      `json:"resource_type"` // e.g., "incident", "user", "tag"
+	ResourceType string      `json:"resource_type"` // 例: "incident", "user", "tag"
 	ResourceID   *uint       `json:"resource_id"`
-	Method       string      `json:"method"` // HTTP method: GET, POST, PUT, DELETE
-	Path         string      `json:"path"`   // Request path
+	Method       string      `json:"method"` // HTTP メソッド: GET, POST, PUT, DELETE
+	Path         string      `json:"path"`   // request パス
 	IPAddress    string      `json:"ip_address"`
 	UserAgent    string      `json:"user_agent"`
 	StatusCode   int         `json:"status_code"`
-	Details      string      `gorm:"type:text" json:"details"` // Additional details in JSON format
+	Details      string      `gorm:"type:text" json:"details"` // JSON 形式の追加詳細情報
 	CreatedAt    time.Time   `json:"created_at"`
 }
 
