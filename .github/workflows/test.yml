@@ -46,20 +46,20 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: コードをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Go をセットアップ
         uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      - name: Download dependencies
+      - name: 依存関係をダウンロード
         working-directory: backend
         run: go mod download
 
-      - name: Run tests with coverage
+      - name: カバレッジ付きでテストを実行
         working-directory: backend
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/incidex_test?sslmode=disable
@@ -68,7 +68,7 @@ jobs:
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
           go tool cover -func=coverage.out
 
-      - name: Upload coverage to Codecov
+      - name: カバレッジを Codecov にアップロード
         uses: codecov/codecov-action@v4
         with:
           files: backend/coverage.out
@@ -76,7 +76,7 @@ jobs:
           name: backend-coverage
           fail_ci_if_error: false
 
-      - name: Upload coverage artifact
+      - name: カバレッジアーティファクトをアップロード
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
@@ -88,29 +88,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: コードをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Node.js をセットアップ
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: 依存関係をインストール
         working-directory: frontend
         run: npm ci
 
-      - name: Run linter
+      - name: リンターを実行
         working-directory: frontend
         run: npm run lint
 
-      - name: Run tests with coverage
+      - name: カバレッジ付きでテストを実行
         working-directory: frontend
         run: npm run test:coverage
 
-      - name: Upload coverage to Codecov
+      - name: カバレッジを Codecov にアップロード
         uses: codecov/codecov-action@v4
         with:
           files: frontend/coverage/lcov.info
@@ -118,7 +118,7 @@ jobs:
           name: frontend-coverage
           fail_ci_if_error: false
 
-      - name: Upload coverage artifact
+      - name: カバレッジアーティファクトをアップロード
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
@@ -156,39 +156,39 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: コードをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: Go をセットアップ
         uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      - name: Set up Node.js
+      - name: Node.js をセットアップ
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install frontend dependencies
+      - name: フロントエンドの依存関係をインストール
         working-directory: frontend
         run: npm ci
 
-      - name: Install Playwright browsers
+      - name: Playwright ブラウザをインストール
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
-      - name: Build backend
+      - name: バックエンドをビルド
         working-directory: backend
         run: go build -o ./bin/server ./cmd/server
 
-      - name: Build frontend
+      - name: フロントエンドをビルド
         working-directory: frontend
         run: npm run build
 
-      - name: Start backend server
+      - name: バックエンドサーバーを起動
         working-directory: backend
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/incidex_test?sslmode=disable
@@ -199,13 +199,13 @@ jobs:
           ./bin/server &
           sleep 5
 
-      - name: Run E2E tests
+      - name: E2E テストを実行
         working-directory: frontend
         env:
           CI: true
         run: npm run test:e2e
 
-      - name: Upload Playwright report
+      - name: Playwright レポートをアップロード
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -213,7 +213,7 @@ jobs:
           path: frontend/playwright-report/
           retention-days: 7
 
-      - name: Upload test screenshots
+      - name: テストスクリーンショットをアップロード
         uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -228,17 +228,17 @@ jobs:
     if: always()
 
     steps:
-      - name: Check job results
+      - name: ジョブ結果を確認
         run: |
-          echo "Backend Tests: ${{ needs.backend-test.result }}"
-          echo "Frontend Tests: ${{ needs.frontend-test.result }}"
-          echo "E2E Tests: ${{ needs.e2e-test.result }}"
+          echo "バックエンドテスト: ${{ needs.backend-test.result }}"
+          echo "フロントエンドテスト: ${{ needs.frontend-test.result }}"
+          echo "E2E テスト: ${{ needs.e2e-test.result }}"
 
           if [ "${{ needs.backend-test.result }}" != "success" ] || \
              [ "${{ needs.frontend-test.result }}" != "success" ] || \
              [ "${{ needs.e2e-test.result }}" != "success" ]; then
-            echo "Tests failed!"
+            echo "テストが失敗しました！"
             exit 1
           fi
 
-          echo "All tests passed!"
+          echo "すべてのテストが成功しました！"
