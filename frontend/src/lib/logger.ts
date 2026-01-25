@@ -1,12 +1,12 @@
 /**
- * Secure Logging Utility for Frontend
+ * フロントエンド向けセキュアロギングユーティリティ
  *
- * Features:
- * - Automatic log level control based on environment
- * - Sensitive data masking
- * - Production-safe logging (no console output in production)
- * - Structured logging format
- * - Error tracking integration ready
+ * 機能:
+ * - 環境に基づいた自動ログレベル制御
+ * - 機密データのマスキング
+ * - 本番環境向け安全なロギング（本番環境ではコンソール出力なし）
+ * - 構造化ログ形式
+ * - error トラッキング連携対応
  */
 
 export enum LogLevel {
@@ -31,27 +31,27 @@ class Logger {
     const isProduction = process.env.NODE_ENV === 'production';
 
     this.config = {
-      // In production: only log errors and warnings
-      // In development: log everything for debugging
+      // 本番環境: error と warning のみログ出力
+      // 開発環境: デバッグ用にすべてログ出力
       level: isProduction ? LogLevel.WARN : LogLevel.DEBUG,
 
-      // Disable console output in production to prevent information leakage
+      // 本番環境では情報漏洩防止のためコンソール出力を無効化
       enableConsole: !isProduction,
 
-      // Enable error tracking in production (integrate with Sentry, LogRocket, etc.)
+      // 本番環境では error トラッキングを有効化（Sentry、LogRocket 等と連携）
       enableErrorTracking: isProduction,
 
-      // Always mask sensitive data
+      // 常に機密データをマスキング
       maskSensitiveData: true,
     };
 
-    // Allow manual override via environment variable
+    // 環境変数による手動オーバーライドを許可
     const logLevelEnv = process.env.NEXT_PUBLIC_LOG_LEVEL;
     if (logLevelEnv) {
       this.config.level = this.parseLogLevel(logLevelEnv);
     }
 
-    // Suppress all console output in production for security
+    // セキュリティのため、本番環境ではすべてのコンソール出力を抑制
     if (isProduction && this.config.enableConsole === false) {
       this.disableConsole();
     }
@@ -76,8 +76,8 @@ class Logger {
   }
 
   /**
-   * Disable all console methods in production
-   * This prevents sensitive information from being exposed in browser console
+   * 本番環境ですべてのコンソールメソッドを無効化します
+   * ブラウザコンソールでの機密情報の露出を防ぎます
    */
   private disableConsole() {
     const noop = () => {};
@@ -85,11 +85,11 @@ class Logger {
     console.info = noop;
     console.debug = noop;
     console.warn = noop;
-    // Keep console.error for critical errors, but sanitize the output
+    // 重大な error 用に console.error は保持しますが、出力はサニタイズします
   }
 
   /**
-   * Mask sensitive information in log messages
+   * ログメッセージ内の機密情報をマスキングします
    */
   private maskSensitiveData(data: any): any {
     if (typeof data === 'string') {
@@ -105,7 +105,7 @@ class Logger {
       for (const [key, value] of Object.entries(data)) {
         const lowerKey = key.toLowerCase();
 
-        // List of sensitive field names
+        // 機密フィールド名のリスト
         const sensitiveKeys = [
           'password', 'token', 'secret', 'api_key', 'apikey',
           'authorization', 'auth', 'credential', 'ssn',
@@ -128,12 +128,12 @@ class Logger {
   }
 
   /**
-   * Mask sensitive patterns in strings
+   * 文字列内の機密パターンをマスキングします
    */
   private maskString(str: string): string {
     let masked = str;
 
-    // Mask email addresses
+    // メールアドレスをマスキング
     masked = masked.replace(
       /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
       (email) => {
@@ -142,19 +142,19 @@ class Logger {
       }
     );
 
-    // Mask JWT tokens
+    // JWT token をマスキング
     masked = masked.replace(
       /eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*/g,
       '[MASKED_TOKEN]'
     );
 
-    // Mask phone numbers
+    // 電話番号をマスキング
     masked = masked.replace(
       /\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g,
       '[MASKED_PHONE]'
     );
 
-    // Mask credit card numbers
+    // クレジットカード番号をマスキング
     masked = masked.replace(
       /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g,
       '[MASKED_CC]'
@@ -164,7 +164,7 @@ class Logger {
   }
 
   /**
-   * Format log message with metadata
+   * メタデータ付きでログメッセージをフォーマットします
    */
   private formatMessage(level: string, message: string, data?: any): string {
     const timestamp = new Date().toISOString();
@@ -183,25 +183,25 @@ class Logger {
   }
 
   /**
-   * Send error to error tracking service (Sentry, LogRocket, etc.)
+   * error トラッキングサービス（Sentry、LogRocket 等）に error を送信します
    */
   private trackError(error: Error, context?: any) {
     if (!this.config.enableErrorTracking) {
       return;
     }
 
-    // TODO: Integrate with error tracking service
-    // Example for Sentry:
+    // TODO: error トラッキングサービスと連携
+    // Sentry の例:
     // Sentry.captureException(error, {
     //   extra: context,
     // });
 
-    // For now, this is a placeholder for future integration
+    // 現時点では将来の連携用のプレースホルダーです
     console.error('[Error Tracking Placeholder]', error.message);
   }
 
   /**
-   * Log debug message (development only)
+   * デバッグメッセージをログ出力します（開発環境のみ）
    */
   debug(message: string, data?: any) {
     if (this.config.level > LogLevel.DEBUG) return;
@@ -212,7 +212,7 @@ class Logger {
   }
 
   /**
-   * Log informational message
+   * 情報メッセージをログ出力します
    */
   info(message: string, data?: any) {
     if (this.config.level > LogLevel.INFO) return;
@@ -223,7 +223,7 @@ class Logger {
   }
 
   /**
-   * Log warning message
+   * 警告メッセージをログ出力します
    */
   warn(message: string, data?: any) {
     if (this.config.level > LogLevel.WARN) return;
@@ -234,14 +234,14 @@ class Logger {
       console.warn(`[WARN] ${message}`, data || '');
     }
 
-    // In production, you might want to send warnings to a logging service
+    // 本番環境では、警告をロギングサービスに送信することを検討してください
     if (this.config.enableErrorTracking) {
-      // TODO: Send to logging service
+      // TODO: ロギングサービスに送信
     }
   }
 
   /**
-   * Log error message
+   * error メッセージをログ出力します
    */
   error(message: string, error?: Error | any, context?: any) {
     if (this.config.level > LogLevel.ERROR) return;
@@ -255,30 +255,30 @@ class Logger {
 
     const formatted = this.formatMessage('ERROR', message, errorData);
 
-    // Always log errors, even in production (to a secure logging service)
+    // error は常にログ出力します（本番環境でも安全なロギングサービスへ）
     if (this.config.enableConsole) {
       console.error(`[ERROR] ${message}`, error);
     }
 
-    // Send to error tracking service
+    // error トラッキングサービスに送信
     if (error instanceof Error) {
       this.trackError(error, context);
     }
   }
 
   /**
-   * Log API request (for debugging)
+   * API request をログ出力します（デバッグ用）
    */
   apiRequest(method: string, url: string, data?: any) {
     this.debug(`API Request: ${method} ${url}`, {
       method,
-      url: this.maskString(url), // Mask sensitive params in URL
+      url: this.maskString(url), // URL 内の機密パラメータをマスキング
       data: data ? this.maskSensitiveData(data) : undefined,
     });
   }
 
   /**
-   * Log API response (for debugging)
+   * API response をログ出力します（デバッグ用）
    */
   apiResponse(method: string, url: string, status: number, data?: any) {
     const level = status >= 400 ? 'error' : 'debug';
@@ -291,21 +291,21 @@ class Logger {
         method,
         url: this.maskString(url),
         status,
-        // Don't log response data by default to avoid sensitive info
+        // 機密情報を避けるため、デフォルトでは response データはログ出力しません
       });
     }
   }
 
   /**
-   * Log user action (for analytics/audit)
+   * ユーザーアクションをログ出力します（分析/監査用）
    */
   userAction(action: string, details?: any) {
     this.info(`User Action: ${action}`, this.maskSensitiveData(details));
   }
 }
 
-// Export singleton instance
+// シングルトンインスタンスをエクスポート
 export const logger = new Logger();
 
-// Export type for use in components
+// コンポーネントで使用するための型をエクスポート
 export type { Logger };

@@ -7,7 +7,7 @@ type RequestOptions = {
   headers?: Record<string, string>;
   body?: unknown;
   token?: string;
-  skipRefresh?: boolean; // Skip automatic token refresh
+  skipRefresh?: boolean; // 自動 token リフレッシュをスキップ
 };
 
 import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
@@ -25,7 +25,7 @@ import { MonthlyReport } from '../types/report';
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  // Return existing promise if already refreshing (prevents race condition)
+  // リフレッシュ中の場合は既存の Promise を返す（競合状態を防止）
   if (refreshPromise) {
     return refreshPromise;
   }
@@ -54,7 +54,7 @@ async function refreshAccessToken(): Promise<string> {
 
       return newToken;
     } finally {
-      // Reset promise after completion (success or failure)
+      // 完了後（成功・失敗問わず）Promise をリセット
       refreshPromise = null;
     }
   })();
@@ -77,7 +77,7 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   const config: RequestInit = {
     method: options.method || 'GET',
     headers,
-    credentials: 'include', // Include cookies for refresh token
+    credentials: 'include', // リフレッシュ token 用に Cookie を含める
   };
 
   if (options.body) {
@@ -90,19 +90,19 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      // 401エラー（認証エラー）の場合、リフレッシュトークンで再試行
+      // 401 error（認証 error）の場合、リフレッシュ token で再試行
       if (response.status === 401 && !endpoint.includes('/auth/') && !options.skipRefresh) {
         try {
           const newToken = await refreshAccessToken();
 
-          // Retry the original request with new token
+          // 新しい token で元の request を再試行
           return apiRequest<T>(endpoint, {
             ...options,
             token: newToken,
-            skipRefresh: true, // Prevent infinite loop
+            skipRefresh: true, // 無限ループを防止
           });
         } catch (refreshError) {
-          // Refresh failed, logout user
+          // リフレッシュ失敗、ユーザーをログアウト
           logger.warn('Token refresh failed, logging out user');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -122,7 +122,7 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
     logger.apiResponse(config.method || 'GET', endpoint, response.status);
     return response.json();
   } catch (error) {
-    // ネットワークエラーの場合、より詳細なエラーメッセージを提供
+    // ネットワーク error の場合、より詳細な error メッセージを提供
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       logger.error('API request failed - network error', error as Error, { url, endpoint });
       throw new Error(
@@ -285,7 +285,7 @@ export const statsApi = {
     apiRequest<{ tag_stats: TagStats[] }>('/stats/tags', { token }),
 };
 
-// Helper for file requests with automatic token refresh
+// 自動 token リフレッシュ付きファイル request 用ヘルパー
 async function fileRequestWithRefresh(
   url: string,
   token: string,
