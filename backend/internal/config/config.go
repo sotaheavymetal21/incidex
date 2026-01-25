@@ -16,26 +16,26 @@ type Config struct {
 	MinioSecretKey string
 	JWTSecret      string
 	AppEnv         string
-	// Logging configuration
-	// LOG_LEVEL: Application log level (debug, info, warn, error, fatal)
-	// Default: "info" for production, "debug" for development
+	// ロギング設定
+	// LOG_LEVEL: アプリケーションログレベル (debug, info, warn, error, fatal)
+	// デフォルト: 本番環境では "info"、開発環境では "debug"
 	LogLevel string
-	// LOG_STACKTRACE: Enable/disable stack traces (true/false)
-	// Default: false for production, true for development
+	// LOG_STACKTRACE: スタックトレースの有効化/無効化 (true/false)
+	// デフォルト: 本番環境では false、開発環境では true
 	LogStacktrace bool
-	// Database logging configuration
-	// DB_LOG_LEVEL: Database query log level (silent, error, warn, info)
-	// Default: "warn" for production, "info" for development
+	// データベースロギング設定
+	// DB_LOG_LEVEL: データベースクエリログレベル (silent, error, warn, info)
+	// デフォルト: 本番環境では "warn"、開発環境では "info"
 	DBLogLevel string
-	// CORS configuration
+	// CORS 設定
 	CORSAllowedOrigins []string
-	// Initial admin user (created on first startup if no users exist)
+	// 初期管理者ユーザー（ユーザーが存在しない場合に初回起動時に作成されます）
 	InitialAdminEmail    string
 	InitialAdminPassword string
 	InitialAdminName     string
-	// Frontend URL for email links
+	// メールリンク用のフロントエンド URL
 	FrontendURL string
-	// Auto migration configuration
+	// 自動マイグレーション設定
 	AutoMigrate   bool
 	MigrationsDir string
 }
@@ -43,7 +43,7 @@ type Config struct {
 func Load() *Config {
 	appEnv := getEnv("APP_ENV", "development")
 
-	// Required environment variables - no defaults for security
+	// 必須環境変数 - セキュリティのためデフォルト値なし
 	cfg := &Config{
 		Port:                 getEnv("PORT", "8080"),
 		DatabaseURL:          getEnvRequired("DATABASE_URL"),
@@ -65,7 +65,7 @@ func Load() *Config {
 		MigrationsDir:        getEnv("MIGRATIONS_DIR", "./migrations"),
 	}
 
-	// Validate configuration
+	// 設定をバリデーションします
 	validateConfig(cfg)
 
 	return cfg
@@ -78,7 +78,7 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// getEnvRequired returns the value of an environment variable or panics if not set
+// getEnvRequired は環境変数の値を返します。設定されていない場合は panic します
 func getEnvRequired(key string) string {
 	value, ok := os.LookupEnv(key)
 	if !ok || value == "" {
@@ -87,7 +87,7 @@ func getEnvRequired(key string) string {
 	return value
 }
 
-// parseCORSOrigins parses a comma-separated string into a slice of origins
+// parseCORSOrigins はカンマ区切りの文字列をオリジンのスライスにパースします
 func parseCORSOrigins(origins string) []string {
 	if origins == "" {
 		return []string{}
@@ -116,46 +116,46 @@ func isDevelopment(env string) bool {
 
 func getDefaultLogLevel(env string) string {
 	if isProduction(env) {
-		return "info" // Production: info level logs
+		return "info" // 本番環境: info レベルのログ
 	}
-	return "debug" // Development: debug level logs
+	return "debug" // 開発環境: debug レベルのログ
 }
 
 func getDefaultLogStacktrace(env string) string {
 	if isProduction(env) {
-		return "false" // Production: disable stack traces for security
+		return "false" // 本番環境: セキュリティのためスタックトレースを無効化
 	}
-	return "true" // Development: enable stack traces for debugging
+	return "true" // 開発環境: デバッグのためスタックトレースを有効化
 }
 
 func getDefaultDBLogLevel(env string) string {
-	if isProduction(env) {
-		return "warn" // Production: only log errors and slow queries
-	}
-	return "info" // Development: log all queries (with masked sensitive data)
+	// すべての環境でデフォルトは "warn"
+	// error とスロークエリ（>200ms）のみをログに記録します
+	// すべてのクエリを表示するには DB_LOG_LEVEL=info を設定します（開発/デバッグ専用）
+	return "warn"
 }
 
-// validateConfig validates the configuration and logs warnings/errors
+// validateConfig は設定をバリデーションし、警告/エラーをログに記録します
 func validateConfig(cfg *Config) {
 	errors := []string{}
 	warnings := []string{}
 
-	// Validate JWT Secret length
+	// JWT Secret の長さをバリデーションします
 	if len(cfg.JWTSecret) < 32 {
 		errors = append(errors, "JWT_SECRET must be at least 32 characters long")
 	}
 
-	// Validate Database SSL in production
+	// 本番環境でのデータベース SSL をバリデーションします
 	if isProduction(cfg.AppEnv) && strings.Contains(cfg.DatabaseURL, "sslmode=disable") {
 		warnings = append(warnings, "Database SSL is disabled in production - this is insecure")
 	}
 
-	// Validate CORS origins
+	// CORS オリジンをバリデーションします
 	if len(cfg.CORSAllowedOrigins) == 0 {
 		errors = append(errors, "CORS_ALLOWED_ORIGINS must be configured")
 	}
 
-	// Log warnings
+	// 警告をログに記録します
 	if len(warnings) > 0 {
 		log.Println("Configuration warnings:")
 		for _, warning := range warnings {
@@ -163,7 +163,7 @@ func validateConfig(cfg *Config) {
 		}
 	}
 
-	// Panic on critical errors
+	// 重大なエラーの場合は panic します
 	if len(errors) > 0 {
 		errorMsg := "CRITICAL: Configuration validation failed:\n"
 		for _, err := range errors {

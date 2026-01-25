@@ -10,7 +10,7 @@ import (
 
 var Log *zap.Logger
 
-// InitLogger initializes the global logger based on environment
+// InitLogger は環境に基づいてグローバルロガーを初期化します
 func InitLogger(env string) error {
 	var config zap.Config
 
@@ -18,49 +18,49 @@ func InitLogger(env string) error {
 
 	if isProduction {
 		config = zap.NewProductionConfig()
-		// In production, log JSON format with INFO level by default
+		// 本番環境では、デフォルトで INFO レベルの JSON 形式でログを記録します
 		config.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
-		// Disable stack traces in production for security
+		// 本番環境ではセキュリティのためスタックトレースを無効化します
 		config.DisableStacktrace = true
-		// Disable caller information in production to reduce log size
-		config.DisableCaller = false // Keep caller for debugging, but can be disabled if needed
+		// 本番環境ではログサイズを削減するため呼び出し元情報を無効化できます（デバッグ用に維持可能）
+		config.DisableCaller = false
 	} else {
 		config = zap.NewDevelopmentConfig()
-		// In development, log human-readable format with DEBUG level by default
+		// 開発環境では、デフォルトで DEBUG レベルの人間が読める形式でログを記録します
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-		// Enable stack traces in development
+		// 開発環境ではスタックトレースを有効化します
 		config.DisableStacktrace = false
 	}
 
-	// Override log level from environment variable if specified
+	// 環境変数が指定されている場合はログレベルを上書きします
 	if logLevel := os.Getenv("LOG_LEVEL"); logLevel != "" {
 		level := parseLogLevel(logLevel)
 		config.Level = zap.NewAtomicLevelAt(level)
 	}
 
-	// Configure stack trace behavior from environment variable
+	// 環境変数からスタックトレースの動作を設定します
 	if stackTrace := os.Getenv("LOG_STACKTRACE"); stackTrace != "" {
 		config.DisableStacktrace = strings.ToLower(stackTrace) == "false"
 	}
 
-	// Customize time encoding
+	// タイムエンコーディングをカスタマイズします
 	config.EncoderConfig.TimeKey = "timestamp"
 	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	// Add severity field for better log parsing
+	// ログのパースを改善するため severity フィールドを追加します
 	config.EncoderConfig.LevelKey = "severity"
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 
-	// Customize message key
+	// メッセージキーをカスタマイズします
 	config.EncoderConfig.MessageKey = "message"
 
-	// Configure output paths
+	// 出力パスを設定します
 	config.OutputPaths = []string{"stdout"}
 	config.ErrorOutputPaths = []string{"stderr"}
 
-	// Build logger
+	// ロガーをビルドします
 	logger, err := config.Build(
-		// Add common fields to all logs
+		// すべてのログに共通フィールドを追加します
 		zap.Fields(
 			zap.String("service", "incidex"),
 			zap.String("environment", env),
@@ -74,7 +74,7 @@ func InitLogger(env string) error {
 	return nil
 }
 
-// parseLogLevel converts string log level to zapcore.Level
+// parseLogLevel は文字列のログレベルを zapcore.Level に変換します
 func parseLogLevel(level string) zapcore.Level {
 	switch strings.ToLower(level) {
 	case "debug":
@@ -94,14 +94,14 @@ func parseLogLevel(level string) zapcore.Level {
 	}
 }
 
-// Sync flushes any buffered log entries
+// Sync はバッファされたログエントリをフラッシュします
 func Sync() {
 	if Log != nil {
 		_ = Log.Sync()
 	}
 }
 
-// GetEnv returns the environment from ENV variable, defaults to "development"
+// GetEnv は ENV 変数から環境を返します。デフォルトは "development" です
 func GetEnv() string {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
