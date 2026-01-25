@@ -25,7 +25,7 @@ func NewMinIOStorage(endpoint, accessKey, secretKey, bucketName string, useSSL b
 		Secure: useSSL,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create MinIO client: %w", err)
+		return nil, fmt.Errorf("MinIOクライアントの作成に失敗しました: %w", err)
 	}
 
 	storage := &MinIOStorage{
@@ -33,7 +33,7 @@ func NewMinIOStorage(endpoint, accessKey, secretKey, bucketName string, useSSL b
 		bucketName: bucketName,
 	}
 
-	// Create bucket if it doesn't exist
+	// バケットが存在しない場合は作成します
 	if err := storage.ensureBucketExists(); err != nil {
 		return nil, err
 	}
@@ -45,15 +45,15 @@ func (s *MinIOStorage) ensureBucketExists() error {
 	ctx := context.Background()
 	exists, err := s.client.BucketExists(ctx, s.bucketName)
 	if err != nil {
-		return fmt.Errorf("failed to check bucket existence: %w", err)
+		return fmt.Errorf("バケットの存在確認に失敗しました: %w", err)
 	}
 
 	if !exists {
 		err = s.client.MakeBucket(ctx, s.bucketName, minio.MakeBucketOptions{})
 		if err != nil {
-			return fmt.Errorf("failed to create bucket: %w", err)
+			return fmt.Errorf("バケットの作成に失敗しました: %w", err)
 		}
-		log.Printf("Bucket %s created successfully", s.bucketName)
+		log.Printf("バケット %s が正常に作成されました", s.bucketName)
 	}
 
 	return nil
@@ -64,7 +64,7 @@ func (s *MinIOStorage) Upload(ctx context.Context, objectKey string, reader io.R
 		ContentType: contentType,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to upload object: %w", err)
+		return fmt.Errorf("オブジェクトのアップロードに失敗しました: %w", err)
 	}
 	return nil
 }
@@ -72,7 +72,7 @@ func (s *MinIOStorage) Upload(ctx context.Context, objectKey string, reader io.R
 func (s *MinIOStorage) Download(ctx context.Context, objectKey string) (io.ReadCloser, error) {
 	object, err := s.client.GetObject(ctx, s.bucketName, objectKey, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get object: %w", err)
+		return nil, fmt.Errorf("オブジェクトの取得に失敗しました: %w", err)
 	}
 	return object, nil
 }
@@ -80,7 +80,7 @@ func (s *MinIOStorage) Download(ctx context.Context, objectKey string) (io.ReadC
 func (s *MinIOStorage) Delete(ctx context.Context, objectKey string) error {
 	err := s.client.RemoveObject(ctx, s.bucketName, objectKey, minio.RemoveObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to delete object: %w", err)
+		return fmt.Errorf("オブジェクトの削除に失敗しました: %w", err)
 	}
 	return nil
 }
@@ -88,7 +88,7 @@ func (s *MinIOStorage) Delete(ctx context.Context, objectKey string) error {
 func (s *MinIOStorage) GetObjectInfo(ctx context.Context, objectKey string) (minio.ObjectInfo, error) {
 	info, err := s.client.StatObject(ctx, s.bucketName, objectKey, minio.StatObjectOptions{})
 	if err != nil {
-		return minio.ObjectInfo{}, fmt.Errorf("failed to get object info: %w", err)
+		return minio.ObjectInfo{}, fmt.Errorf("オブジェクト情報の取得に失敗しました: %w", err)
 	}
 	return info, nil
 }

@@ -22,28 +22,28 @@ func NewIncidentPDFService() *IncidentPDFService {
 	return &IncidentPDFService{}
 }
 
-// GenerateIncidentReport generates a PDF report for a single incident
+// GenerateIncidentReport は単一インシデントのPDFレポートを生成します
 func (s *IncidentPDFService) GenerateIncidentReport(incident *domain.Incident) ([]byte, error) {
 	cfg := config.NewBuilder().Build()
 	m := maroto.New(cfg)
 
-	// Add header
+	// ヘッダーを追加します
 	s.addHeader(m, incident)
 
-	// Add basic information
+	// 基本情報を追加します
 	s.addBasicInfo(m, incident)
 
-	// Add description and summary
+	// 説明とサマリーを追加します
 	s.addDescriptionSection(m, incident)
 
-	// Add tags
+	// タグを追加します
 	if len(incident.Tags) > 0 {
 		s.addTagsSection(m, incident.Tags)
 	}
 
 	document, err := m.Generate()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+		return nil, fmt.Errorf("PDFの生成に失敗しました: %w", err)
 	}
 
 	return document.GetBytes(), nil
@@ -92,7 +92,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		),
 	)
 
-	// Severity
+	// 重要度
 	severityColor := s.getSeverityColor(incident.Severity)
 	m.AddRow(6,
 		col.New(3).Add(
@@ -110,7 +110,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		),
 	)
 
-	// Status
+	// ステータス
 	statusColor := s.getStatusColor(incident.Status)
 	m.AddRow(6,
 		col.New(3).Add(
@@ -128,7 +128,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		),
 	)
 
-	// Impact Scope
+	// 影響範囲
 	m.AddRow(6,
 		col.New(3).Add(
 			text.New("影響範囲:", props.Text{
@@ -143,7 +143,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		),
 	)
 
-	// Detected At
+	// 検出日時
 	m.AddRow(6,
 		col.New(3).Add(
 			text.New("検出日時:", props.Text{
@@ -158,7 +158,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		),
 	)
 
-	// Resolved At
+	// 解決日時
 	if incident.ResolvedAt != nil {
 		m.AddRow(6,
 			col.New(3).Add(
@@ -175,7 +175,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		)
 	}
 
-	// Creator
+	// 作成者
 	if incident.Creator != nil {
 		m.AddRow(6,
 			col.New(3).Add(
@@ -192,7 +192,7 @@ func (s *IncidentPDFService) addBasicInfo(m core.Maroto, incident *domain.Incide
 		)
 	}
 
-	// Assignee
+	// 担当者
 	if incident.Assignee != nil {
 		m.AddRow(6,
 			col.New(3).Add(
