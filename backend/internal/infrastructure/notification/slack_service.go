@@ -8,11 +8,15 @@ import (
 )
 
 // SlackService はSlack通知を送信するサービス
-type SlackService struct{}
+type SlackService struct {
+	frontendURL string
+}
 
 // NewSlackService は新しいSlackサービスを作成します
-func NewSlackService() *SlackService {
-	return &SlackService{}
+func NewSlackService(frontendURL string) *SlackService {
+	return &SlackService{
+		frontendURL: frontendURL,
+	}
 }
 
 // SlackMessage はSlackメッセージの構造体
@@ -52,17 +56,17 @@ func (s *SlackService) SendMessage(webhookURL string, message SlackMessage) erro
 
 	jsonData, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("failed to marshal slack message: %w", err)
+		return fmt.Errorf("Slackメッセージのマーシャルに失敗しました: %w", err)
 	}
 
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return fmt.Errorf("failed to send slack message: %w", err)
+		return fmt.Errorf("Slackメッセージの送信に失敗しました: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("slack returned non-OK status: %d", resp.StatusCode)
+		return fmt.Errorf("Slackが非OKステータスを返しました: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -80,7 +84,7 @@ func (s *SlackService) SendIncidentCreatedMessage(webhookURL, incidentTitle stri
 				Text: &SlackText{
 					Type: "mrkdwn",
 					Text: fmt.Sprintf("*🚨 新しいインシデントが作成されました*\n*<%s|#%d %s>*",
-						fmt.Sprintf("http://localhost:3000/incidents/%d", incidentID),
+						fmt.Sprintf("%s/incidents/%d", s.frontendURL, incidentID),
 						incidentID,
 						incidentTitle),
 				},
@@ -114,7 +118,7 @@ func (s *SlackService) SendAssignedMessage(webhookURL, incidentTitle string, inc
 				Text: &SlackText{
 					Type: "mrkdwn",
 					Text: fmt.Sprintf("*👤 インシデントが割り当てられました*\n*<%s|#%d %s>*",
-						fmt.Sprintf("http://localhost:3000/incidents/%d", incidentID),
+						fmt.Sprintf("%s/incidents/%d", s.frontendURL, incidentID),
 						incidentID,
 						incidentTitle),
 				},
@@ -148,7 +152,7 @@ func (s *SlackService) SendCommentMessage(webhookURL, incidentTitle string, inci
 				Text: &SlackText{
 					Type: "mrkdwn",
 					Text: fmt.Sprintf("*💬 新しいコメントが追加されました*\n*<%s|#%d %s>*",
-						fmt.Sprintf("http://localhost:3000/incidents/%d", incidentID),
+						fmt.Sprintf("%s/incidents/%d", s.frontendURL, incidentID),
 						incidentID,
 						incidentTitle),
 				},
@@ -182,7 +186,7 @@ func (s *SlackService) SendStatusChangeMessage(webhookURL, incidentTitle string,
 				Text: &SlackText{
 					Type: "mrkdwn",
 					Text: fmt.Sprintf("*🔄 ステータスが変更されました*\n*<%s|#%d %s>*",
-						fmt.Sprintf("http://localhost:3000/incidents/%d", incidentID),
+						fmt.Sprintf("%s/incidents/%d", s.frontendURL, incidentID),
 						incidentID,
 						incidentTitle),
 				},
@@ -216,7 +220,7 @@ func (s *SlackService) SendResolvedMessage(webhookURL, incidentTitle string, inc
 				Text: &SlackText{
 					Type: "mrkdwn",
 					Text: fmt.Sprintf("*✅ インシデントが解決されました*\n*<%s|#%d %s>*",
-						fmt.Sprintf("http://localhost:3000/incidents/%d", incidentID),
+						fmt.Sprintf("%s/incidents/%d", s.frontendURL, incidentID),
 						incidentID,
 						incidentTitle),
 				},
@@ -231,6 +235,42 @@ func (s *SlackService) SendResolvedMessage(webhookURL, incidentTitle string, inc
 		Attachments: []Attachment{
 			{
 				Color:  "#36a64f",
+				Footer: "Incidex - Incident Management System",
+			},
+		},
+	}
+
+	return s.SendMessage(webhookURL, message)
+}
+
+// SendSeverityChangeMessage は重要度変更通知を送信します
+func (s *SlackService) SendSeverityChangeMessage(webhookURL, incidentTitle string, incidentID uint, oldSeverity, newSeverity string) error {
+	newColor := getSeverityColor(newSeverity)
+
+	message := SlackMessage{
+		Text: fmt.Sprintf("⚠️ 重要度変更: %s", incidentTitle),
+		Blocks: []SlackBlock{
+			{
+				Type: "section",
+				Text: &SlackText{
+					Type: "mrkdwn",
+					Text: fmt.Sprintf("*⚠️ 重要度が変更されました*\n*<%s|#%d %s>*",
+						fmt.Sprintf("%s/incidents/%d", s.frontendURL, incidentID),
+						incidentID,
+						incidentTitle),
+				},
+			},
+			{
+				Type: "section",
+				Text: &SlackText{
+					Type: "mrkdwn",
+					Text: fmt.Sprintf("*変更:* %s → %s", getSeverityEmoji(oldSeverity), getSeverityEmoji(newSeverity)),
+				},
+			},
+		},
+		Attachments: []Attachment{
+			{
+				Color:  newColor,
 				Footer: "Incidex - Incident Management System",
 			},
 		},

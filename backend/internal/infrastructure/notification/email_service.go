@@ -13,16 +13,18 @@ type EmailService struct {
 	smtpUsername string
 	smtpPassword string
 	fromAddress  string
+	frontendURL  string
 }
 
 // NewEmailService は新しいEmailサービスを作成します
-func NewEmailService() *EmailService {
+func NewEmailService(frontendURL string) *EmailService {
 	return &EmailService{
 		smtpHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
 		smtpPort:     getEnv("SMTP_PORT", "587"),
 		smtpUsername: os.Getenv("SMTP_USERNAME"),
 		smtpPassword: os.Getenv("SMTP_PASSWORD"),
 		fromAddress:  getEnv("SMTP_FROM", os.Getenv("SMTP_USERNAME")),
+		frontendURL:  frontendURL,
 	}
 }
 
@@ -30,7 +32,7 @@ func NewEmailService() *EmailService {
 func (s *EmailService) SendEmail(to, subject, body string) error {
 	if s.smtpUsername == "" || s.smtpPassword == "" {
 		// SMTP設定がない場合はログのみ出力（開発環境用）
-		fmt.Printf("[EMAIL] To: %s, Subject: %s\n%s\n", to, subject, body)
+		fmt.Printf("[EMAIL] To: %s, Subject: %s (body omitted)\n", to, subject)
 		return nil
 	}
 
@@ -62,10 +64,10 @@ func (s *EmailService) SendIncidentCreatedEmail(to, incidentTitle string, incide
 			<p><strong>タイトル:</strong> %s</p>
 			<p><strong>重要度:</strong> %s</p>
 			<p><strong>インシデントID:</strong> #%d</p>
-			<p><a href="http://localhost:3000/incidents/%d">詳細を見る</a></p>
+			<p><a href="%s/incidents/%d">詳細を見る</a></p>
 		</body>
 		</html>
-	`, incidentTitle, severity, incidentID, incidentID)
+	`, incidentTitle, severity, incidentID, s.frontendURL, incidentID)
 
 	return s.SendEmail(to, subject, body)
 }
@@ -81,10 +83,10 @@ func (s *EmailService) SendAssignedEmail(to, incidentTitle string, incidentID ui
 			<p><strong>タイトル:</strong> %s</p>
 			<p><strong>割り当て者:</strong> %s</p>
 			<p><strong>インシデントID:</strong> #%d</p>
-			<p><a href="http://localhost:3000/incidents/%d">詳細を見る</a></p>
+			<p><a href="%s/incidents/%d">詳細を見る</a></p>
 		</body>
 		</html>
-	`, incidentTitle, assignedBy, incidentID, incidentID)
+	`, incidentTitle, assignedBy, incidentID, s.frontendURL, incidentID)
 
 	return s.SendEmail(to, subject, body)
 }
@@ -101,10 +103,10 @@ func (s *EmailService) SendCommentEmail(to, incidentTitle string, incidentID uin
 			<p><strong>コメント者:</strong> %s</p>
 			<p><strong>コメント:</strong></p>
 			<blockquote>%s</blockquote>
-			<p><a href="http://localhost:3000/incidents/%d">詳細を見る</a></p>
+			<p><a href="%s/incidents/%d">詳細を見る</a></p>
 		</body>
 		</html>
-	`, incidentTitle, commenterName, comment, incidentID)
+	`, incidentTitle, commenterName, comment, s.frontendURL, incidentID)
 
 	return s.SendEmail(to, subject, body)
 }
@@ -119,10 +121,10 @@ func (s *EmailService) SendStatusChangeEmail(to, incidentTitle string, incidentI
 			<h2>インシデントのステータスが変更されました</h2>
 			<p><strong>インシデント:</strong> %s</p>
 			<p><strong>変更:</strong> %s → %s</p>
-			<p><a href="http://localhost:3000/incidents/%d">詳細を見る</a></p>
+			<p><a href="%s/incidents/%d">詳細を見る</a></p>
 		</body>
 		</html>
-	`, incidentTitle, oldStatus, newStatus, incidentID)
+	`, incidentTitle, oldStatus, newStatus, s.frontendURL, incidentID)
 
 	return s.SendEmail(to, subject, body)
 }
@@ -137,10 +139,28 @@ func (s *EmailService) SendResolvedEmail(to, incidentTitle string, incidentID ui
 			<h2>インシデントが解決されました</h2>
 			<p><strong>インシデント:</strong> %s</p>
 			<p><strong>解決者:</strong> %s</p>
-			<p><a href="http://localhost:3000/incidents/%d">詳細を見る</a></p>
+			<p><a href="%s/incidents/%d">詳細を見る</a></p>
 		</body>
 		</html>
-	`, incidentTitle, resolvedBy, incidentID)
+	`, incidentTitle, resolvedBy, s.frontendURL, incidentID)
+
+	return s.SendEmail(to, subject, body)
+}
+
+// SendSeverityChangeEmail は重要度変更通知を送信します
+func (s *EmailService) SendSeverityChangeEmail(to, incidentTitle string, incidentID uint, oldSeverity, newSeverity string) error {
+	subject := fmt.Sprintf("[Incidex] 重要度変更: %s", incidentTitle)
+
+	body := fmt.Sprintf(`
+		<html>
+		<body>
+			<h2>インシデントの重要度が変更されました</h2>
+			<p><strong>インシデント:</strong> %s</p>
+			<p><strong>変更:</strong> %s → %s</p>
+			<p><a href="%s/incidents/%d">詳細を見る</a></p>
+		</body>
+		</html>
+	`, incidentTitle, oldSeverity, newSeverity, s.frontendURL, incidentID)
 
 	return s.SendEmail(to, subject, body)
 }

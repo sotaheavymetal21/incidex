@@ -17,10 +17,11 @@ type NotificationService struct {
 func NewNotificationService(
 	settingRepo domain.NotificationSettingRepository,
 	userRepo domain.UserRepository,
+	frontendURL string,
 ) *NotificationService {
 	return &NotificationService{
-		emailService: NewEmailService(),
-		slackService: NewSlackService(),
+		emailService: NewEmailService(frontendURL),
+		slackService: NewSlackService(frontendURL),
 		settingRepo:  settingRepo,
 		userRepo:     userRepo,
 	}
@@ -262,6 +263,51 @@ func (s *NotificationService) NotifyResolved(incident *domain.Incident, resolver
 					incident.Title,
 					incident.ID,
 					resolver.Name,
+				); err != nil {
+					fmt.Printf("Failed to send slack message: %v\n", err)
+				}
+			}
+
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// NotifySeverityChange は重要度変更通知を送信します
+func (s *NotificationService) NotifySeverityChange(incident *domain.Incident, oldSeverity, newSeverity string) error {
+	userIDs := s.getInterestedUsers(incident)
+
+	for _, userID := range userIDs {
+		if err := s.notifyUser(userID, func(setting *domain.NotificationSetting, user *domain.User) error {
+			if !setting.NotifyOnSeverityChange {
+				return nil
+			}
+
+			// Email通知
+			if setting.EmailEnabled {
+				if err := s.emailService.SendSeverityChangeEmail(
+					user.Email,
+					incident.Title,
+					incident.ID,
+					oldSeverity,
+					newSeverity,
+				); err != nil {
+					fmt.Printf("Failed to send email: %v\n", err)
+				}
+			}
+
+			// Slack通知
+			if setting.SlackEnabled && setting.SlackWebhook != "" {
+				if err := s.slackService.SendSeverityChangeMessage(
+					setting.SlackWebhook,
+					incident.Title,
+					incident.ID,
+					oldSeverity,
+					newSeverity,
 				); err != nil {
 					fmt.Printf("Failed to send slack message: %v\n", err)
 				}
