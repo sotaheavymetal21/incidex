@@ -13,7 +13,7 @@ export default function ReportsPage() {
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Date selection state
+  // 日付選択 state
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
@@ -170,7 +170,7 @@ export default function ReportsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
-      {/* Header */}
+      {/* ヘッダー */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">月次レポート</h1>
         <p className="mt-2 text-base text-gray-700">
@@ -178,7 +178,7 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      {/* Month Selector */}
+      {/* 月セレクター */}
       <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-lg shadow">
         <button
           onClick={handlePreviousMonth}
@@ -200,10 +200,10 @@ export default function ReportsPage() {
             </svg>
           </button>
 
-          {/* Calendar Popup */}
+          {/* カレンダーポップアップ */}
           {showCalendar && (
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 w-72">
-              {/* Year Navigation */}
+              {/* 年ナビゲーション */}
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={() => setCalendarYear(calendarYear - 1)}
@@ -233,7 +233,7 @@ export default function ReportsPage() {
                 </button>
               </div>
 
-              {/* Month Grid */}
+              {/* 月グリッド */}
               <div className="grid grid-cols-4 gap-2">
                 {months.map((monthName, index) => {
                   const monthNum = index + 1;
@@ -262,7 +262,7 @@ export default function ReportsPage() {
                 })}
               </div>
 
-              {/* Quick Actions */}
+              {/* クイックアクション */}
               <div className="mt-4 pt-3 border-t border-gray-200">
                 <button
                   onClick={() => {
@@ -291,7 +291,7 @@ export default function ReportsPage() {
         </button>
       </div>
 
-      {/* Summary Cards */}
+      {/* サマリーカード */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="text-sm font-medium text-gray-600">総インシデント</div>
@@ -353,7 +353,7 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Severity Breakdown */}
+        {/* 重要度内訳 */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-bold text-gray-900 mb-4">重要度別</h2>
           <div className="space-y-3">
@@ -387,7 +387,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Status Breakdown */}
+        {/* ステータス内訳 */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-bold text-gray-900 mb-4">ステータス別</h2>
           <div className="space-y-3">
@@ -411,7 +411,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Top Tags */}
+      {/* 上位タグ */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">タグ</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -424,7 +424,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Daily Trend */}
+      {/* 日別トレンド */}
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-xl font-bold text-gray-900 mb-4">日別トレンド</h2>
         <div className="overflow-x-auto">

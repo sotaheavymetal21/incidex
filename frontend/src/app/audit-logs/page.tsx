@@ -15,19 +15,19 @@ export default function AuditLogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination state
+  // ページネーション state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 50;
 
-  // Filter state
+  // フィルター state
   const [filters, setFilters] = useState<AuditLogFilters>({
     page: 1,
     limit: limit,
   });
 
-  // Check if user is admin
+  // ユーザーが管理者かどうかを確認します
   useEffect(() => {
     if (!permissions.isAdmin) {
       router.push('/dashboard');
@@ -138,7 +138,7 @@ export default function AuditLogsPage() {
         </p>
       </div>
 
-      {/* Filters */}
+      {/* フィルター */}
       <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -184,26 +184,26 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* 統計 */}
       <div className="mb-4 text-sm text-gray-600">
         全 {total} 件中 {(currentPage - 1) * limit + 1} - {Math.min(currentPage * limit, total)} 件を表示
       </div>
 
-      {/* Error Message */}
+      {/* error メッセージ */}
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
           {error}
         </div>
       )}
 
-      {/* Loading */}
+      {/* 読み込み中 */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-gray-900">読み込み中...</div>
         </div>
       ) : (
         <>
-          {/* Logs Table */}
+          {/* ログテーブル */}
           <div className="bg-white shadow overflow-hidden rounded-lg">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -291,7 +291,7 @@ export default function AuditLogsPage() {
             </div>
           </div>
 
-          {/* Pagination */}
+          {/* ページネーション */}
           {totalPages > 1 && (
             <div className="mt-6 flex justify-center items-center space-x-2">
               <button

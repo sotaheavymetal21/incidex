@@ -14,7 +14,7 @@ const SEVERITY_COLORS = {
   low: '#3b82f6',
 };
 
-// Status colors - must match CSS variables in globals.css (--status-*)
+// ステータスの色 - globals.css の CSS 変数 (--status-*) と一致させる必要があります
 const STATUS_COLORS = {
   open: '#ef4444',        // --status-open
   investigating: '#f59e0b', // --status-investigating
@@ -126,7 +126,7 @@ export default function DashboardPage() {
     key, // Keep the original key for filtering
   }));
 
-  // Custom tooltip component
+  // カスタムツールチップコンポーネント
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -149,7 +149,7 @@ export default function DashboardPage() {
     return null;
   };
 
-  // Handle pie chart click - navigate to incidents page with filter
+  // 円グラフのクリックを処理します - フィルター付きでインシデントページに遷移します
   const handleSeverityClick = (data: any) => {
     const severityKey = Object.keys(SEVERITY_LABELS).find(
       key => SEVERITY_LABELS[key] === data.name
@@ -171,7 +171,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 relative" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto">
-        {/* Stats Cards */}
+        {/* 統計カード */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div
             onClick={() => router.push('/incidents')}
@@ -368,7 +368,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Graph Type Selector */}
+        {/* グラフタイプセレクター */}
         <div className="mb-6 animate-slideUp">
           <div
             className="inline-flex rounded-2xl p-2 gap-2"
@@ -459,10 +459,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Charts Section */}
+        {/* グラフセクション */}
         {graphType === 'pie' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fadeIn">
-            {/* Severity Distribution - Pie Chart */}
+            {/* 重要度分布 - 円グラフ */}
             <div
               className="rounded-2xl p-6 animate-scaleIn stagger-5"
               style={{
@@ -509,7 +509,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
 
-          {/* Status Distribution - Pie Chart */}
+          {/* ステータス分布 - 円グラフ */}
           <div
             className="rounded-2xl p-6 animate-scaleIn stagger-6"
             style={{
@@ -558,10 +558,10 @@ export default function DashboardPage() {
         </div>
         )}
 
-        {/* Timeseries Graph */}
+        {/* 時系列グラフ */}
         {graphType === 'timeseries' && (
           <div className="mb-8 animate-fadeIn">
-            {/* Period Selector */}
+            {/* 期間セレクター */}
             <div className="mb-6">
               <div
                 className="inline-flex rounded-xl p-1.5 gap-1.5"
@@ -644,10 +644,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Bar Graph */}
+        {/* 棒グラフ */}
         {graphType === 'bar' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fadeIn">
-            {/* Severity Bar Chart */}
+            {/* 重要度棒グラフ */}
             <div
               className="rounded-2xl p-6"
               style={{
@@ -696,7 +696,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
 
-            {/* Status Bar Chart */}
+            {/* ステータス棒グラフ */}
             <div
               className="rounded-2xl p-6"
               style={{
@@ -747,7 +747,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Trend Chart (kept for compatibility) */}
+        {/* トレンドチャート（互換性のため維持） */}
         <div
           className="rounded-2xl p-6 mb-8 animate-fadeIn"
           style={{
@@ -830,7 +830,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Tag Statistics */}
+        {/* タグ統計 */}
         {tagStats.length > 0 && (
           <div
             className="rounded-2xl p-6 mb-8 animate-fadeIn"
@@ -903,7 +903,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Recent Incidents */}
+        {/* 最近のインシデント */}
         <div
           className="rounded-2xl overflow-hidden animate-fadeIn"
           style={{
