@@ -1,3 +1,7 @@
+/**
+ * テスト用タグフィクスチャ
+ * テストで使用するタグデータを定義します
+ */
 export const testTags = {
   database: {
     id: 1,

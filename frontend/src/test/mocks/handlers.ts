@@ -4,7 +4,7 @@ import { testUsers, testIncidents, testTags } from '../fixtures';
 const API_URL = 'http://localhost:8080/api';
 
 export const handlers = [
-  // Auth handlers
+  // 認証ハンドラー
   http.post(`${API_URL}/auth/login`, async ({ request }) => {
     const body = await request.json() as { email: string; password: string };
 
@@ -48,7 +48,7 @@ export const handlers = [
     return HttpResponse.json({ message: 'Logged out successfully' });
   }),
 
-  // User handlers
+  // ユーザーハンドラー
   http.get(`${API_URL}/users`, () => {
     return HttpResponse.json(Object.values(testUsers));
   }),
@@ -67,7 +67,7 @@ export const handlers = [
     return HttpResponse.json(user);
   }),
 
-  // Incident handlers
+  // インシデントハンドラー
   http.get(`${API_URL}/incidents`, () => {
     return HttpResponse.json({
       incidents: Object.values(testIncidents),
@@ -120,12 +120,12 @@ export const handlers = [
     return HttpResponse.json({ message: 'Incident deleted' });
   }),
 
-  // Tag handlers
+  // タグハンドラー
   http.get(`${API_URL}/tags`, () => {
     return HttpResponse.json(Object.values(testTags));
   }),
 
-  // Stats handlers
+  // 統計ハンドラー
   http.get(`${API_URL}/stats/dashboard`, () => {
     return HttpResponse.json({
       total_incidents: 42,

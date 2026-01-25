@@ -1,3 +1,7 @@
+/**
+ * テスト用インシデントフィクスチャ
+ * 各重要度・ステータスのテストインシデントを定義します
+ */
 export const testIncidents = {
   critical: {
     id: 1,

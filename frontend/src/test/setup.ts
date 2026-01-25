@@ -2,16 +2,16 @@ import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { server } from './mocks/server';
 
-// Start server before all tests
+// すべてのテスト前にサーバーを起動
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
-// Reset handlers after each test
+// 各テスト後にハンドラーをリセット
 afterEach(() => server.resetHandlers());
 
-// Close server after all tests
+// すべてのテスト後にサーバーを閉じる
 afterAll(() => server.close());
 
-// Mock localStorage
+// localStorage のモック
 const localStorageMock = {
   getItem: (key: string) => localStorageMock.store[key] || null,
   setItem: (key: string, value: string) => {
@@ -28,7 +28,7 @@ const localStorageMock = {
 
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-// Mock window.location
+// window.location のモック
 const locationMock = {
   href: '',
   origin: 'http://localhost:3000',
