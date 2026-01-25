@@ -10,8 +10,10 @@
 
 # Build outputs
 backend/main
-backend/cmd/server/main
-backend/cmd/seed/seed
+backend/bin/
+backend/tmp/
+server
+seeder
 
 # Test binary, built with `go test -c`
 *.test
