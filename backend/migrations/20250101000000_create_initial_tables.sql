@@ -1,9 +1,9 @@
 -- +goose Up
--- Migration: Create Initial Tables
--- Date: 2025-01-01
--- Description: Creates all initial tables for the Incidex application
+-- マイグレーション: 初期テーブル作成
+-- 日付: 2025-01-01
+-- 説明: Incidex アプリケーションの初期テーブルをすべて作成します
 
--- Users table
+-- ユーザーテーブル
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -22,7 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_employee_number ON users(employee_number);
 CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
 
--- Tags table
+-- タグテーブル
 CREATE TABLE IF NOT EXISTS tags (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) UNIQUE NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS tags (
 
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
 
--- Incidents table
+-- インシデントテーブル
 CREATE TABLE IF NOT EXISTS incidents (
     id SERIAL PRIMARY KEY,
     title VARCHAR(500) NOT NULL,
@@ -62,7 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents(created_at);
 CREATE INDEX IF NOT EXISTS idx_incidents_sla_deadline ON incidents(sla_deadline);
 CREATE INDEX IF NOT EXISTS idx_incidents_sla_violated ON incidents(sla_violated);
 
--- Incident Tags (many-to-many)
+-- インシデントタグ（多対多）
 CREATE TABLE IF NOT EXISTS incident_tags (
     incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
     tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS incident_tags (
 CREATE INDEX IF NOT EXISTS idx_incident_tags_incident_id ON incident_tags(incident_id);
 CREATE INDEX IF NOT EXISTS idx_incident_tags_tag_id ON incident_tags(tag_id);
 
--- Incident Assignees (many-to-many)
+-- インシデント担当者（多対多）
 CREATE TABLE IF NOT EXISTS incident_assignees (
     incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS incident_assignees (
 CREATE INDEX IF NOT EXISTS idx_incident_assignees_incident_id ON incident_assignees(incident_id);
 CREATE INDEX IF NOT EXISTS idx_incident_assignees_user_id ON incident_assignees(user_id);
 
--- Incident Activities table
+-- インシデントアクティビティテーブル
 CREATE TABLE IF NOT EXISTS incident_activities (
     id SERIAL PRIMARY KEY,
     incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
@@ -99,7 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_incident_activities_user_id ON incident_activitie
 CREATE INDEX IF NOT EXISTS idx_incident_activities_activity_type ON incident_activities(activity_type);
 CREATE INDEX IF NOT EXISTS idx_incident_activities_created_at ON incident_activities(created_at);
 
--- Attachments table
+-- 添付ファイルテーブル
 CREATE TABLE IF NOT EXISTS attachments (
     id SERIAL PRIMARY KEY,
     incident_id INTEGER NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 CREATE INDEX IF NOT EXISTS idx_attachments_incident_id ON attachments(incident_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_storage_key ON attachments(storage_key);
 
--- Notification Settings table
+-- 通知設定テーブル
 CREATE TABLE IF NOT EXISTS notification_settings (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS notification_settings (
 
 CREATE INDEX IF NOT EXISTS idx_notification_settings_user_id ON notification_settings(user_id);
 
--- Incident Templates table
+-- インシデントテンプレートテーブル
 CREATE TABLE IF NOT EXISTS incident_templates (
     id SERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
@@ -155,7 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_incident_templates_creator_id ON incident_templat
 CREATE INDEX IF NOT EXISTS idx_incident_templates_is_public ON incident_templates(is_public);
 CREATE INDEX IF NOT EXISTS idx_incident_templates_created_at ON incident_templates(created_at);
 
--- Template Tags (many-to-many)
+-- テンプレートタグ（多対多）
 CREATE TABLE IF NOT EXISTS template_tags (
     incident_template_id INTEGER NOT NULL REFERENCES incident_templates(id) ON DELETE CASCADE,
     tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS template_tags (
 CREATE INDEX IF NOT EXISTS idx_template_tags_incident_template_id ON template_tags(incident_template_id);
 CREATE INDEX IF NOT EXISTS idx_template_tags_tag_id ON template_tags(tag_id);
 
--- Post-Mortems table
+-- ポストモーテムテーブル
 CREATE TABLE IF NOT EXISTS post_mortems (
     id SERIAL PRIMARY KEY,
     incident_id INTEGER UNIQUE NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
@@ -187,7 +187,7 @@ CREATE INDEX IF NOT EXISTS idx_post_mortems_author_id ON post_mortems(author_id)
 CREATE INDEX IF NOT EXISTS idx_post_mortems_status ON post_mortems(status);
 CREATE INDEX IF NOT EXISTS idx_post_mortems_created_at ON post_mortems(created_at);
 
--- Action Items table
+-- アクションアイテムテーブル
 CREATE TABLE IF NOT EXISTS action_items (
     id SERIAL PRIMARY KEY,
     post_mortem_id INTEGER NOT NULL REFERENCES post_mortems(id) ON DELETE CASCADE,
@@ -209,7 +209,7 @@ CREATE INDEX IF NOT EXISTS idx_action_items_priority ON action_items(priority);
 CREATE INDEX IF NOT EXISTS idx_action_items_status ON action_items(status);
 CREATE INDEX IF NOT EXISTS idx_action_items_created_at ON action_items(created_at);
 
--- Audit Logs table
+-- 監査ログテーブル
 CREATE TABLE IF NOT EXISTS audit_logs (
     id SERIAL PRIMARY KEY,
     user_id INTEGER,
@@ -233,7 +233,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_type ON audit_logs(resource_t
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 
 -- +goose Down
--- Drop tables in reverse order to respect foreign key constraints
+-- 外部キー制約を考慮して逆順でテーブルを削除します
 DROP TABLE IF EXISTS audit_logs;
 DROP TABLE IF EXISTS action_items;
 DROP TABLE IF EXISTS post_mortems;
