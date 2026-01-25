@@ -11,44 +11,44 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 )
 
-// SecureLogger implements gorm.Interface with security-focused logging
+// SecureLogger はセキュリティに重点を置いたロギングを実装した gorm.Interface です
 type SecureLogger struct {
 	ZapLogger                 *zap.Logger
 	LogLevel                  gormlogger.LogLevel
 	SlowThreshold             time.Duration
 	IgnoreRecordNotFoundError bool
-	MaskParameters            bool // Always mask SQL parameters for security
+	MaskParameters            bool // セキュリティのため常に SQL パラメータをマスクします
 }
 
-// LogMode sets log mode
+// LogMode はログモードを設定します
 func (l *SecureLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
 	newlogger := *l
 	newlogger.LogLevel = level
 	return &newlogger
 }
 
-// Info logs info level messages
+// Info は info レベルのメッセージをログに記録します
 func (l *SecureLogger) Info(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormlogger.Info {
 		l.ZapLogger.Sugar().Infof(msg, data...)
 	}
 }
 
-// Warn logs warn level messages
+// Warn は warn レベルのメッセージをログに記録します
 func (l *SecureLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormlogger.Warn {
 		l.ZapLogger.Sugar().Warnf(msg, data...)
 	}
 }
 
-// Error logs error level messages
+// Error は error レベルのメッセージをログに記録します
 func (l *SecureLogger) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= gormlogger.Error {
 		l.ZapLogger.Sugar().Errorf(msg, data...)
 	}
 }
 
-// Trace logs SQL queries with security masking
+// Trace はセキュリティマスキングを適用して SQL クエリをログに記録します
 func (l *SecureLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
 	if l.LogLevel <= gormlogger.Silent {
 		return
@@ -57,7 +57,7 @@ func (l *SecureLogger) Trace(ctx context.Context, begin time.Time, fc func() (sq
 	elapsed := time.Since(begin)
 	sql, rows := fc()
 
-	// Mask sensitive parameters in SQL
+	// SQL 内の機密パラメータをマスクします
 	maskedSQL := l.maskSensitiveData(sql)
 
 	switch {
@@ -89,37 +89,30 @@ func (l *SecureLogger) Trace(ctx context.Context, begin time.Time, fc func() (sq
 	}
 }
 
-// maskSensitiveData masks sensitive information in SQL queries
+// maskSensitiveData は SQL クエリ内の機密情報をマスクします
 func (l *SecureLogger) maskSensitiveData(sql string) string {
 	if !l.MaskParameters {
 		return sql
 	}
 
-	// Use the centralized sanitizer for comprehensive masking
+	// 包括的なマスキングのために一元化されたサニタイザーを使用します
 	return sanitizer.SanitizeSQL(sql)
 }
 
-// NewSecureLogger creates a new secure logger instance
-func NewSecureLogger(zapLogger *zap.Logger, isProduction bool) gormlogger.Interface {
+// NewSecureLogger は新しいセキュアロガーインスタンスを作成します
+func NewSecureLogger(zapLogger *zap.Logger, dbLogLevel string) gormlogger.Interface {
 	config := &SecureLogger{
 		ZapLogger:                 zapLogger,
 		SlowThreshold:             200 * time.Millisecond,
 		IgnoreRecordNotFoundError: true,
-		MaskParameters:            true, // Always mask for security
-	}
-
-	if isProduction {
-		// Production: Only log errors and slow queries
-		config.LogLevel = gormlogger.Warn
-	} else {
-		// Development: Log more details but still mask sensitive data
-		config.LogLevel = gormlogger.Info
+		MaskParameters:            true, // セキュリティのため常にマスクします
+		LogLevel:                  ParseLogLevel(dbLogLevel),
 	}
 
 	return config
 }
 
-// ParseLogLevel converts string log level to gorm log level
+// ParseLogLevel は文字列のログレベルを GORM のログレベルに変換します
 func ParseLogLevel(level string) gormlogger.LogLevel {
 	switch level {
 	case "silent":
@@ -135,7 +128,7 @@ func ParseLogLevel(level string) gormlogger.LogLevel {
 	}
 }
 
-// LogLevelString returns string representation of log level
+// LogLevelString はログレベルの文字列表現を返します
 func LogLevelString(level gormlogger.LogLevel) string {
 	switch level {
 	case gormlogger.Silent:

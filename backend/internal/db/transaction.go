@@ -6,12 +6,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// TxFunc is a function type that takes a transaction and returns an error
+// TxFunc はトランザクションを受け取り error を返す関数型です
 type TxFunc func(*gorm.DB) error
 
-// WithTransaction executes a function within a database transaction
-// If the function returns an error, the transaction is rolled back
-// Otherwise, the transaction is committed
+// WithTransaction はデータベーストランザクション内で関数を実行します
+// 関数が error を返した場合、トランザクションはロールバックされます
+// それ以外の場合、トランザクションはコミットされます
 func WithTransaction(ctx context.Context, db *gorm.DB, fn TxFunc) error {
 	tx := db.WithContext(ctx).Begin()
 	if tx.Error != nil {
@@ -21,7 +21,7 @@ func WithTransaction(ctx context.Context, db *gorm.DB, fn TxFunc) error {
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
-			panic(r) // re-throw panic after rollback
+			panic(r) // ロールバック後に panic を再スローします
 		}
 	}()
 

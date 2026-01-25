@@ -8,10 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// Connect establishes a database connection with secure logging
-func Connect(databaseURL string, zapLogger *zap.Logger, isProduction bool) *gorm.DB {
-	// Create secure logger that masks sensitive data
-	gormLogger := NewSecureLogger(zapLogger, isProduction)
+// Connect はセキュアなロギングを使用してデータベース接続を確立します
+func Connect(databaseURL string, zapLogger *zap.Logger, dbLogLevel string) *gorm.DB {
+	// 機密データをマスクするセキュアなロガーを作成します
+	gormLogger := NewSecureLogger(zapLogger, dbLogLevel)
 
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
 		Logger: gormLogger,
@@ -20,7 +20,7 @@ func Connect(databaseURL string, zapLogger *zap.Logger, isProduction bool) *gorm
 		zapLogger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	// Configure connection pool
+	// コネクションプールを設定します
 	sqlDB, err := db.DB()
 	if err != nil {
 		zapLogger.Fatal("Failed to get database instance", zap.Error(err))

@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// ConnectRedis initializes a Redis client
+// ConnectRedis は Redis クライアントを初期化します
 func ConnectRedis(redisURL string) *redis.Client {
 	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
@@ -16,7 +16,7 @@ func ConnectRedis(redisURL string) *redis.Client {
 
 	client := redis.NewClient(opts)
 
-	// Test connection
+	// 接続をテストします
 	ctx := context.Background()
 	if err := client.Ping(ctx).Err(); err != nil {
 		log.Printf("Warning: Failed to connect to Redis: %v", err)
