@@ -9,10 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// NotificationHandler は通知関連の HTTP handler を提供します
 type NotificationHandler struct {
 	notificationUsecase *usecase.NotificationUsecase
 }
 
+// NewNotificationHandler は新しい NotificationHandler を作成します
 func NewNotificationHandler(notificationUsecase *usecase.NotificationUsecase) *NotificationHandler {
 	return &NotificationHandler{
 		notificationUsecase: notificationUsecase,
@@ -20,7 +22,7 @@ func NewNotificationHandler(notificationUsecase *usecase.NotificationUsecase) *N
 }
 
 // GetMyNotificationSetting godoc
-// @Summary Get my notification settings
+// @Summary 自分の通知設定を取得します
 // @Tags notifications
 // @Accept json
 // @Produce json
@@ -51,11 +53,11 @@ func (h *NotificationHandler) GetMyNotificationSetting(c *gin.Context) {
 }
 
 // UpdateMyNotificationSetting godoc
-// @Summary Update my notification settings
+// @Summary 自分の通知設定を更新します
 // @Tags notifications
 // @Accept json
 // @Produce json
-// @Param setting body domain.NotificationSetting true "Notification Setting"
+// @Param setting body domain.NotificationSetting true "通知設定"
 // @Success 200 {object} domain.NotificationSetting
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -95,11 +97,11 @@ func (h *NotificationHandler) UpdateMyNotificationSetting(c *gin.Context) {
 }
 
 // GetUserNotificationSetting godoc
-// @Summary Get user notification settings (Admin only)
+// @Summary ユーザーの通知設定を取得します（管理者専用）
 // @Tags notifications
 // @Accept json
 // @Produce json
-// @Param id path int true "User ID"
+// @Param id path int true "ユーザー ID"
 // @Success 200 {object} domain.NotificationSetting
 // @Failure 401 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -107,7 +109,7 @@ func (h *NotificationHandler) UpdateMyNotificationSetting(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /notifications/settings/:id [get]
 func (h *NotificationHandler) GetUserNotificationSetting(c *gin.Context) {
-	// Check if admin
+	// 管理者かどうかをチェック
 	role, exists := c.Get("role")
 	if !exists || role != domain.RoleAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: Admin only"})

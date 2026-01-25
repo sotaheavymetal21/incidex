@@ -10,14 +10,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserHandler はユーザー関連の HTTP handler を提供します
 type UserHandler struct {
 	userUsecase usecase.UserUsecase
 }
 
+// NewUserHandler は新しい UserHandler を作成します
 func NewUserHandler(u usecase.UserUsecase) *UserHandler {
 	return &UserHandler{userUsecase: u}
 }
 
+// GetAll はすべてのユーザーを取得します
 func (h *UserHandler) GetAll(c *gin.Context) {
 	users, err := h.userUsecase.GetAllUsers(c.Request.Context())
 	if err != nil {
@@ -28,6 +31,7 @@ func (h *UserHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
+// GetByID は指定された ID のユーザーを取得します
 func (h *UserHandler) GetByID(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -45,6 +49,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// CreateUserRequest はユーザー作成の request body を表します
 type CreateUserRequest struct {
 	Email          string      `json:"email" binding:"required,email,max=254"`
 	Password       string      `json:"password" binding:"required,min=6"`
@@ -54,6 +59,7 @@ type CreateUserRequest struct {
 	Department     string      `json:"department,omitempty" binding:"omitempty,max=50"`
 }
 
+// Create は新しいユーザーを作成します
 func (h *UserHandler) Create(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,7 +67,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Custom validation
+	// カスタムバリデーション
 	if err := validator.ValidateName(req.Name); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -83,7 +89,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Validate role
+	// ロールをバリデーション
 	if req.Role != domain.RoleAdmin && req.Role != domain.RoleEditor && req.Role != domain.RoleViewer {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
 		return
@@ -98,6 +104,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
+// UpdateUserRequest はユーザー更新の request body を表します
 type UpdateUserRequest struct {
 	Name           string      `json:"name" binding:"required,max=50"`
 	Email          string      `json:"email" binding:"required,email,max=254"`
@@ -106,6 +113,7 @@ type UpdateUserRequest struct {
 	Department     string      `json:"department,omitempty" binding:"omitempty,max=50"`
 }
 
+// Update は既存のユーザーを更新します
 func (h *UserHandler) Update(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -120,7 +128,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Custom validation
+	// カスタムバリデーション
 	if err := validator.ValidateName(req.Name); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -138,7 +146,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Validate role
+	// ロールをバリデーション
 	if req.Role != domain.RoleAdmin && req.Role != domain.RoleEditor && req.Role != domain.RoleViewer {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
 		return
@@ -153,11 +161,13 @@ func (h *UserHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// UpdatePasswordRequest はパスワード更新の request body を表します
 type UpdatePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
+// UpdatePassword はユーザーのパスワードを更新します
 func (h *UserHandler) UpdatePassword(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -172,7 +182,7 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	// Custom validation for new password
+	// 新しいパスワードのカスタムバリデーション
 	if err := validator.ValidatePassword(req.NewPassword, true); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -186,10 +196,12 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "password updated successfully"})
 }
 
+// AdminResetPasswordRequest は管理者によるパスワードリセットの request body を表します
 type AdminResetPasswordRequest struct {
 	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
 
+// AdminResetPassword は管理者がユーザーのパスワードをリセットします
 func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -204,7 +216,7 @@ func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 		return
 	}
 
-	// Custom validation for new password (admin has looser requirements)
+	// 新しいパスワードのカスタムバリデーション（管理者はより緩い要件）
 	if err := validator.ValidatePassword(req.NewPassword, false); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -218,6 +230,7 @@ func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "password reset successfully"})
 }
 
+// Delete は指定されたユーザーを削除します
 func (h *UserHandler) Delete(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -234,10 +247,12 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
 }
 
+// ToggleActiveRequest はユーザー有効/無効切替の request body を表します
 type ToggleActiveRequest struct {
 	IsActive bool `json:"is_active"`
 }
 
+// ToggleActive はユーザーの有効/無効状態を切り替えます
 func (h *UserHandler) ToggleActive(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.ParseUint(idParam, 10, 32)
@@ -252,7 +267,7 @@ func (h *UserHandler) ToggleActive(c *gin.Context) {
 		return
 	}
 
-	// Get current user ID from context
+	// context から現在のユーザー ID を取得
 	currentUserIDValue, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user ID not found in context"})

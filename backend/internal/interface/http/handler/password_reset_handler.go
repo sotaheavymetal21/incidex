@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"incidex/internal/interface/http/validator"
 	"incidex/internal/usecase"
 	"net/http"
 
@@ -41,13 +42,19 @@ func (h *PasswordResetHandler) RequestPasswordReset(c *gin.Context) {
 
 type ResetPasswordRequest struct {
 	Token       string `json:"token" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=8"`
+	NewPassword string `json:"new_password" binding:"required,min=12"`
 }
 
 // ResetPassword handles the actual password reset
 func (h *PasswordResetHandler) ResetPassword(c *gin.Context) {
 	var req ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		HandleValidationError(c, err)
+		return
+	}
+
+	// Validate password strength (strict mode)
+	if err := validator.ValidatePassword(req.NewPassword, true); err != nil {
 		HandleValidationError(c, err)
 		return
 	}

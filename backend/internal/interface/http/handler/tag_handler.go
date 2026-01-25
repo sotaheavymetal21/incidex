@@ -8,24 +8,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TagHandler はタグ関連の HTTP handler を提供します
 type TagHandler struct {
 	tagUsecase usecase.TagUsecase
 }
 
+// NewTagHandler は新しい TagHandler を作成します
 func NewTagHandler(u usecase.TagUsecase) *TagHandler {
 	return &TagHandler{tagUsecase: u}
 }
 
+// CreateTagRequest はタグ作成の request body を表します
 type CreateTagRequest struct {
 	Name  string `json:"name" binding:"required"`
 	Color string `json:"color"`
 }
 
+// UpdateTagRequest はタグ更新の request body を表します
 type UpdateTagRequest struct {
 	Name  string `json:"name" binding:"required"`
 	Color string `json:"color"`
 }
 
+// Create は新しいタグを作成します
 func (h *TagHandler) Create(c *gin.Context) {
 	var req CreateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -42,6 +47,7 @@ func (h *TagHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, tag)
 }
 
+// GetAll はすべてのタグを取得します
 func (h *TagHandler) GetAll(c *gin.Context) {
 	tags, err := h.tagUsecase.GetAllTags(c.Request.Context())
 	if err != nil {
@@ -52,6 +58,7 @@ func (h *TagHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, tags)
 }
 
+// Update は既存のタグを更新します
 func (h *TagHandler) Update(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -75,6 +82,7 @@ func (h *TagHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, tag)
 }
 
+// Delete は指定されたタグを削除します
 func (h *TagHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
