@@ -6,6 +6,9 @@ interface TimelineProps {
   activities: IncidentActivity[];
 }
 
+/**
+ * アクティビティタイプに対応するアイコンを返します
+ */
 const getActivityIcon = (type: ActivityType) => {
   switch (type) {
     case 'created':
@@ -95,6 +98,9 @@ const getActivityIcon = (type: ActivityType) => {
   }
 };
 
+/**
+ * アクティビティに対応する表示メッセージを返します
+ */
 const getActivityMessage = (activity: IncidentActivity) => {
   const userName = activity.user?.name || 'Unknown User';
 
@@ -132,6 +138,9 @@ const getActivityMessage = (activity: IncidentActivity) => {
   }
 };
 
+/**
+ * 日付を日本語形式でフォーマットします
+ */
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleString('ja-JP', {

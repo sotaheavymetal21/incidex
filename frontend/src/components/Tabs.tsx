@@ -15,6 +15,10 @@ interface TabsProps {
   onChange?: (tabId: string) => void;
 }
 
+/**
+ * タブコンポーネント
+ * 複数のタブを切り替えてコンテンツを表示します
+ */
 export default function Tabs({ tabs, defaultTab, onChange }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id || '');
 
@@ -27,7 +31,7 @@ export default function Tabs({ tabs, defaultTab, onChange }: TabsProps) {
 
   return (
     <div className="w-full">
-      {/* Tab Headers */}
+      {/* タブヘッダー */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
           {tabs.map((tab) => (
@@ -56,7 +60,7 @@ export default function Tabs({ tabs, defaultTab, onChange }: TabsProps) {
         </nav>
       </div>
 
-      {/* Tab Content */}
+      {/* タブコンテンツ */}
       <div className="mt-6">
         {activeTabContent}
       </div>

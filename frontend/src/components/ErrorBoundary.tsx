@@ -24,11 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error with context information
+    // コンテキスト情報付きで error をログ出力
     logger.error('ErrorBoundary caught an error', error, {
       componentStack: errorInfo.componentStack,
     });
-    // Error tracking service integration is handled by logger
+    // error トラッキングサービスとの連携は logger で処理されます
   }
 
   render() {
