@@ -2,8 +2,19 @@ package testutil
 
 import (
 	"incidex/internal/domain"
+	"incidex/internal/pkg/logger"
+	"sync"
 	"time"
 )
+
+var initLoggerOnce sync.Once
+
+// InitTestLogger はテスト用のロガーを初期化します（一度だけ実行）
+func InitTestLogger() {
+	initLoggerOnce.Do(func() {
+		_ = logger.InitLogger("test")
+	})
+}
 
 // Factory はテストデータを作成するためのメソッドを提供します
 

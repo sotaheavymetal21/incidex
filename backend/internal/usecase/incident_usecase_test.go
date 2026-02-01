@@ -198,9 +198,9 @@ func TestIncidentUsecase_UpdateIncident(t *testing.T) {
 
 		existingIncident := testutil.NewTestIncident(func(i *domain.Incident) {
 			i.ID = 1
-			i.CreatorID = 2 // Different creator
-			i.Severity = domain.SeverityHigh        // Same as update to avoid activity log
-			i.Status = domain.StatusInvestigating   // Same as update to avoid activity log
+			i.CreatorID = 2                       // Different creator
+			i.Severity = domain.SeverityHigh      // Same as update to avoid activity log
+			i.Status = domain.StatusInvestigating // Same as update to avoid activity log
 		})
 		updatedIncident := testutil.NewTestIncident()
 
@@ -236,8 +236,8 @@ func TestIncidentUsecase_UpdateIncident(t *testing.T) {
 
 		existingIncident := testutil.NewTestIncident(func(i *domain.Incident) {
 			i.ID = 1
-			i.CreatorID = 5 // Same as the editor user
-			i.Severity = domain.SeverityHigh       // Same as update value
+			i.CreatorID = 5                       // Same as the editor user
+			i.Severity = domain.SeverityHigh      // Same as update value
 			i.Status = domain.StatusInvestigating // Same as update value
 		})
 		updatedIncident := testutil.NewTestIncident()
@@ -465,6 +465,230 @@ func TestIncidentUsecase_GetIncidentByID(t *testing.T) {
 		assert.Equal(t, expectedIncident, incident)
 
 		incidentRepo.AssertExpectations(t)
+	})
+}
+
+func TestIncidentUsecase_GetAllIncidents(t *testing.T) {
+	t.Parallel()
+
+	testutil.InitTestLogger()
+	ctx := context.Background()
+
+	t.Run("returns incidents without cache", func(t *testing.T) {
+		t.Parallel()
+
+		incidentRepo := mocks.NewMockIncidentRepository()
+		tagRepo := mocks.NewMockTagRepository()
+		userRepo := mocks.NewMockUserRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		cacheRepo := mocks.NewMockCacheRepository()
+
+		usecase := createTestIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, cacheRepo)
+
+		expectedIncidents := []*domain.Incident{testutil.NewTestIncident()}
+		expectedResult := &domain.PaginationResult{
+			Page:       1,
+			Limit:      10,
+			Total:      1,
+			TotalPages: 1,
+		}
+
+		filters := domain.IncidentFilters{}
+		pagination := domain.Pagination{Page: 1, Limit: 10}
+
+		// キャッシュミス
+		cacheRepo.On("Get", ctx, mock.Anything).Return("", nil)
+		incidentRepo.On("FindAll", ctx, filters, pagination).Return(expectedIncidents, expectedResult, nil)
+		cacheRepo.On("Set", ctx, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		incidents, result, err := usecase.GetAllIncidents(ctx, filters, pagination)
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedIncidents, incidents)
+		assert.Equal(t, expectedResult, result)
+
+		incidentRepo.AssertExpectations(t)
+	})
+
+	t.Run("returns incidents with filters", func(t *testing.T) {
+		t.Parallel()
+
+		incidentRepo := mocks.NewMockIncidentRepository()
+		tagRepo := mocks.NewMockTagRepository()
+		userRepo := mocks.NewMockUserRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		cacheRepo := mocks.NewMockCacheRepository()
+
+		usecase := createTestIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, cacheRepo)
+
+		expectedIncidents := []*domain.Incident{testutil.NewTestIncident()}
+		expectedResult := &domain.PaginationResult{
+			Page:       1,
+			Limit:      10,
+			Total:      1,
+			TotalPages: 1,
+		}
+
+		filters := domain.IncidentFilters{
+			Severity: string(domain.SeverityCritical),
+			Status:   string(domain.StatusOpen),
+		}
+		pagination := domain.Pagination{Page: 1, Limit: 10}
+
+		cacheRepo.On("Get", ctx, mock.Anything).Return("", nil)
+		incidentRepo.On("FindAll", ctx, filters, pagination).Return(expectedIncidents, expectedResult, nil)
+		cacheRepo.On("Set", ctx, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		incidents, result, err := usecase.GetAllIncidents(ctx, filters, pagination)
+
+		require.NoError(t, err)
+		assert.Len(t, incidents, 1)
+		assert.Equal(t, expectedResult, result)
+	})
+}
+
+func TestIncidentUsecase_AssignIncident(t *testing.T) {
+	t.Parallel()
+
+	testutil.InitTestLogger()
+	ctx := context.Background()
+
+	t.Run("assigns user to incident", func(t *testing.T) {
+		t.Parallel()
+
+		incidentRepo := mocks.NewMockIncidentRepository()
+		tagRepo := mocks.NewMockTagRepository()
+		userRepo := mocks.NewMockUserRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		cacheRepo := mocks.NewMockCacheRepository()
+
+		usecase := createTestIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, cacheRepo)
+
+		existingIncident := testutil.NewTestIncident(func(i *domain.Incident) {
+			i.ID = 1
+			i.AssigneeID = nil
+		})
+		assigneeID := uint(2)
+		callerUser := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 1
+			u.Name = "Caller"
+		})
+		assignee := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 2
+			u.Name = "Assignee"
+		})
+		updatedIncident := testutil.NewTestIncident(func(i *domain.Incident) {
+			i.ID = 1
+			i.AssigneeID = &assigneeID
+		})
+
+		incidentRepo.On("FindByID", ctx, uint(1)).Return(existingIncident, nil).Once()
+		userRepo.On("FindByID", ctx, uint(2)).Return(assignee, nil)
+		incidentRepo.On("UpdateAssignee", ctx, uint(1), &assigneeID).Return(nil)
+		userRepo.On("FindByID", ctx, uint(1)).Return(callerUser, nil)
+		activityRepo.On("Create", mock.AnythingOfType("*domain.IncidentActivity")).Return(nil)
+		incidentRepo.On("FindByID", ctx, uint(1)).Return(updatedIncident, nil)
+
+		incident, err := usecase.AssignIncident(ctx, 1, 1, &assigneeID)
+
+		require.NoError(t, err)
+		assert.NotNil(t, incident)
+
+		incidentRepo.AssertExpectations(t)
+		userRepo.AssertExpectations(t)
+	})
+
+	t.Run("unassigns user from incident", func(t *testing.T) {
+		t.Parallel()
+
+		incidentRepo := mocks.NewMockIncidentRepository()
+		tagRepo := mocks.NewMockTagRepository()
+		userRepo := mocks.NewMockUserRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		cacheRepo := mocks.NewMockCacheRepository()
+
+		usecase := createTestIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, cacheRepo)
+
+		oldAssigneeID := uint(2)
+		existingIncident := testutil.NewTestIncident(func(i *domain.Incident) {
+			i.ID = 1
+			i.AssigneeID = &oldAssigneeID
+		})
+		callerUser := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 1
+			u.Name = "Caller"
+		})
+		oldAssignee := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 2
+			u.Name = "Old Assignee"
+		})
+		updatedIncident := testutil.NewTestIncident(func(i *domain.Incident) {
+			i.ID = 1
+			i.AssigneeID = nil
+		})
+
+		incidentRepo.On("FindByID", ctx, uint(1)).Return(existingIncident, nil).Once()
+		userRepo.On("FindByID", ctx, uint(2)).Return(oldAssignee, nil)
+		incidentRepo.On("UpdateAssignee", ctx, uint(1), (*uint)(nil)).Return(nil)
+		userRepo.On("FindByID", ctx, uint(1)).Return(callerUser, nil)
+		activityRepo.On("Create", mock.AnythingOfType("*domain.IncidentActivity")).Return(nil)
+		incidentRepo.On("FindByID", ctx, uint(1)).Return(updatedIncident, nil)
+
+		incident, err := usecase.AssignIncident(ctx, 1, 1, nil)
+
+		require.NoError(t, err)
+		assert.NotNil(t, incident)
+	})
+
+	t.Run("returns error when incident not found", func(t *testing.T) {
+		t.Parallel()
+
+		incidentRepo := mocks.NewMockIncidentRepository()
+		tagRepo := mocks.NewMockTagRepository()
+		userRepo := mocks.NewMockUserRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		cacheRepo := mocks.NewMockCacheRepository()
+
+		usecase := createTestIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, cacheRepo)
+
+		incidentRepo.On("FindByID", ctx, uint(999)).Return(nil, nil)
+
+		assigneeID := uint(2)
+		incident, err := usecase.AssignIncident(ctx, 1, 999, &assigneeID)
+
+		require.Error(t, err)
+		assert.Nil(t, incident)
+	})
+
+	t.Run("returns error when assignee not found", func(t *testing.T) {
+		t.Parallel()
+
+		incidentRepo := mocks.NewMockIncidentRepository()
+		tagRepo := mocks.NewMockTagRepository()
+		userRepo := mocks.NewMockUserRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		cacheRepo := mocks.NewMockCacheRepository()
+
+		usecase := createTestIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, cacheRepo)
+
+		existingIncident := testutil.NewTestIncident(func(i *domain.Incident) {
+			i.ID = 1
+		})
+
+		incidentRepo.On("FindByID", ctx, uint(1)).Return(existingIncident, nil)
+		userRepo.On("FindByID", ctx, uint(999)).Return(nil, nil)
+
+		assigneeID := uint(999)
+		incident, err := usecase.AssignIncident(ctx, 1, 1, &assigneeID)
+
+		require.Error(t, err)
+		assert.Nil(t, incident)
 	})
 }
 

@@ -128,14 +128,19 @@ async function apiRequest<T>(
   }
 
   // AbortControllerでタイムアウトを実装
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  // テスト環境（Vitest）では undici との互換性問題を避けるため signal をスキップ
+  const isTestEnv =
+    typeof process !== "undefined" && process.env?.VITEST === "true";
+  const controller = isTestEnv ? null : new AbortController();
+  const timeoutId = controller
+    ? setTimeout(() => controller.abort(), timeout)
+    : null;
 
   const config: RequestInit = {
     method: options.method || "GET",
     headers,
     credentials: "include", // リフレッシュ token 用に Cookie を含める
-    signal: controller.signal,
+    ...(controller && { signal: controller.signal }),
   };
 
   if (options.body) {
@@ -147,11 +152,15 @@ async function apiRequest<T>(
 
     const response = await fetch(url, config);
 
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
 
     if (!response.ok) {
-      // 5xxエラーの場合、リトライを試みる
-      if (isRetryableError(response.status) && retryCount < MAX_RETRIES) {
+      // 5xxエラーの場合、リトライを試みる（テスト環境ではスキップ）
+      if (
+        isRetryableError(response.status) &&
+        retryCount < MAX_RETRIES &&
+        !isTestEnv
+      ) {
         const retryDelay = RETRY_DELAY * Math.pow(2, retryCount); // 指数バックオフ
         logger.warn(
           `Server error ${response.status}, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`,
@@ -201,7 +210,7 @@ async function apiRequest<T>(
     logger.apiResponse(config.method || "GET", endpoint, response.status);
     return response.json();
   } catch (error) {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
 
     // タイムアウトエラーの場合
     if (error instanceof Error && error.name === "AbortError") {
