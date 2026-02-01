@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"incidex/internal/domain"
-	"incidex/internal/pkg/sanitizer"
 	"io"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"incidex/internal/domain"
+	"incidex/internal/pkg/logger"
+	"incidex/internal/pkg/sanitizer"
 )
 
 type AuditMiddleware struct {
@@ -90,10 +93,16 @@ func (m *AuditMiddleware) Log() gin.HandlerFunc {
 				log.Details = string(detailsJSON)
 			}
 
-			// 監査ログを保存します（メイン request に影響を与えないよう error を無視します）
+			// 監査ログを保存します
 			// goroutine 内なので background context を使用します
 			ctx := context.Background()
-			_ = m.auditLogRepo.Create(ctx, log)
+			if err := m.auditLogRepo.Create(ctx, log); err != nil {
+				logger.Log.Error("Failed to create audit log",
+					zap.Error(err),
+					zap.String("method", log.Method),
+					zap.String("path", log.Path),
+				)
+			}
 		}()
 	}
 }
@@ -109,9 +118,9 @@ func shouldSkipAudit(path string, method string) bool {
 	// メソッドに関係なく特定のエンドポイントをスキップします
 	skipPaths := []string{
 		"/api/health",
-		"/api/stats",        // 統計情報は読み取り専用です
-		"/api/export",       // エクスポート操作は読み取り専用です
-		"/api/audit-logs",   // 監査ログのクエリは監査しません
+		"/api/stats",      // 統計情報は読み取り専用です
+		"/api/export",     // エクスポート操作は読み取り専用です
+		"/api/audit-logs", // 監査ログのクエリは監査しません
 	}
 
 	for _, skip := range skipPaths {
