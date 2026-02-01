@@ -1,6 +1,13 @@
-import { logger } from './logger';
+import { logger } from "./logger";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+
+// タイムアウト設定（ミリ秒）
+const DEFAULT_TIMEOUT = 30000;
+// リトライ設定
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 初回リトライの遅延（ミリ秒）
 
 type RequestOptions = {
   method?: string;
@@ -8,19 +15,50 @@ type RequestOptions = {
   body?: unknown;
   token?: string;
   skipRefresh?: boolean; // 自動 token リフレッシュをスキップ
+  timeout?: number; // タイムアウト（ミリ秒）
+  retryCount?: number; // 内部用: 現在のリトライ回数
 };
 
-import { Tag, CreateTagRequest, UpdateTagRequest } from '../types/tag';
-import { Incident, IncidentListResponse, CreateIncidentRequest, UpdateIncidentRequest, IncidentFilters, User as IncidentUser } from '../types/incident';
-import { DashboardStats, TrendPeriod, SLAMetrics, TagStats } from '../types/stats';
-import { IncidentActivity, AddCommentRequest, AddTimelineEventRequest } from '../types/activity';
-import { Attachment } from '../types/attachment';
-import { NotificationSetting } from '../types/notification';
-import { PostMortem, CreatePostMortemRequest, UpdatePostMortemRequest } from '../types/postmortem';
-import { ActionItem, CreateActionItemRequest, UpdateActionItemRequest } from '../types/actionitem';
-import { User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest } from '../types/user';
-import { AuditLog, AuditLogFilters, AuditLogResponse } from '../types/auditLog';
-import { MonthlyReport } from '../types/report';
+import { Tag, CreateTagRequest, UpdateTagRequest } from "../types/tag";
+import {
+  Incident,
+  IncidentListResponse,
+  CreateIncidentRequest,
+  UpdateIncidentRequest,
+  IncidentFilters,
+  User as IncidentUser,
+} from "../types/incident";
+import {
+  DashboardStats,
+  TrendPeriod,
+  SLAMetrics,
+  TagStats,
+} from "../types/stats";
+import {
+  IncidentActivity,
+  AddCommentRequest,
+  AddTimelineEventRequest,
+} from "../types/activity";
+import { Attachment } from "../types/attachment";
+import { NotificationSetting } from "../types/notification";
+import {
+  PostMortem,
+  CreatePostMortemRequest,
+  UpdatePostMortemRequest,
+} from "../types/postmortem";
+import {
+  ActionItem,
+  CreateActionItemRequest,
+  UpdateActionItemRequest,
+} from "../types/actionitem";
+import {
+  User,
+  CreateUserRequest,
+  UpdateUserRequest,
+  UpdatePasswordRequest,
+} from "../types/user";
+import { AuditLog, AuditLogFilters, AuditLogResponse } from "../types/auditLog";
+import { MonthlyReport } from "../types/report";
 
 let refreshPromise: Promise<string> | null = null;
 
@@ -33,23 +71,23 @@ async function refreshAccessToken(): Promise<string> {
   refreshPromise = (async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to refresh token');
+        throw new Error("Failed to refresh token");
       }
 
       const data = await response.json();
       const newToken = data.access_token;
 
-      localStorage.setItem('token', newToken);
+      localStorage.setItem("token", newToken);
       if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
       return newToken;
@@ -62,22 +100,42 @@ async function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
-async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${endpoint}`;
+// 5xxエラーかどうかを判定
+function isRetryableError(status: number): boolean {
+  return status >= 500 && status < 600;
+}
+
+// 遅延関数（指数バックオフ用）
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${endpoint}`;
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT;
+  const retryCount = options.retryCount ?? 0;
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...options.headers,
   };
 
   if (options.token) {
-    headers['Authorization'] = `Bearer ${options.token}`;
+    headers["Authorization"] = `Bearer ${options.token}`;
   }
 
+  // AbortControllerでタイムアウトを実装
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
   const config: RequestInit = {
-    method: options.method || 'GET',
+    method: options.method || "GET",
     headers,
-    credentials: 'include', // リフレッシュ token 用に Cookie を含める
+    credentials: "include", // リフレッシュ token 用に Cookie を含める
+    signal: controller.signal,
   };
 
   if (options.body) {
@@ -85,13 +143,32 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
   }
 
   try {
-    logger.apiRequest(config.method || 'GET', endpoint, options.body);
+    logger.apiRequest(config.method || "GET", endpoint, options.body);
 
     const response = await fetch(url, config);
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
+      // 5xxエラーの場合、リトライを試みる
+      if (isRetryableError(response.status) && retryCount < MAX_RETRIES) {
+        const retryDelay = RETRY_DELAY * Math.pow(2, retryCount); // 指数バックオフ
+        logger.warn(
+          `Server error ${response.status}, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        await delay(retryDelay);
+        return apiRequest<T>(endpoint, {
+          ...options,
+          retryCount: retryCount + 1,
+        });
+      }
+
       // 401 error（認証 error）の場合、リフレッシュ token で再試行
-      if (response.status === 401 && !endpoint.includes('/auth/') && !options.skipRefresh) {
+      if (
+        response.status === 401 &&
+        !endpoint.includes("/auth/") &&
+        !options.skipRefresh
+      ) {
         try {
           const newToken = await refreshAccessToken();
 
@@ -103,31 +180,70 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
           });
         } catch (refreshError) {
           // リフレッシュ失敗、ユーザーをログアウト
-          logger.warn('Token refresh failed, logging out user');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+          logger.warn("Token refresh failed, logging out user");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
           }
           throw refreshError;
         }
       }
 
       const errorData = await response.json().catch(() => ({}));
-      const error = new Error(errorData.error || `Request failed with status ${response.status}`);
-      logger.apiResponse(config.method || 'GET', endpoint, response.status);
+      const error = new Error(
+        errorData.error || `Request failed with status ${response.status}`,
+      );
+      logger.apiResponse(config.method || "GET", endpoint, response.status);
       throw error;
     }
 
-    logger.apiResponse(config.method || 'GET', endpoint, response.status);
+    logger.apiResponse(config.method || "GET", endpoint, response.status);
     return response.json();
   } catch (error) {
+    clearTimeout(timeoutId);
+
+    // タイムアウトエラーの場合
+    if (error instanceof Error && error.name === "AbortError") {
+      // タイムアウト時もリトライを試みる
+      if (retryCount < MAX_RETRIES) {
+        const retryDelay = RETRY_DELAY * Math.pow(2, retryCount);
+        logger.warn(
+          `Request timeout, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        await delay(retryDelay);
+        return apiRequest<T>(endpoint, {
+          ...options,
+          retryCount: retryCount + 1,
+        });
+      }
+      logger.error("API request timed out", error, { url, endpoint, timeout });
+      throw new Error(
+        `リクエストがタイムアウトしました（${timeout / 1000}秒）。ネットワーク接続を確認してください。`,
+      );
+    }
+
     // ネットワーク error の場合、より詳細な error メッセージを提供
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      logger.error('API request failed - network error', error as Error, { url, endpoint });
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      // ネットワークエラー時もリトライを試みる
+      if (retryCount < MAX_RETRIES) {
+        const retryDelay = RETRY_DELAY * Math.pow(2, retryCount);
+        logger.warn(
+          `Network error, retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        await delay(retryDelay);
+        return apiRequest<T>(endpoint, {
+          ...options,
+          retryCount: retryCount + 1,
+        });
+      }
+      logger.error("API request failed - network error", error as Error, {
+        url,
+        endpoint,
+      });
       throw new Error(
         `バックエンドサーバーに接続できませんでした。サーバーが起動しているか確認してください。\n` +
-        `エラー: ${(error as Error).message}`
+          `エラー: ${(error as Error).message}`,
       );
     }
     throw error;
@@ -135,58 +251,73 @@ async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Pr
 }
 
 export const authApi = {
-  register: (name: string, email: string, password: string, employeeNumber: string, department: string) =>
-    apiRequest<{ access_token: string; user: any }>('/auth/register', {
-      method: 'POST',
-      body: { name, email, password, employee_number: employeeNumber, department },
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    employeeNumber: string,
+    department: string,
+  ) =>
+    apiRequest<{ access_token: string; user: any }>("/auth/register", {
+      method: "POST",
+      body: {
+        name,
+        email,
+        password,
+        employee_number: employeeNumber,
+        department,
+      },
     }),
   login: (email: string, password: string) =>
-    apiRequest<{ access_token: string; user: any }>('/auth/login', {
-      method: 'POST',
+    apiRequest<{ access_token: string; user: any }>("/auth/login", {
+      method: "POST",
       body: { email, password },
     }),
   logout: () =>
-    apiRequest<{ message: string }>('/auth/logout', {
-      method: 'POST',
+    apiRequest<{ message: string }>("/auth/logout", {
+      method: "POST",
     }),
   refresh: () =>
-    apiRequest<{ access_token: string; user: any }>('/auth/refresh', {
-      method: 'POST',
+    apiRequest<{ access_token: string; user: any }>("/auth/refresh", {
+      method: "POST",
     }),
   requestPasswordReset: (email: string) =>
-    apiRequest<{ message: string }>('/auth/forgot-password', {
-      method: 'POST',
+    apiRequest<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
       body: { email },
     }),
   resetPassword: (token: string, newPassword: string) =>
-    apiRequest<{ message: string }>('/auth/reset-password', {
-      method: 'POST',
+    apiRequest<{ message: string }>("/auth/reset-password", {
+      method: "POST",
       body: { token, new_password: newPassword },
     }),
   validateResetToken: (token: string) =>
-    apiRequest<{ valid: boolean }>(`/auth/validate-reset-token?token=${token}`, {
-      method: 'GET',
-    }),
+    apiRequest<{ valid: boolean }>(
+      `/auth/validate-reset-token?token=${token}`,
+      {
+        method: "GET",
+      },
+    ),
 };
 
 export const tagApi = {
-  getAll: (token: string) => apiRequest<Tag[]>('/tags', { token }),
+  getAll: (token: string) => apiRequest<Tag[]>("/tags", { token }),
   create: (token: string, data: CreateTagRequest) =>
-    apiRequest<Tag>('/tags', {
-      method: 'POST',
+    apiRequest<Tag>("/tags", {
+      method: "POST",
       body: data,
-      token
+      token,
     }),
   update: (token: string, id: number, data: UpdateTagRequest) =>
     apiRequest<Tag>(`/tags/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: data,
-      token
+      token,
     }),
   delete: (token: string, id: number) =>
     apiRequest<void>(`/tags/${id}`, {
-      method: 'DELETE',
-      token
+      method: "DELETE",
+      token,
     }),
 };
 
@@ -194,95 +325,100 @@ export const incidentApi = {
   getAll: (token: string, params?: IncidentFilters) => {
     const queryParams = new URLSearchParams();
     if (params) {
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
-      if (params.severity) queryParams.append('severity', params.severity);
-      if (params.status) queryParams.append('status', params.status);
-      if (params.tag_ids) queryParams.append('tag_ids', params.tag_ids);
-      if (params.search) queryParams.append('search', params.search);
-      if (params.sort) queryParams.append('sort', params.sort);
-      if (params.order) queryParams.append('order', params.order);
-      if (params.assigned_to_id) queryParams.append('assigned_to_id', params.assigned_to_id.toString());
+      if (params.page) queryParams.append("page", params.page.toString());
+      if (params.limit) queryParams.append("limit", params.limit.toString());
+      if (params.severity) queryParams.append("severity", params.severity);
+      if (params.status) queryParams.append("status", params.status);
+      if (params.tag_ids) queryParams.append("tag_ids", params.tag_ids);
+      if (params.search) queryParams.append("search", params.search);
+      if (params.sort) queryParams.append("sort", params.sort);
+      if (params.order) queryParams.append("order", params.order);
+      if (params.assigned_to_id)
+        queryParams.append("assigned_to_id", params.assigned_to_id.toString());
     }
     const queryString = queryParams.toString();
-    return apiRequest<IncidentListResponse>(`/incidents${queryString ? `?${queryString}` : ''}`, { token });
+    return apiRequest<IncidentListResponse>(
+      `/incidents${queryString ? `?${queryString}` : ""}`,
+      { token },
+    );
   },
   getById: (token: string, id: number) =>
     apiRequest<Incident>(`/incidents/${id}`, { token }),
   create: (token: string, data: CreateIncidentRequest) =>
-    apiRequest<Incident>('/incidents', {
-      method: 'POST',
+    apiRequest<Incident>("/incidents", {
+      method: "POST",
       body: data,
-      token
+      token,
     }),
   update: (token: string, id: number, data: UpdateIncidentRequest) =>
     apiRequest<Incident>(`/incidents/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: data,
-      token
+      token,
     }),
   delete: (token: string, id: number) =>
     apiRequest<void>(`/incidents/${id}`, {
-      method: 'DELETE',
-      token
+      method: "DELETE",
+      token,
     }),
   assignIncident: (token: string, id: number, assigneeId: number | null) =>
     apiRequest<Incident>(`/incidents/${id}/assign`, {
-      method: 'POST',
+      method: "POST",
       token,
       body: { assignee_id: assigneeId },
     }),
 };
 
 export const userApi = {
-  getAll: (token: string) => apiRequest<User[]>('/users', { token }),
-  getById: (token: string, id: number) => apiRequest<User>(`/users/${id}`, { token }),
+  getAll: (token: string) => apiRequest<User[]>("/users", { token }),
+  getById: (token: string, id: number) =>
+    apiRequest<User>(`/users/${id}`, { token }),
   create: (token: string, data: CreateUserRequest) =>
-    apiRequest<User>('/users', {
-      method: 'POST',
+    apiRequest<User>("/users", {
+      method: "POST",
       token,
       body: data,
     }),
   update: (token: string, id: number, data: UpdateUserRequest) =>
     apiRequest<User>(`/users/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       token,
       body: data,
     }),
   toggleActive: (token: string, id: number, isActive: boolean) =>
     apiRequest<{ message: string }>(`/users/${id}/status`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: { is_active: isActive },
     }),
   updatePassword: (token: string, id: number, data: UpdatePasswordRequest) =>
     apiRequest<{ message: string }>(`/users/${id}/password`, {
-      method: 'PUT',
+      method: "PUT",
       token,
       body: data,
     }),
   adminResetPassword: (token: string, id: number, newPassword: string) =>
     apiRequest<{ message: string }>(`/users/${id}/admin-reset-password`, {
-      method: 'POST',
+      method: "POST",
       token,
       body: { new_password: newPassword },
     }),
   delete: (token: string, id: number) =>
     apiRequest<{ message: string }>(`/users/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
 
 export const statsApi = {
-  getDashboardStats: (token: string, period: TrendPeriod = 'daily') =>
+  getDashboardStats: (token: string, period: TrendPeriod = "daily") =>
     apiRequest<DashboardStats>(`/stats/dashboard?period=${period}`, { token }),
 
   getSLAMetrics: (token: string) =>
-    apiRequest<SLAMetrics>('/stats/sla', { token }),
+    apiRequest<SLAMetrics>("/stats/sla", { token }),
 
   getTagStats: (token: string) =>
-    apiRequest<{ tag_stats: TagStats[] }>('/stats/tags', { token }),
+    apiRequest<{ tag_stats: TagStats[] }>("/stats/tags", { token }),
 };
 
 // 自動 token リフレッシュ付きファイル request 用ヘルパー
@@ -290,26 +426,30 @@ async function fileRequestWithRefresh(
   url: string,
   token: string,
   options: RequestInit = {},
-  retried = false
+  retried = false,
 ): Promise<Response> {
   const headers: Record<string, string> = {
-    'Authorization': `Bearer ${token}`,
-    ...options.headers as Record<string, string>,
+    Authorization: `Bearer ${token}`,
+    ...(options.headers as Record<string, string>),
   };
 
-  const response = await fetch(url, { ...options, headers, credentials: 'include' });
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
 
   if (response.status === 401 && !retried) {
     try {
       const newToken = await refreshAccessToken();
       return fileRequestWithRefresh(url, newToken, options, true);
     } catch {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
       }
-      throw new Error('Authentication failed');
+      throw new Error("Authentication failed");
     }
   }
 
@@ -317,16 +457,19 @@ async function fileRequestWithRefresh(
 }
 
 export const exportApi = {
-  exportIncidentsCSV: async (token: string, params?: IncidentFilters): Promise<Blob> => {
+  exportIncidentsCSV: async (
+    token: string,
+    params?: IncidentFilters,
+  ): Promise<Blob> => {
     const queryParams = new URLSearchParams();
     if (params) {
-      if (params.severity) queryParams.append('severity', params.severity);
-      if (params.status) queryParams.append('status', params.status);
-      if (params.tag_ids) queryParams.append('tag_ids', params.tag_ids);
-      if (params.search) queryParams.append('search', params.search);
+      if (params.severity) queryParams.append("severity", params.severity);
+      if (params.status) queryParams.append("status", params.status);
+      if (params.tag_ids) queryParams.append("tag_ids", params.tag_ids);
+      if (params.search) queryParams.append("search", params.search);
     }
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/export/incidents${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_BASE_URL}/export/incidents${queryString ? `?${queryString}` : ""}`;
 
     const response = await fileRequestWithRefresh(url, token);
 
@@ -337,7 +480,10 @@ export const exportApi = {
     return response.blob();
   },
 
-  exportIncidentPDF: async (token: string, incidentId: number): Promise<void> => {
+  exportIncidentPDF: async (
+    token: string,
+    incidentId: number,
+  ): Promise<void> => {
     const url = `${API_BASE_URL}/export/incidents/${incidentId}/pdf`;
 
     const response = await fileRequestWithRefresh(url, token);
@@ -347,7 +493,7 @@ export const exportApi = {
     }
 
     const blob = await response.blob();
-    const contentDisposition = response.headers.get('Content-Disposition');
+    const contentDisposition = response.headers.get("Content-Disposition");
     let fileName = `incident_${incidentId}.pdf`;
     if (contentDisposition) {
       const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
@@ -357,7 +503,7 @@ export const exportApi = {
     }
 
     const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = fileName;
     document.body.appendChild(link);
@@ -370,22 +516,26 @@ export const exportApi = {
 export const activityApi = {
   getActivities: (token: string, incidentId: number, limit?: number) => {
     const queryParams = new URLSearchParams();
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit) queryParams.append("limit", limit.toString());
     const queryString = queryParams.toString();
     return apiRequest<IncidentActivity[]>(
-      `/incidents/${incidentId}/activities${queryString ? `?${queryString}` : ''}`,
-      { token }
+      `/incidents/${incidentId}/activities${queryString ? `?${queryString}` : ""}`,
+      { token },
     );
   },
   addComment: (token: string, incidentId: number, data: AddCommentRequest) =>
     apiRequest<{ message: string }>(`/incidents/${incidentId}/comments`, {
-      method: 'POST',
+      method: "POST",
       body: data,
       token,
     }),
-  addTimelineEvent: (token: string, incidentId: number, data: AddTimelineEventRequest) =>
+  addTimelineEvent: (
+    token: string,
+    incidentId: number,
+    data: AddTimelineEventRequest,
+  ) =>
     apiRequest<IncidentActivity>(`/incidents/${incidentId}/timeline`, {
-      method: 'POST',
+      method: "POST",
       body: data,
       token,
     }),
@@ -395,26 +545,37 @@ export const attachmentApi = {
   getAttachments: (token: string, incidentId: number) =>
     apiRequest<Attachment[]>(`/incidents/${incidentId}/attachments`, { token }),
 
-  uploadAttachment: async (token: string, incidentId: number, file: File): Promise<Attachment> => {
+  uploadAttachment: async (
+    token: string,
+    incidentId: number,
+    file: File,
+  ): Promise<Attachment> => {
     const url = `${API_BASE_URL}/incidents/${incidentId}/attachments`;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const response = await fileRequestWithRefresh(url, token, {
-      method: 'POST',
+      method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      throw new Error(
+        errorData.error || `Upload failed with status ${response.status}`,
+      );
     }
 
     return response.json();
   },
 
-  downloadAttachment: async (token: string, incidentId: number, attachmentId: number, fileName: string): Promise<void> => {
+  downloadAttachment: async (
+    token: string,
+    incidentId: number,
+    attachmentId: number,
+    fileName: string,
+  ): Promise<void> => {
     const url = `${API_BASE_URL}/incidents/${incidentId}/attachments/${attachmentId}`;
 
     const response = await fileRequestWithRefresh(url, token);
@@ -425,7 +586,7 @@ export const attachmentApi = {
 
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = fileName;
     document.body.appendChild(link);
@@ -435,21 +596,24 @@ export const attachmentApi = {
   },
 
   deleteAttachment: (token: string, incidentId: number, attachmentId: number) =>
-    apiRequest<{ message: string }>(`/incidents/${incidentId}/attachments/${attachmentId}`, {
-      method: 'DELETE',
-      token,
-    }),
+    apiRequest<{ message: string }>(
+      `/incidents/${incidentId}/attachments/${attachmentId}`,
+      {
+        method: "DELETE",
+        token,
+      },
+    ),
 };
 
 export const notificationApi = {
   getMySettings: (token: string) =>
-    apiRequest<NotificationSetting>('/notifications/settings', {
+    apiRequest<NotificationSetting>("/notifications/settings", {
       token,
     }),
 
   updateMySettings: (token: string, settings: Partial<NotificationSetting>) =>
-    apiRequest<NotificationSetting>('/notifications/settings', {
-      method: 'PUT',
+    apiRequest<NotificationSetting>("/notifications/settings", {
+      method: "PUT",
       token,
       body: settings,
     }),
@@ -461,23 +625,27 @@ export const notificationApi = {
 };
 
 export const postMortemApi = {
-  getAll: (token: string, params?: {
-    status?: string;
-    author_id?: number;
-    page?: number;
-    limit?: number;
-  }) => {
+  getAll: (
+    token: string,
+    params?: {
+      status?: string;
+      author_id?: number;
+      page?: number;
+      limit?: number;
+    },
+  ) => {
     const queryParams = new URLSearchParams();
     if (params) {
-      if (params.status) queryParams.append('status', params.status);
-      if (params.author_id) queryParams.append('author_id', params.author_id.toString());
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.status) queryParams.append("status", params.status);
+      if (params.author_id)
+        queryParams.append("author_id", params.author_id.toString());
+      if (params.page) queryParams.append("page", params.page.toString());
+      if (params.limit) queryParams.append("limit", params.limit.toString());
     }
     const queryString = queryParams.toString();
     return apiRequest<{ post_mortems: PostMortem[]; pagination: any }>(
-      `/post-mortems${queryString ? `?${queryString}` : ''}`,
-      { token }
+      `/post-mortems${queryString ? `?${queryString}` : ""}`,
+      { token },
     );
   },
 
@@ -488,64 +656,71 @@ export const postMortemApi = {
     apiRequest<PostMortem>(`/incidents/${incidentId}/postmortem`, { token }),
 
   create: (token: string, data: CreatePostMortemRequest) =>
-    apiRequest<PostMortem>('/post-mortems', {
-      method: 'POST',
+    apiRequest<PostMortem>("/post-mortems", {
+      method: "POST",
       token,
       body: data,
     }),
 
   update: (token: string, id: number, data: UpdatePostMortemRequest) =>
     apiRequest<PostMortem>(`/post-mortems/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       token,
       body: data,
     }),
 
   publish: (token: string, id: number) =>
     apiRequest<PostMortem>(`/post-mortems/${id}/publish`, {
-      method: 'POST',
+      method: "POST",
       token,
     }),
 
   unpublish: (token: string, id: number) =>
     apiRequest<PostMortem>(`/post-mortems/${id}/unpublish`, {
-      method: 'POST',
+      method: "POST",
       token,
     }),
 
   delete: (token: string, id: number) =>
     apiRequest<{ message: string }>(`/post-mortems/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 
   generateAISuggestion: (token: string, incidentId: number) =>
-    apiRequest<{ suggestion: string }>(`/incidents/${incidentId}/postmortem/ai-suggestion`, {
-      method: 'POST',
-      token,
-    }),
+    apiRequest<{ suggestion: string }>(
+      `/incidents/${incidentId}/postmortem/ai-suggestion`,
+      {
+        method: "POST",
+        token,
+      },
+    ),
 };
 
 export const actionItemApi = {
-  getAll: (token: string, params?: {
-    status?: string;
-    priority?: string;
-    assignee_id?: number;
-    page?: number;
-    limit?: number;
-  }) => {
+  getAll: (
+    token: string,
+    params?: {
+      status?: string;
+      priority?: string;
+      assignee_id?: number;
+      page?: number;
+      limit?: number;
+    },
+  ) => {
     const queryParams = new URLSearchParams();
     if (params) {
-      if (params.status) queryParams.append('status', params.status);
-      if (params.priority) queryParams.append('priority', params.priority);
-      if (params.assignee_id) queryParams.append('assignee_id', params.assignee_id.toString());
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.status) queryParams.append("status", params.status);
+      if (params.priority) queryParams.append("priority", params.priority);
+      if (params.assignee_id)
+        queryParams.append("assignee_id", params.assignee_id.toString());
+      if (params.page) queryParams.append("page", params.page.toString());
+      if (params.limit) queryParams.append("limit", params.limit.toString());
     }
     const queryString = queryParams.toString();
     return apiRequest<{ action_items: ActionItem[]; pagination: any }>(
-      `/action-items${queryString ? `?${queryString}` : ''}`,
-      { token }
+      `/action-items${queryString ? `?${queryString}` : ""}`,
+      { token },
     );
   },
 
@@ -553,25 +728,27 @@ export const actionItemApi = {
     apiRequest<ActionItem>(`/action-items/${id}`, { token }),
 
   getByPostMortemId: (token: string, postMortemId: number) =>
-    apiRequest<ActionItem[]>(`/post-mortems/${postMortemId}/action-items`, { token }),
+    apiRequest<ActionItem[]>(`/post-mortems/${postMortemId}/action-items`, {
+      token,
+    }),
 
   create: (token: string, data: CreateActionItemRequest) =>
-    apiRequest<ActionItem>('/action-items', {
-      method: 'POST',
+    apiRequest<ActionItem>("/action-items", {
+      method: "POST",
       token,
       body: data,
     }),
 
   update: (token: string, id: number, data: UpdateActionItemRequest) =>
     apiRequest<ActionItem>(`/action-items/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       token,
       body: data,
     }),
 
   delete: (token: string, id: number) =>
     apiRequest<{ message: string }>(`/action-items/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
@@ -580,18 +757,21 @@ export const auditLogApi = {
   getAll: (token: string, filters?: AuditLogFilters) => {
     const queryParams = new URLSearchParams();
     if (filters) {
-      if (filters.page) queryParams.append('page', filters.page.toString());
-      if (filters.limit) queryParams.append('limit', filters.limit.toString());
-      if (filters.user_id) queryParams.append('user_id', filters.user_id.toString());
-      if (filters.action) queryParams.append('action', filters.action);
-      if (filters.resource_type) queryParams.append('resource_type', filters.resource_type);
-      if (filters.start_date) queryParams.append('start_date', filters.start_date);
-      if (filters.end_date) queryParams.append('end_date', filters.end_date);
+      if (filters.page) queryParams.append("page", filters.page.toString());
+      if (filters.limit) queryParams.append("limit", filters.limit.toString());
+      if (filters.user_id)
+        queryParams.append("user_id", filters.user_id.toString());
+      if (filters.action) queryParams.append("action", filters.action);
+      if (filters.resource_type)
+        queryParams.append("resource_type", filters.resource_type);
+      if (filters.start_date)
+        queryParams.append("start_date", filters.start_date);
+      if (filters.end_date) queryParams.append("end_date", filters.end_date);
     }
     const queryString = queryParams.toString();
     return apiRequest<AuditLogResponse>(
-      `/audit-logs${queryString ? `?${queryString}` : ''}`,
-      { token }
+      `/audit-logs${queryString ? `?${queryString}` : ""}`,
+      { token },
     );
   },
 
@@ -602,46 +782,45 @@ export const auditLogApi = {
 export const reportApi = {
   getMonthlyReport: (token: string, year?: number, month?: number) => {
     const queryParams = new URLSearchParams();
-    if (year) queryParams.append('year', year.toString());
-    if (month) queryParams.append('month', month.toString());
+    if (year) queryParams.append("year", year.toString());
+    if (month) queryParams.append("month", month.toString());
     const queryString = queryParams.toString();
     return apiRequest<MonthlyReport>(
-      `/reports/monthly${queryString ? `?${queryString}` : ''}`,
-      { token }
+      `/reports/monthly${queryString ? `?${queryString}` : ""}`,
+      { token },
     );
   },
 
   getCustomReport: (token: string, startDate: string, endDate: string) => {
     const queryParams = new URLSearchParams();
-    queryParams.append('start_date', startDate);
-    queryParams.append('end_date', endDate);
+    queryParams.append("start_date", startDate);
+    queryParams.append("end_date", endDate);
     return apiRequest<MonthlyReport>(
       `/reports/custom?${queryParams.toString()}`,
-      { token }
+      { token },
     );
   },
 };
 
 export const llmSettingApi = {
-  getMySetting: (token: string) =>
-    apiRequest<any>('/llm-settings', { token }),
+  getMySetting: (token: string) => apiRequest<any>("/llm-settings", { token }),
 
   createOrUpdate: (token: string, data: any) =>
-    apiRequest<any>('/llm-settings', {
-      method: 'PUT',
+    apiRequest<any>("/llm-settings", {
+      method: "PUT",
       token,
       body: data,
     }),
 
   delete: (token: string) =>
-    apiRequest<{ message: string }>('/llm-settings', {
-      method: 'DELETE',
+    apiRequest<{ message: string }>("/llm-settings", {
+      method: "DELETE",
       token,
     }),
 
   testConnection: (token: string) =>
-    apiRequest<{ message: string }>('/llm-settings/test', {
-      method: 'POST',
+    apiRequest<{ message: string }>("/llm-settings/test", {
+      method: "POST",
       token,
     }),
 };
