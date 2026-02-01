@@ -50,9 +50,11 @@
 ### フェーズ3: テストインフラ改善
 
 #### バックエンド
-- usecase カバレッジ: 64.2% → 71.3%
+- usecase カバレッジ: 64.2% → 72.7%
 - `TestIncidentUsecase_GetAllIncidents` 追加（2テストケース）
 - `TestIncidentUsecase_AssignIncident` 追加（4テストケース）
+- `TestPostMortemUsecase_GetPostMortemByIncidentID` 追加（2テストケース）
+- `TestUserUsecase_AdminResetPassword` 追加（4テストケース）
 - `testutil.InitTestLogger()` ヘルパー追加
 
 #### フロントエンド テスト修正
@@ -223,7 +225,7 @@ backend/internal/wire/wire_gen.go   # 新規
 
 | 指標 | 開始時 | 現在 | 目標 |
 |------|--------|------|------|
-| バックエンド テストカバレッジ | 0% | 71.3% | 80%+ |
+| バックエンド テストカバレッジ | 0% | 72.7% | 80%+ |
 | フロントエンド テストカバレッジ | 0% | 98%+ (517/518 pass) | 80%+ |
 | main.go 行数 | 275行 | 200行 | 100行以下 |
 | 最大ファイル行数（Frontend） | 1,580行 | 343行 | 200行以下 |
