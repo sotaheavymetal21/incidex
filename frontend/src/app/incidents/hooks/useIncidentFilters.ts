@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Severity, Status, PaginationResult } from "@/types/incident";
 
@@ -70,80 +70,92 @@ export function useIncidentFilters(): IncidentFiltersState &
     if (paramSearch) setSearch(paramSearch);
   }, [searchParams]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearch(e.target.value);
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    },
+    [],
+  );
 
-  const handleTagToggle = (tagId: number) => {
+  const handleTagToggle = useCallback((tagId: number) => {
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
         : [...prev, tagId],
     );
     setPagination((prev) => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const handleSort = (field: SortField) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("desc");
-    }
-  };
+  const handleSort = useCallback(
+    (field: SortField) => {
+      if (sortBy === field) {
+        setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+      } else {
+        setSortBy(field);
+        setSortOrder("desc");
+      }
+    },
+    [sortBy],
+  );
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearch("");
     setSeverity("");
     setStatus("");
     setSelectedTagIds([]);
     setPagination((prev) => ({ ...prev, page: 1 }));
-  };
+  }, []);
 
-  const clearFilter = (
-    filterType: "search" | "severity" | "status" | "tag",
-    value?: number,
-  ) => {
-    switch (filterType) {
-      case "search":
-        setSearch("");
-        break;
-      case "severity":
-        setSeverity("");
-        break;
-      case "status":
-        setStatus("");
-        break;
-      case "tag":
-        if (value !== undefined) {
-          setSelectedTagIds((prev) => prev.filter((id) => id !== value));
-        }
-        break;
-    }
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
+  const clearFilter = useCallback(
+    (filterType: "search" | "severity" | "status" | "tag", value?: number) => {
+      switch (filterType) {
+        case "search":
+          setSearch("");
+          break;
+        case "severity":
+          setSeverity("");
+          break;
+        case "status":
+          setStatus("");
+          break;
+        case "tag":
+          if (value !== undefined) {
+            setSelectedTagIds((prev) => prev.filter((id) => id !== value));
+          }
+          break;
+      }
+      setPagination((prev) => ({ ...prev, page: 1 }));
+    },
+    [],
+  );
 
-  const applyPreset = (preset: "unresolved" | "my-assigned" | "critical") => {
-    clearFilters();
-    switch (preset) {
-      case "unresolved":
-        setStatus("open");
-        break;
-      case "my-assigned":
-        // 担当者フィルターのAPIサポートが必要
-        break;
-      case "critical":
-        setSeverity("critical");
-        break;
-    }
-  };
+  const applyPreset = useCallback(
+    (preset: "unresolved" | "my-assigned" | "critical") => {
+      clearFilters();
+      switch (preset) {
+        case "unresolved":
+          setStatus("open");
+          break;
+        case "my-assigned":
+          // 担当者フィルターのAPIサポートが必要
+          break;
+        case "critical":
+          setSeverity("critical");
+          break;
+      }
+    },
+    [clearFilters],
+  );
 
-  const hasActiveFilters =
-    search !== "" ||
-    severity !== "" ||
-    status !== "" ||
-    selectedTagIds.length > 0;
+  const hasActiveFilters = useMemo(
+    () =>
+      search !== "" ||
+      severity !== "" ||
+      status !== "" ||
+      selectedTagIds.length > 0,
+    [search, severity, status, selectedTagIds],
+  );
 
   return {
     search,

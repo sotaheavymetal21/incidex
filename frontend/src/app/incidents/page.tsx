@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -111,45 +111,22 @@ function IncidentsPageContent() {
 
   const filters = useIncidentFilters();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!token) {
-      router.push("/login");
-    }
-  }, [token, authLoading, router]);
-
-  useEffect(() => {
-    if (authLoading || !token) return;
-    fetchTags();
-  }, [token, authLoading]);
-
-  useEffect(() => {
-    if (authLoading || !token) return;
-    fetchIncidents();
-  }, [
-    token,
-    authLoading,
-    filters.pagination.page,
-    filters.search,
-    filters.severity,
-    filters.status,
-    filters.selectedTagIds,
-  ]);
-
-  const fetchTags = async () => {
+  const fetchTags = useCallback(async () => {
+    if (!token) return;
     try {
-      const fetchedTags = await tagApi.getAll(token!);
+      const fetchedTags = await tagApi.getAll(token);
       setTags(fetchedTags);
     } catch (err) {
       console.error("Failed to fetch tags:", err);
     }
-  };
+  }, [token]);
 
-  const fetchIncidents = async () => {
+  const fetchIncidents = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     setError("");
     try {
-      const response = await incidentApi.getAll(token!, {
+      const response = await incidentApi.getAll(token, {
         page: filters.pagination.page,
         limit: filters.pagination.limit,
         search: filters.search || undefined,
@@ -169,11 +146,38 @@ function IncidentsPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    token,
+    filters.pagination.page,
+    filters.pagination.limit,
+    filters.search,
+    filters.severity,
+    filters.status,
+    filters.selectedTagIds,
+    filters.setPagination,
+  ]);
 
-  const handleExportCSV = async () => {
+  useEffect(() => {
+    if (authLoading) return;
+    if (!token) {
+      router.push("/login");
+    }
+  }, [token, authLoading, router]);
+
+  useEffect(() => {
+    if (authLoading || !token) return;
+    fetchTags();
+  }, [token, authLoading, fetchTags]);
+
+  useEffect(() => {
+    if (authLoading || !token) return;
+    fetchIncidents();
+  }, [token, authLoading, fetchIncidents]);
+
+  const handleExportCSV = useCallback(async () => {
+    if (!token) return;
     try {
-      const blob = await exportApi.exportIncidentsCSV(token!, {
+      const blob = await exportApi.exportIncidentsCSV(token, {
         search: filters.search || undefined,
         severity: filters.severity || undefined,
         status: filters.status || undefined,
@@ -195,7 +199,13 @@ function IncidentsPageContent() {
       console.error("Export failed:", err);
       setError("Failed to export incidents");
     }
-  };
+  }, [
+    token,
+    filters.search,
+    filters.severity,
+    filters.status,
+    filters.selectedTagIds,
+  ]);
 
   if (authLoading || !token) {
     return (
