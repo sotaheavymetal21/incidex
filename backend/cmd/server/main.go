@@ -5,15 +5,10 @@ import (
 	"incidex/internal/config"
 	"incidex/internal/db"
 	"incidex/internal/domain"
-	"incidex/internal/infrastructure/cache"
-	"incidex/internal/infrastructure/notification"
-	"incidex/internal/infrastructure/persistence"
-	"incidex/internal/infrastructure/storage"
-	"incidex/internal/interface/http/handler"
 	"incidex/internal/interface/http/middleware"
 	"incidex/internal/interface/http/router"
 	"incidex/internal/pkg/logger"
-	"incidex/internal/usecase"
+	"incidex/internal/wire"
 	"log"
 	"net/http"
 	"os"
@@ -29,7 +24,7 @@ import (
 )
 
 func main() {
-	// ロガーを初期化します
+	// Initialize logger
 	env := logger.GetEnv()
 	if err := logger.InitLogger(env); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
@@ -40,11 +35,27 @@ func main() {
 
 	cfg := config.Load()
 
-	// セキュアなロギングでデータベースを初期化します
-	isProduction := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
-	dbConn := db.Connect(cfg.DatabaseURL, logger.Log, cfg.DBLogLevel)
+	// Run migrations if AUTO_MIGRATE is enabled
+	runMigrationsIfEnabled(cfg)
 
-	// AUTO_MIGRATE が有効な場合はデータベースマイグレーションを実行します
+	// Initialize app with Wire DI
+	app, err := wire.InitializeApp(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize application: %v", err)
+	}
+
+	// Create initial admin user if needed
+	createInitialAdminIfNeeded(app.DB, cfg)
+
+	// Setup router
+	r := setupRouter(app, cfg)
+
+	// Start server with graceful shutdown
+	startServer(r, cfg.Port)
+}
+
+// runMigrationsIfEnabled runs database migrations if AUTO_MIGRATE is enabled.
+func runMigrationsIfEnabled(cfg *config.Config) {
 	if cfg.AutoMigrate {
 		log.Println("INFO: AUTO_MIGRATE is enabled. Running database migrations...")
 		if err := db.RunMigrations(cfg.MigrationsDir, cfg.DatabaseURL); err != nil {
@@ -53,128 +64,21 @@ func main() {
 		log.Println("SUCCESS: Database migrations completed successfully")
 	} else {
 		log.Println("INFO: AUTO_MIGRATE is disabled. Database migrations are managed manually.")
-		log.Println("To enable auto-migration, set AUTO_MIGRATE=true environment variable.")
-		log.Println("To run migrations manually: 'make migrate-up' (local) or 'make migrate-docker-up' (Docker)")
 	}
+}
 
-	// MinIO ストレージを初期化します
-	// 本番環境では SSL を使用し、開発環境ではローカルテスト用に無効化します
-	useSSL := isProduction
-	minioStorage, err := storage.NewMinIOStorage(
-		cfg.MinioEndpoint,
-		cfg.MinioAccessKey,
-		cfg.MinioSecretKey,
-		storage.DefaultBucketName,
-		useSSL,
-	)
-	if err != nil {
-		log.Fatalf("Failed to initialize MinIO storage: %v", err)
-	}
-
-	// Redis キャッシュを初期化します
-	redisClient := db.ConnectRedis(cfg.RedisURL)
-	cacheRepo := cache.NewRedisCache(redisClient)
-
-	// 依存性注入
-	// 認証
-	userRepo := persistence.NewUserRepository(dbConn)
-	refreshTokenRepo := persistence.NewRefreshTokenRepository(dbConn)
-
-	// 設定されている場合、かつユーザーが存在しない場合に初期管理者ユーザーを作成します
-	createInitialAdminIfNeeded(dbConn, userRepo, cfg)
-
-	// JWT token の有効期限: access token は1時間（よりセキュア）
-	authUsecase := usecase.NewAuthUsecase(userRepo, refreshTokenRepo, cfg.JWTSecret, 1*time.Hour)
-	authHandler := handler.NewAuthHandler(authUsecase, isProduction)
-	jwtMiddleware := middleware.NewJWTMiddleware(cfg.JWTSecret)
-
-	// パスワードリセット
-	emailService := notification.NewEmailService(cfg.FrontendURL)
-	passwordResetTokenRepo := persistence.NewPasswordResetTokenRepository(dbConn)
-	passwordResetUsecase := usecase.NewPasswordResetUsecase(userRepo, passwordResetTokenRepo, emailService, cfg.FrontendURL)
-	passwordResetHandler := handler.NewPasswordResetHandler(passwordResetUsecase)
-
-	// タグ
-	tagRepo := persistence.NewTagRepository(dbConn)
-	tagUsecase := usecase.NewTagUsecase(tagRepo)
-	tagHandler := handler.NewTagHandler(tagUsecase)
-
-	// インシデントアクティビティ
-	activityRepo := persistence.NewIncidentActivityRepository(dbConn)
-
-	// 通知
-	notificationRepo := persistence.NewNotificationSettingRepository(dbConn)
-	notificationService := notification.NewNotificationService(notificationRepo, userRepo, cfg.FrontendURL)
-	notificationUsecase := usecase.NewNotificationUsecase(notificationRepo)
-	notificationHandler := handler.NewNotificationHandler(notificationUsecase)
-
-	// インシデント
-	incidentRepo := persistence.NewIncidentRepository(dbConn)
-
-	// ユーザー
-	userUsecase := usecase.NewUserUsecase(userRepo)
-	userHandler := handler.NewUserHandler(userUsecase)
-
-	// 統計
-	statsUsecase := usecase.NewStatsUsecase(incidentRepo, cacheRepo)
-	statsHandler := handler.NewStatsHandler(statsUsecase)
-
-	// アクティビティ handler
-	activityUsecase := usecase.NewIncidentActivityUsecase(activityRepo, incidentRepo, userRepo, notificationService)
-	activityHandler := handler.NewIncidentActivityHandler(activityUsecase)
-
-	// 添付ファイル
-	attachmentRepo := persistence.NewAttachmentRepository(dbConn)
-	attachmentUsecase := usecase.NewAttachmentUsecase(attachmentRepo, incidentRepo, minioStorage)
-	attachmentHandler := handler.NewAttachmentHandler(attachmentUsecase)
-
-	// ポストモーテム
-	postMortemRepo := persistence.NewPostMortemRepository(dbConn)
-	postMortemUsecase := usecase.NewPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
-	postMortemHandler := handler.NewPostMortemHandler(postMortemUsecase)
-
-	// PostMortemRepo が利用可能になった後に IncidentUsecase を初期化します
-	incidentUsecase := usecase.NewIncidentUsecase(incidentRepo, tagRepo, userRepo, activityRepo, postMortemRepo, notificationService, cacheRepo)
-	incidentHandler := handler.NewIncidentHandler(incidentUsecase)
-
-	// エクスポート
-	exportHandler := handler.NewExportHandler(incidentUsecase)
-
-	// アクションアイテム
-	actionItemRepo := persistence.NewActionItemRepository(dbConn)
-	actionItemUsecase := usecase.NewActionItemUsecase(actionItemRepo, postMortemRepo)
-	actionItemHandler := handler.NewActionItemHandler(actionItemUsecase)
-
-	// 監査ログ
-	auditLogRepo := persistence.NewAuditLogRepository(dbConn)
-	auditLogUsecase := usecase.NewAuditLogUsecase(auditLogRepo)
-	auditLogHandler := handler.NewAuditLogHandler(auditLogUsecase)
-	auditMiddleware := middleware.NewAuditMiddleware(auditLogRepo, userRepo)
-
-	// レポート
-	reportRepo := persistence.NewReportRepository(dbConn)
-	reportUsecase := usecase.NewReportUsecase(reportRepo)
-	reportHandler := handler.NewReportHandler(reportUsecase)
-
-	// ヘルスチェック
-	healthHandler := handler.NewHealthHandler(dbConn)
-
-	// レートリミッター
-	// ログインレート制限: 1分あたり5リクエスト
-	loginRateLimiter := middleware.NewRateLimitMiddleware(redisClient, 5, 1*time.Minute)
-	// 一般 API レート制限: 1分あたり100リクエスト
-	apiRateLimiter := middleware.NewRateLimitMiddleware(redisClient, 100, 1*time.Minute)
-
+// setupRouter configures the Gin router with all middleware and routes.
+func setupRouter(app *wire.App, cfg *config.Config) *gin.Engine {
 	r := gin.Default()
 
-	// Request ID middleware（すべてのリクエストに一意のIDを付与）
+	// Request ID middleware
 	r.Use(middleware.RequestID())
 
-	// セキュリティヘッダー middleware
+	// Security headers middleware
 	r.Use(middleware.SecurityHeaders())
 
-	// 監査ログ middleware
-	r.Use(auditMiddleware.Log())
+	// Audit log middleware
+	r.Use(app.AuditMiddleware.Log())
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
@@ -186,34 +90,58 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// ルートを登録します
-	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler, healthHandler, passwordResetHandler, loginRateLimiter, apiRateLimiter)
+	// Register routes
+	router.RegisterRoutes(
+		r,
+		app.AuthHandler,
+		app.JWTMiddleware,
+		app.TagHandler,
+		app.IncidentHandler,
+		app.UserHandler,
+		app.StatsHandler,
+		app.ActivityHandler,
+		app.ExportHandler,
+		app.AttachmentHandler,
+		app.NotificationHandler,
+		app.PostMortemHandler,
+		app.ActionItemHandler,
+		app.AuditLogHandler,
+		app.ReportHandler,
+		app.HealthHandler,
+		app.PasswordResetHandler,
+		app.LoginRateLimiter,
+		app.APIRateLimiter,
+	)
 
-	// Graceful Shutdown対応のHTTPサーバーを設定
+	return r
+}
+
+// startServer starts the HTTP server with graceful shutdown support.
+func startServer(handler http.Handler, port string) {
 	srv := &http.Server{
-		Addr:         ":" + cfg.Port,
-		Handler:      r,
+		Addr:         ":" + port,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// サーバーを非同期で起動
+	// Start server asynchronously
 	go func() {
-		log.Printf("Server starting on port %s", cfg.Port)
+		log.Printf("Server starting on port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	// シグナルを待機
+	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	logger.Log.Info("Shutting down server...")
 
-	// Graceful Shutdown（最大30秒待機）
+	// Graceful shutdown with 30 second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -224,19 +152,17 @@ func main() {
 	logger.Log.Info("Server exited gracefully")
 }
 
-// createInitialAdminIfNeeded は以下の条件で初期管理者ユーザーを作成します:
-// 1. INITIAL_ADMIN_* 環境変数が設定されている
-// 2. データベースにユーザーが存在しない
-func createInitialAdminIfNeeded(dbConn *gorm.DB, userRepo domain.UserRepository, cfg *config.Config) {
-	ctx := context.Background()
-
-	// 初期管理者設定が提供されているか確認します
+// createInitialAdminIfNeeded creates the initial admin user if:
+// 1. INITIAL_ADMIN_* environment variables are set
+// 2. No users exist in the database
+func createInitialAdminIfNeeded(dbConn *gorm.DB, cfg *config.Config) {
+	// Check if initial admin configuration is provided
 	if cfg.InitialAdminEmail == "" || cfg.InitialAdminPassword == "" || cfg.InitialAdminName == "" {
 		log.Println("INFO: Initial admin user not configured (INITIAL_ADMIN_* environment variables not set)")
 		return
 	}
 
-	// ユーザーが既に存在するか確認します
+	// Check if users already exist
 	var userCount int64
 	if err := dbConn.Model(&domain.User{}).Count(&userCount).Error; err != nil {
 		log.Printf("WARNING: Failed to count users: %v", err)
@@ -248,14 +174,14 @@ func createInitialAdminIfNeeded(dbConn *gorm.DB, userRepo domain.UserRepository,
 		return
 	}
 
-	// パスワードをハッシュ化します
+	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(cfg.InitialAdminPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("ERROR: Failed to hash initial admin password: %v", err)
 		return
 	}
 
-	// 初期管理者ユーザーを作成します
+	// Create initial admin user directly via GORM
 	adminUser := &domain.User{
 		Email:        cfg.InitialAdminEmail,
 		PasswordHash: string(hashedPassword),
@@ -264,7 +190,7 @@ func createInitialAdminIfNeeded(dbConn *gorm.DB, userRepo domain.UserRepository,
 		IsActive:     true,
 	}
 
-	if err := userRepo.Create(ctx, adminUser); err != nil {
+	if err := dbConn.Create(adminUser).Error; err != nil {
 		log.Printf("ERROR: Failed to create initial admin user: %v", err)
 		return
 	}
