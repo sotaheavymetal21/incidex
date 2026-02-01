@@ -15,6 +15,10 @@ import (
 	"incidex/internal/pkg/logger"
 	"incidex/internal/usecase"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -163,7 +167,10 @@ func main() {
 
 	r := gin.Default()
 
-	// セキュリティヘッダー middleware（最初に適用）
+	// Request ID middleware（すべてのリクエストに一意のIDを付与）
+	r.Use(middleware.RequestID())
+
+	// セキュリティヘッダー middleware
 	r.Use(middleware.SecurityHeaders())
 
 	// 監査ログ middleware
@@ -173,8 +180,8 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.CORSAllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID"},
+		ExposeHeaders:    []string{"Content-Length", "X-Request-ID"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
@@ -182,10 +189,39 @@ func main() {
 	// ルートを登録します
 	router.RegisterRoutes(r, authHandler, jwtMiddleware, tagHandler, incidentHandler, userHandler, statsHandler, activityHandler, exportHandler, attachmentHandler, notificationHandler, postMortemHandler, actionItemHandler, auditLogHandler, reportHandler, healthHandler, passwordResetHandler, loginRateLimiter, apiRateLimiter)
 
-	log.Printf("Server starting on port %s", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// Graceful Shutdown対応のHTTPサーバーを設定
+	srv := &http.Server{
+		Addr:         ":" + cfg.Port,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	// サーバーを非同期で起動
+	go func() {
+		log.Printf("Server starting on port %s", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	// シグナルを待機
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	logger.Log.Info("Shutting down server...")
+
+	// Graceful Shutdown（最大30秒待機）
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Log.Error("Server forced to shutdown", zap.Error(err))
+	}
+
+	logger.Log.Info("Server exited gracefully")
 }
 
 // createInitialAdminIfNeeded は以下の条件で初期管理者ユーザーを作成します:
