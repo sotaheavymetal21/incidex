@@ -115,26 +115,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// RefreshRequest はトークン更新の request body を表します
-type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"` // オプション: body または cookie で送信可能
-}
-
 // Refresh はアクセストークンを更新します
+// セキュリティ上の理由から、refresh tokenはhttpOnly Cookieからのみ受け付けます
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	// まず cookie から refresh token の取得を試みる
+	// cookie から refresh token を取得（XSS対策のためCookie専用）
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || refreshToken == "" {
-		// request body にフォールバック
-		var req RefreshRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token required"})
-			return
-		}
-		refreshToken = req.RefreshToken
-	}
-
-	if refreshToken == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token required"})
 		return
 	}

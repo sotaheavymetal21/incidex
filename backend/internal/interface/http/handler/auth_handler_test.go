@@ -454,43 +454,8 @@ func TestAuthHandler_Refresh(t *testing.T) {
 		authUsecase.AssertExpectations(t)
 	})
 
-	t.Run("successfully refreshes token from request body", func(t *testing.T) {
-		t.Parallel()
-
-		authUsecase := NewMockAuthUsecase()
-		handler := NewAuthHandler(authUsecase, false)
-
-		user := testutil.NewTestUser()
-		authResponse := &usecase.AuthResponse{
-			User:         user,
-			AccessToken:  "new-access-token",
-			RefreshToken: "new-refresh-token",
-		}
-
-		authUsecase.On("RefreshAccessToken", mock.Anything, "body-refresh-token").
-			Return(authResponse, nil)
-
-		reqBody := RefreshRequest{
-			RefreshToken: "body-refresh-token",
-		}
-		body, _ := json.Marshal(reqBody)
-
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", bytes.NewBuffer(body))
-		c.Request.Header.Set("Content-Type", "application/json")
-
-		handler.Refresh(c)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		require.NoError(t, err)
-
-		assert.Contains(t, response, "access_token")
-		authUsecase.AssertExpectations(t)
-	})
+	// Note: Request body fallback has been removed for security (XSS prevention).
+	// Refresh tokens are now accepted only via httpOnly cookies.
 
 	t.Run("fails with missing refresh token", func(t *testing.T) {
 		t.Parallel()
@@ -544,7 +509,7 @@ func TestAuthHandler_Refresh(t *testing.T) {
 		authUsecase.AssertExpectations(t)
 	})
 
-	t.Run("prefers cookie over request body", func(t *testing.T) {
+	t.Run("only accepts cookie token (ignores request body)", func(t *testing.T) {
 		t.Parallel()
 
 		authUsecase := NewMockAuthUsecase()
@@ -557,19 +522,13 @@ func TestAuthHandler_Refresh(t *testing.T) {
 			RefreshToken: "new-refresh-token",
 		}
 
-		// cookie からのトークンが使用されるべき
+		// cookie からのトークンのみが使用される
 		authUsecase.On("RefreshAccessToken", mock.Anything, "cookie-token").
 			Return(authResponse, nil)
 
-		reqBody := RefreshRequest{
-			RefreshToken: "body-token",
-		}
-		body, _ := json.Marshal(reqBody)
-
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", bytes.NewBuffer(body))
-		c.Request.Header.Set("Content-Type", "application/json")
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
 		c.Request.AddCookie(&http.Cookie{
 			Name:  "refresh_token",
 			Value: "cookie-token",
@@ -579,7 +538,6 @@ func TestAuthHandler_Refresh(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		authUsecase.AssertExpectations(t)
-		authUsecase.AssertNotCalled(t, "RefreshAccessToken", mock.Anything, "body-token")
 	})
 }
 
@@ -859,15 +817,13 @@ func TestAuthHandler_AdditionalRefreshScenarios(t *testing.T) {
 		authUsecase.On("RefreshAccessToken", mock.Anything, "revoked-token").
 			Return(nil, domain.ErrUnauthorized("Refresh token is expired or revoked"))
 
-		reqBody := RefreshRequest{
-			RefreshToken: "revoked-token",
-		}
-		body, _ := json.Marshal(reqBody)
-
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", bytes.NewBuffer(body))
-		c.Request.Header.Set("Content-Type", "application/json")
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
+		c.Request.AddCookie(&http.Cookie{
+			Name:  "refresh_token",
+			Value: "revoked-token",
+		})
 
 		handler.Refresh(c)
 
