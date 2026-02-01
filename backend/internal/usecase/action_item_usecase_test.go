@@ -129,6 +129,31 @@ func TestActionItemUsecase_CreateActionItem(t *testing.T) {
 
 		actionItemRepo.AssertExpectations(t)
 	})
+
+	t.Run("fails when create returns error", func(t *testing.T) {
+		t.Parallel()
+
+		actionItemRepo := mocks.NewMockActionItemRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		usecase := createTestActionItemUsecase(actionItemRepo, postMortemRepo)
+
+		pm := testutil.NewTestPostMortem(1, 1)
+
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(pm, nil)
+		actionItemRepo.On("Create", ctx, mock.AnythingOfType("*domain.ActionItem")).Return(errors.New("db error"))
+
+		item, err := usecase.CreateActionItem(
+			ctx, 1, "Fix bug", "Description",
+			nil, domain.PriorityHigh, nil, "[]",
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, item)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
 }
 
 func TestActionItemUsecase_UpdateActionItem(t *testing.T) {
@@ -264,6 +289,54 @@ func TestActionItemUsecase_UpdateActionItem(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeNotFound, domainErr.Code)
 	})
+
+	t.Run("fails when update returns error", func(t *testing.T) {
+		t.Parallel()
+
+		actionItemRepo := mocks.NewMockActionItemRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		usecase := createTestActionItemUsecase(actionItemRepo, postMortemRepo)
+
+		existingItem := testutil.NewTestActionItem(1)
+
+		actionItemRepo.On("FindByID", ctx, uint(1)).Return(existingItem, nil)
+		actionItemRepo.On("Update", ctx, mock.AnythingOfType("*domain.ActionItem")).Return(errors.New("db error"))
+
+		item, err := usecase.UpdateActionItem(
+			ctx, 1, "Title", "Description",
+			nil, domain.PriorityMedium, domain.ActionStatusPending, nil, "[]",
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, item)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
+
+	t.Run("fails with invalid priority", func(t *testing.T) {
+		t.Parallel()
+
+		actionItemRepo := mocks.NewMockActionItemRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		usecase := createTestActionItemUsecase(actionItemRepo, postMortemRepo)
+
+		existingItem := testutil.NewTestActionItem(1)
+		actionItemRepo.On("FindByID", ctx, uint(1)).Return(existingItem, nil)
+
+		item, err := usecase.UpdateActionItem(
+			ctx, 1, "Title", "Description",
+			nil, domain.Priority("invalid"), domain.ActionStatusPending, nil, "[]",
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, item)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+	})
 }
 
 func TestActionItemUsecase_DeleteActionItem(t *testing.T) {
@@ -316,6 +389,24 @@ func TestActionItemUsecase_DeleteActionItem(t *testing.T) {
 		domainErr, ok := domain.AsDomainError(err)
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeForbidden, domainErr.Code)
+	})
+
+	t.Run("fails when delete returns error", func(t *testing.T) {
+		t.Parallel()
+
+		actionItemRepo := mocks.NewMockActionItemRepository()
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		usecase := createTestActionItemUsecase(actionItemRepo, postMortemRepo)
+
+		actionItemRepo.On("Delete", ctx, uint(1)).Return(errors.New("db error"))
+
+		err := usecase.DeleteActionItem(ctx, domain.RoleAdmin, 1)
+
+		require.Error(t, err)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
 	})
 }
 

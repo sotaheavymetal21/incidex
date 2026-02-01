@@ -132,6 +132,45 @@ func TestAuthUsecase_Register(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
 	})
+
+	t.Run("registration fails when database error on email check", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		userRepo.On("FindByEmail", ctx, "new@example.com").Return(nil, domain.ErrDatabase("db error", nil))
+
+		user, err := usecase.Register(ctx, "New User", "new@example.com", "StrongPass123!", "", "")
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
+
+	t.Run("registration fails when create returns error", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		userRepo.On("FindByEmail", ctx, "new@example.com").Return(nil, nil)
+		userRepo.On("Create", ctx, mock.AnythingOfType("*domain.User")).Return(domain.ErrDatabase("create failed", nil))
+
+		user, err := usecase.Register(ctx, "New User", "new@example.com", "StrongPass123!", "", "")
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
 }
 
 func TestAuthUsecase_Login(t *testing.T) {
@@ -358,6 +397,94 @@ func TestAuthUsecase_RefreshAccessToken(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeForbidden, domainErr.Code)
 	})
+
+	t.Run("refresh fails when user not found", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		refreshToken := testutil.NewTestRefreshToken(999)
+
+		refreshTokenRepo.On("FindByToken", ctx, "valid-token").Return(refreshToken, nil)
+		userRepo.On("FindByID", ctx, uint(999)).Return(nil, nil) // User not found
+
+		response, err := usecase.RefreshAccessToken(ctx, "valid-token")
+
+		require.Error(t, err)
+		assert.Nil(t, response)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeUnauthorized, domainErr.Code)
+	})
+
+	t.Run("refresh fails when database error on token lookup", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		refreshTokenRepo.On("FindByToken", ctx, "some-token").Return(nil, domain.ErrDatabase("db error", nil))
+
+		response, err := usecase.RefreshAccessToken(ctx, "some-token")
+
+		require.Error(t, err)
+		assert.Nil(t, response)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
+
+	t.Run("refresh fails when database error on user lookup", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		refreshToken := testutil.NewTestRefreshToken(1)
+
+		refreshTokenRepo.On("FindByToken", ctx, "valid-token").Return(refreshToken, nil)
+		userRepo.On("FindByID", ctx, uint(1)).Return(nil, domain.ErrDatabase("db error", nil))
+
+		response, err := usecase.RefreshAccessToken(ctx, "valid-token")
+
+		require.Error(t, err)
+		assert.Nil(t, response)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
+
+	t.Run("refresh fails when revoke old token fails", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		user := testutil.NewTestUser()
+		refreshToken := testutil.NewTestRefreshToken(user.ID)
+
+		refreshTokenRepo.On("FindByToken", ctx, "old-token").Return(refreshToken, nil)
+		userRepo.On("FindByID", ctx, user.ID).Return(user, nil)
+		refreshTokenRepo.On("Create", ctx, mock.AnythingOfType("*domain.RefreshToken")).Return(nil)
+		refreshTokenRepo.On("RevokeByToken", ctx, "old-token").Return(domain.ErrDatabase("revoke failed", nil))
+
+		response, err := usecase.RefreshAccessToken(ctx, "old-token")
+
+		require.Error(t, err)
+		assert.Nil(t, response)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
 }
 
 func TestAuthUsecase_Logout(t *testing.T) {
@@ -392,5 +519,23 @@ func TestAuthUsecase_Logout(t *testing.T) {
 		require.NoError(t, err)
 		// RevokeByToken should not be called
 		refreshTokenRepo.AssertNotCalled(t, "RevokeByToken")
+	})
+
+	t.Run("logout fails when revoke returns error", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		refreshTokenRepo := mocks.NewMockRefreshTokenRepository()
+		usecase := createTestAuthUsecase(userRepo, refreshTokenRepo)
+
+		refreshTokenRepo.On("RevokeByToken", ctx, "some-token").Return(domain.ErrDatabase("revoke failed", nil))
+
+		err := usecase.Logout(ctx, "some-token")
+
+		require.Error(t, err)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
 	})
 }

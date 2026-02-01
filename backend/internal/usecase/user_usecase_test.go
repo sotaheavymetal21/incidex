@@ -80,6 +80,24 @@ func TestUserUsecase_GetByID(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeNotFound, domainErr.Code)
 	})
+
+	t.Run("returns error when database fails", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindByID", ctx, uint(1)).Return(nil, domain.ErrDatabase("db error", nil))
+
+		user, err := usecase.GetByID(ctx, 1)
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
 }
 
 func TestUserUsecase_GetAllUsers(t *testing.T) {
@@ -107,6 +125,24 @@ func TestUserUsecase_GetAllUsers(t *testing.T) {
 		assert.Len(t, result, 2) // Only active users
 		assert.Equal(t, uint(1), result[0].ID)
 		assert.Equal(t, uint(2), result[1].ID)
+	})
+
+	t.Run("returns error when database fails", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindAll", ctx).Return(nil, domain.ErrDatabase("db error", nil))
+
+		result, err := usecase.GetAllUsers(ctx)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
 	})
 }
 
@@ -184,6 +220,41 @@ func TestUserUsecase_CreateUser(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
 	})
+
+	t.Run("fails with empty name", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		user, err := usecase.CreateUser(ctx, "new@example.com", "StrongPass123!", "", domain.RoleViewer, "", "")
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+	})
+
+	t.Run("fails when database returns error on create", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindByEmail", ctx, "new@example.com").Return(nil, nil)
+		userRepo.On("Create", ctx, mock.AnythingOfType("*domain.User")).Return(domain.ErrDatabase("db error", nil))
+
+		user, err := usecase.CreateUser(ctx, "new@example.com", "StrongPass123!", "New User", domain.RoleViewer, "", "")
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
 }
 
 func TestUserUsecase_Update(t *testing.T) {
@@ -253,6 +324,85 @@ func TestUserUsecase_Update(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeConflict, domainErr.Code)
 	})
+
+	t.Run("fails with invalid email", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		existingUser := testutil.NewTestUser(func(u *domain.User) { u.ID = 1 })
+		userRepo.On("FindByID", ctx, uint(1)).Return(existingUser, nil)
+
+		user, err := usecase.Update(ctx, 1, "Updated Name", "invalid-email", domain.RoleViewer, "", "")
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+	})
+
+	t.Run("fails with empty name", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		existingUser := testutil.NewTestUser(func(u *domain.User) { u.ID = 1 })
+		userRepo.On("FindByID", ctx, uint(1)).Return(existingUser, nil)
+
+		user, err := usecase.Update(ctx, 1, "", "test@example.com", domain.RoleViewer, "", "")
+
+		require.Error(t, err)
+		assert.Nil(t, user)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+	})
+
+	t.Run("allows same email for same user", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		existingUser := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 1
+			u.Email = "same@example.com"
+		})
+
+		userRepo.On("FindByID", ctx, uint(1)).Return(existingUser, nil)
+		userRepo.On("Update", ctx, mock.AnythingOfType("*domain.User")).Return(nil)
+
+		user, err := usecase.Update(ctx, 1, "Updated Name", "same@example.com", domain.RoleEditor, "", "")
+
+		require.NoError(t, err)
+		assert.NotNil(t, user)
+	})
+
+	t.Run("allows email change when not taken", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		existingUser := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 1
+			u.Email = "old@example.com"
+		})
+
+		userRepo.On("FindByID", ctx, uint(1)).Return(existingUser, nil)
+		userRepo.On("FindByEmail", ctx, "new@example.com").Return(nil, nil) // Not taken
+		userRepo.On("Update", ctx, mock.AnythingOfType("*domain.User")).Return(nil)
+
+		user, err := usecase.Update(ctx, 1, "Updated Name", "new@example.com", domain.RoleEditor, "", "")
+
+		require.NoError(t, err)
+		assert.NotNil(t, user)
+	})
 }
 
 func TestUserUsecase_UpdatePassword(t *testing.T) {
@@ -318,6 +468,40 @@ func TestUserUsecase_UpdatePassword(t *testing.T) {
 		err := usecase.UpdatePassword(ctx, 1, "OldPassword123!", "weak")
 
 		require.Error(t, err)
+	})
+
+	t.Run("fails when user not found", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindByID", ctx, uint(999)).Return(nil, nil)
+
+		err := usecase.UpdatePassword(ctx, 999, "OldPassword123!", "NewStrongPass123!")
+
+		require.Error(t, err)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeNotFound, domainErr.Code)
+	})
+
+	t.Run("fails when database returns error", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindByID", ctx, uint(1)).Return(nil, domain.ErrDatabase("db error", nil))
+
+		err := usecase.UpdatePassword(ctx, 1, "OldPassword123!", "NewStrongPass123!")
+
+		require.Error(t, err)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
 	})
 }
 
@@ -467,6 +651,23 @@ func TestUserUsecase_ToggleActive(t *testing.T) {
 
 		require.NoError(t, err)
 		userRepo.AssertExpectations(t)
+	})
+
+	t.Run("fails when user not found", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindByID", ctx, uint(999)).Return(nil, nil)
+
+		err := usecase.ToggleActive(ctx, 1, 999, true)
+
+		require.Error(t, err)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeNotFound, domainErr.Code)
 	})
 }
 

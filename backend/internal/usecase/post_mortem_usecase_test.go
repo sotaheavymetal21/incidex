@@ -110,7 +110,7 @@ func TestPostMortemUsecase_CreatePostMortem(t *testing.T) {
 		assert.Equal(t, domain.ErrCodeConflict, domainErr.Code)
 	})
 
-	t.Run("validates five whys field length", func(t *testing.T) {
+	t.Run("validates five whys Why1 field length", func(t *testing.T) {
 		t.Parallel()
 
 		postMortemRepo := mocks.NewMockPostMortemRepository()
@@ -119,7 +119,6 @@ func TestPostMortemUsecase_CreatePostMortem(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository()
 		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
 
-		// Create a string longer than 1000 characters
 		longString := make([]byte, 1001)
 		for i := range longString {
 			longString[i] = 'a'
@@ -140,6 +139,179 @@ func TestPostMortemUsecase_CreatePostMortem(t *testing.T) {
 		domainErr, ok := domain.AsDomainError(err)
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+		assert.Contains(t, err.Error(), "Why1")
+	})
+
+	t.Run("validates five whys Why2 field length", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		longString := make([]byte, 1001)
+		for i := range longString {
+			longString[i] = 'a'
+		}
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: "Valid",
+			Why2: string(longString),
+		}
+
+		pm, err := usecase.CreatePostMortem(
+			ctx, 1, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+		assert.Contains(t, err.Error(), "Why2")
+	})
+
+	t.Run("validates five whys Why3 field length", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		longString := make([]byte, 1001)
+		for i := range longString {
+			longString[i] = 'a'
+		}
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: "Valid",
+			Why2: "Valid",
+			Why3: string(longString),
+		}
+
+		pm, err := usecase.CreatePostMortem(
+			ctx, 1, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+		assert.Contains(t, err.Error(), "Why3")
+	})
+
+	t.Run("validates five whys Why4 field length", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		longString := make([]byte, 1001)
+		for i := range longString {
+			longString[i] = 'a'
+		}
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: "Valid",
+			Why2: "Valid",
+			Why3: "Valid",
+			Why4: string(longString),
+		}
+
+		pm, err := usecase.CreatePostMortem(
+			ctx, 1, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+		assert.Contains(t, err.Error(), "Why4")
+	})
+
+	t.Run("validates five whys Why5 field length", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		longString := make([]byte, 1001)
+		for i := range longString {
+			longString[i] = 'a'
+		}
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: "Valid",
+			Why2: "Valid",
+			Why3: "Valid",
+			Why4: "Valid",
+			Why5: string(longString),
+		}
+
+		pm, err := usecase.CreatePostMortem(
+			ctx, 1, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+		assert.Contains(t, err.Error(), "Why5")
+	})
+
+	t.Run("accepts valid five whys within length limit", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		incident := testutil.NewTestIncident()
+		createdPM := testutil.NewTestPostMortem(1, 1)
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: "Why did this happen?",
+			Why2: "Because of X",
+			Why3: "Because of Y",
+			Why4: "Because of Z",
+			Why5: "Root cause",
+		}
+
+		incidentRepo.On("FindByID", ctx, uint(1)).Return(incident, nil)
+		postMortemRepo.On("FindByIncidentID", ctx, uint(1)).Return(nil, nil)
+		postMortemRepo.On("Create", ctx, mock.AnythingOfType("*domain.PostMortem")).Return(nil)
+		postMortemRepo.On("FindByID", ctx, uint(0)).Return(createdPM, nil)
+
+		pm, err := usecase.CreatePostMortem(
+			ctx, 1, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.NoError(t, err)
+		assert.NotNil(t, pm)
 	})
 }
 
@@ -228,6 +400,92 @@ func TestPostMortemUsecase_UpdatePostMortem(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeForbidden, domainErr.Code)
 	})
+
+	t.Run("update with five whys data", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		existingPM := testutil.NewTestPostMortem(1, 1)
+		updatedPM := testutil.NewTestPostMortem(1, 1)
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: "First why",
+			Why2: "Second why",
+			Why3: "Third why",
+			Why4: "Fourth why",
+			Why5: "Root cause",
+		}
+
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(existingPM, nil).Once()
+		postMortemRepo.On("Update", ctx, mock.MatchedBy(func(pm *domain.PostMortem) bool {
+			return pm.FiveWhysAnalysis != "" // JSON should be non-empty
+		})).Return(nil)
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(updatedPM, nil)
+
+		pm, err := usecase.UpdatePostMortem(
+			ctx, 1, domain.RoleAdmin, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.NoError(t, err)
+		assert.NotNil(t, pm)
+	})
+
+	t.Run("fails update with invalid five whys", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		longString := make([]byte, 1001)
+		for i := range longString {
+			longString[i] = 'a'
+		}
+
+		fiveWhys := &domain.FiveWhysAnalysis{
+			Why1: string(longString),
+		}
+
+		pm, err := usecase.UpdatePostMortem(
+			ctx, 1, domain.RoleAdmin, 1,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", fiveWhys,
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+	})
+
+	t.Run("fails when post-mortem not found", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		postMortemRepo.On("FindByID", ctx, uint(999)).Return(nil, domain.ErrNotFound("post-mortem"))
+
+		pm, err := usecase.UpdatePostMortem(
+			ctx, 1, domain.RoleAdmin, 999,
+			"Root cause", "Impact", "Well", "Wrong", "Lessons", nil,
+		)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+	})
 }
 
 func TestPostMortemUsecase_PublishPostMortem(t *testing.T) {
@@ -313,6 +571,32 @@ func TestPostMortemUsecase_PublishPostMortem(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, domain.ErrCodeForbidden, domainErr.Code)
 	})
+
+	t.Run("editor can publish own post-mortem", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		existingPM := testutil.NewTestPostMortem(1, 5, func(pm *domain.PostMortem) {
+			pm.Status = domain.PMStatusDraft
+		})
+		publishedPM := testutil.NewTestPostMortem(1, 5, func(pm *domain.PostMortem) {
+			pm.Status = domain.PMStatusPublished
+		})
+
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(existingPM, nil).Once()
+		postMortemRepo.On("Update", ctx, mock.AnythingOfType("*domain.PostMortem")).Return(nil)
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(publishedPM, nil)
+
+		pm, err := usecase.PublishPostMortem(ctx, 5, domain.RoleEditor, 1)
+
+		require.NoError(t, err)
+		assert.NotNil(t, pm)
+	})
 }
 
 func TestPostMortemUsecase_UnpublishPostMortem(t *testing.T) {
@@ -349,6 +633,57 @@ func TestPostMortemUsecase_UnpublishPostMortem(t *testing.T) {
 		assert.Equal(t, domain.PMStatusDraft, pm.Status)
 
 		postMortemRepo.AssertExpectations(t)
+	})
+
+	t.Run("editor can unpublish own post-mortem", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		existingPM := testutil.NewTestPostMortem(1, 5, func(pm *domain.PostMortem) {
+			pm.Status = domain.PMStatusPublished
+		})
+		unpublishedPM := testutil.NewTestPostMortem(1, 5, func(pm *domain.PostMortem) {
+			pm.Status = domain.PMStatusDraft
+		})
+
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(existingPM, nil).Once()
+		postMortemRepo.On("Update", ctx, mock.AnythingOfType("*domain.PostMortem")).Return(nil)
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(unpublishedPM, nil)
+
+		pm, err := usecase.UnpublishPostMortem(ctx, 5, domain.RoleEditor, 1)
+
+		require.NoError(t, err)
+		assert.NotNil(t, pm)
+	})
+
+	t.Run("editor cannot unpublish others post-mortem", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		existingPM := testutil.NewTestPostMortem(1, 2, func(pm *domain.PostMortem) {
+			pm.Status = domain.PMStatusPublished
+		})
+
+		postMortemRepo.On("FindByID", ctx, uint(1)).Return(existingPM, nil)
+
+		pm, err := usecase.UnpublishPostMortem(ctx, 5, domain.RoleEditor, 1)
+
+		require.Error(t, err)
+		assert.Nil(t, pm)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeForbidden, domainErr.Code)
 	})
 
 	t.Run("fails when already draft", func(t *testing.T) {

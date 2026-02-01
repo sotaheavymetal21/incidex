@@ -254,6 +254,24 @@ func TestTagUsecase_UpdateTag(t *testing.T) {
 
 		tagRepo.AssertExpectations(t)
 	})
+
+	t.Run("fails when find returns error", func(t *testing.T) {
+		t.Parallel()
+
+		tagRepo := mocks.NewMockTagRepository()
+		usecase := NewTagUsecase(tagRepo)
+
+		tagRepo.On("FindByID", ctx, uint(1)).Return(nil, errors.New("database error"))
+
+		tag, err := usecase.UpdateTag(ctx, 1, "NewName", "#00ff00")
+
+		require.Error(t, err)
+		assert.Nil(t, tag)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
+	})
 }
 
 func TestTagUsecase_DeleteTag(t *testing.T) {
@@ -316,5 +334,22 @@ func TestTagUsecase_DeleteTag(t *testing.T) {
 		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
 
 		tagRepo.AssertExpectations(t)
+	})
+
+	t.Run("fails when find returns error", func(t *testing.T) {
+		t.Parallel()
+
+		tagRepo := mocks.NewMockTagRepository()
+		usecase := NewTagUsecase(tagRepo)
+
+		tagRepo.On("FindByID", ctx, uint(1)).Return(nil, errors.New("database error"))
+
+		err := usecase.DeleteTag(ctx, 1)
+
+		require.Error(t, err)
+
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeDatabaseError, domainErr.Code)
 	})
 }

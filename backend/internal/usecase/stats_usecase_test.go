@@ -654,16 +654,26 @@ func TestStatsUsecase_GetTagStats(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, tagStats, 2)
 
-		// Results should be sorted by count (descending)
-		assert.Equal(t, uint(1), tagStats[0].TagID)
-		assert.Equal(t, "Production", tagStats[0].TagName)
-		assert.Equal(t, int64(2), tagStats[0].Count)
-		assert.InDelta(t, 66.66, tagStats[0].Percentage, 0.1)
+		// Both tags have count=2, so order is not guaranteed when counts are equal
+		// Verify both tags are present with correct data
+		var productionTag, securityTag *TagStats
+		for i := range tagStats {
+			if tagStats[i].TagID == 1 {
+				productionTag = &tagStats[i]
+			} else if tagStats[i].TagID == 2 {
+				securityTag = &tagStats[i]
+			}
+		}
 
-		assert.Equal(t, uint(2), tagStats[1].TagID)
-		assert.Equal(t, "Security", tagStats[1].TagName)
-		assert.Equal(t, int64(2), tagStats[1].Count)
-		assert.InDelta(t, 66.66, tagStats[1].Percentage, 0.1)
+		require.NotNil(t, productionTag, "Production tag should be present")
+		assert.Equal(t, "Production", productionTag.TagName)
+		assert.Equal(t, int64(2), productionTag.Count)
+		assert.InDelta(t, 66.66, productionTag.Percentage, 0.1)
+
+		require.NotNil(t, securityTag, "Security tag should be present")
+		assert.Equal(t, "Security", securityTag.TagName)
+		assert.Equal(t, int64(2), securityTag.Count)
+		assert.InDelta(t, 66.66, securityTag.Percentage, 0.1)
 
 		incidentRepo.AssertExpectations(t)
 		cacheRepo.AssertExpectations(t)
