@@ -469,3 +469,82 @@ func TestUserUsecase_ToggleActive(t *testing.T) {
 		userRepo.AssertExpectations(t)
 	})
 }
+
+func TestUserUsecase_AdminResetPassword(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("successfully resets password for active user", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		user := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 5
+			u.DeletedAt = nil
+		})
+
+		userRepo.On("FindByID", ctx, uint(5)).Return(user, nil)
+		userRepo.On("UpdatePassword", ctx, uint(5), mock.AnythingOfType("string")).Return(nil)
+
+		err := usecase.AdminResetPassword(ctx, 5, "NewStrongPass123!")
+
+		require.NoError(t, err)
+		userRepo.AssertExpectations(t)
+	})
+
+	t.Run("fails with weak password", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		err := usecase.AdminResetPassword(ctx, 5, "weak")
+
+		require.Error(t, err)
+		userRepo.AssertNotCalled(t, "FindByID")
+		userRepo.AssertNotCalled(t, "UpdatePassword")
+	})
+
+	t.Run("fails when user not found", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		userRepo.On("FindByID", ctx, uint(999)).Return(nil, nil)
+
+		err := usecase.AdminResetPassword(ctx, 999, "NewStrongPass123!")
+
+		require.Error(t, err)
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeNotFound, domainErr.Code)
+	})
+
+	t.Run("fails for deleted user", func(t *testing.T) {
+		t.Parallel()
+
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestUserUsecase(userRepo)
+
+		deletedAt := time.Now()
+		user := testutil.NewTestUser(func(u *domain.User) {
+			u.ID = 5
+			u.DeletedAt = &deletedAt
+		})
+
+		userRepo.On("FindByID", ctx, uint(5)).Return(user, nil)
+
+		err := usecase.AdminResetPassword(ctx, 5, "NewStrongPass123!")
+
+		require.Error(t, err)
+		domainErr, ok := domain.AsDomainError(err)
+		require.True(t, ok)
+		assert.Equal(t, domain.ErrCodeValidation, domainErr.Code)
+
+		userRepo.AssertNotCalled(t, "UpdatePassword")
+	})
+}

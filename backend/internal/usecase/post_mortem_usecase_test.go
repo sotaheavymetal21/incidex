@@ -462,6 +462,56 @@ func TestPostMortemUsecase_GetPostMortemByID(t *testing.T) {
 	})
 }
 
+func TestPostMortemUsecase_GetPostMortemByIncidentID(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("returns post-mortem when found", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		expectedPM := testutil.NewTestPostMortem(1, 1, func(pm *domain.PostMortem) {
+			pm.ID = 5
+			pm.IncidentID = 10
+		})
+
+		postMortemRepo.On("FindByIncidentID", ctx, uint(10)).Return(expectedPM, nil)
+
+		pm, err := usecase.GetPostMortemByIncidentID(ctx, 10)
+
+		require.NoError(t, err)
+		assert.NotNil(t, pm)
+		assert.Equal(t, uint(10), pm.IncidentID)
+
+		postMortemRepo.AssertExpectations(t)
+	})
+
+	t.Run("returns nil when post-mortem not found", func(t *testing.T) {
+		t.Parallel()
+
+		postMortemRepo := mocks.NewMockPostMortemRepository()
+		incidentRepo := mocks.NewMockIncidentRepository()
+		activityRepo := mocks.NewMockIncidentActivityRepository()
+		userRepo := mocks.NewMockUserRepository()
+		usecase := createTestPostMortemUsecase(postMortemRepo, incidentRepo, activityRepo, userRepo)
+
+		postMortemRepo.On("FindByIncidentID", ctx, uint(999)).Return(nil, nil)
+
+		pm, err := usecase.GetPostMortemByIncidentID(ctx, 999)
+
+		require.NoError(t, err)
+		assert.Nil(t, pm)
+
+		postMortemRepo.AssertExpectations(t)
+	})
+}
+
 func TestPostMortemUsecase_GetAllPostMortems(t *testing.T) {
 	t.Parallel()
 
