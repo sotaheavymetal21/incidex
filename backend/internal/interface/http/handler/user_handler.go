@@ -5,7 +5,6 @@ import (
 	"incidex/internal/interface/http/validator"
 	"incidex/internal/usecase"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,14 +32,13 @@ func (h *UserHandler) GetAll(c *gin.Context) {
 
 // GetByID は指定された ID のユーザーを取得します
 func (h *UserHandler) GetByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
-	user, err := h.userUsecase.GetByID(c.Request.Context(), uint(id))
+	user, err := h.userUsecase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -115,10 +113,9 @@ type UpdateUserRequest struct {
 
 // Update は既存のユーザーを更新します
 func (h *UserHandler) Update(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -152,7 +149,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.Update(c.Request.Context(), uint(id), req.Name, req.Email, req.Role, req.EmployeeNumber, req.Department)
+	user, err := h.userUsecase.Update(c.Request.Context(), id, req.Name, req.Email, req.Role, req.EmployeeNumber, req.Department)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -169,10 +166,9 @@ type UpdatePasswordRequest struct {
 
 // UpdatePassword はユーザーのパスワードを更新します
 func (h *UserHandler) UpdatePassword(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -188,7 +184,7 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.userUsecase.UpdatePassword(c.Request.Context(), uint(id), req.OldPassword, req.NewPassword); err != nil {
+	if err := h.userUsecase.UpdatePassword(c.Request.Context(), id, req.OldPassword, req.NewPassword); err != nil {
 		HandleError(c, err)
 		return
 	}
@@ -203,10 +199,9 @@ type AdminResetPasswordRequest struct {
 
 // AdminResetPassword は管理者がユーザーのパスワードをリセットします
 func (h *UserHandler) AdminResetPassword(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -222,7 +217,7 @@ func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.userUsecase.AdminResetPassword(c.Request.Context(), uint(id), req.NewPassword); err != nil {
+	if err := h.userUsecase.AdminResetPassword(c.Request.Context(), id, req.NewPassword); err != nil {
 		HandleError(c, err)
 		return
 	}
@@ -232,14 +227,13 @@ func (h *UserHandler) AdminResetPassword(c *gin.Context) {
 
 // Delete は指定されたユーザーを削除します
 func (h *UserHandler) Delete(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
-	if err := h.userUsecase.Delete(c.Request.Context(), uint(id)); err != nil {
+	if err := h.userUsecase.Delete(c.Request.Context(), id); err != nil {
 		HandleError(c, err)
 		return
 	}
@@ -254,10 +248,9 @@ type ToggleActiveRequest struct {
 
 // ToggleActive はユーザーの有効/無効状態を切り替えます
 func (h *UserHandler) ToggleActive(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -268,18 +261,13 @@ func (h *UserHandler) ToggleActive(c *gin.Context) {
 	}
 
 	// context から現在のユーザー ID を取得
-	currentUserIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user ID not found in context"})
-		return
-	}
-	currentUserID, ok := currentUserIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format in context"})
+	currentUserID, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	if err := h.userUsecase.ToggleActive(c.Request.Context(), currentUserID, uint(id), req.IsActive); err != nil {
+	if err := h.userUsecase.ToggleActive(c.Request.Context(), currentUserID, id, req.IsActive); err != nil {
 		HandleError(c, err)
 		return
 	}
