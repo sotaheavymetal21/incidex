@@ -23,23 +23,23 @@ func NewPostMortemHandler(postMortemUsecase usecase.PostMortemUsecase) *PostMort
 
 // CreatePostMortemRequest はポストモーテム作成の request body を表します
 type CreatePostMortemRequest struct {
-	IncidentID       uint                       `json:"incident_id" binding:"required"`
-	RootCause        string                     `json:"root_cause" binding:"max=10000"`
-	ImpactAnalysis   string                     `json:"impact_analysis" binding:"max=10000"`
-	WhatWentWell     string                     `json:"what_went_well" binding:"max=10000"`
-	WhatWentWrong    string                     `json:"what_went_wrong" binding:"max=10000"`
-	LessonsLearned   string                     `json:"lessons_learned" binding:"max=10000"`
-	FiveWhysAnalysis *domain.FiveWhysAnalysis   `json:"five_whys_analysis"`
+	IncidentID       uint                     `json:"incident_id" binding:"required"`
+	RootCause        string                   `json:"root_cause" binding:"max=10000"`
+	ImpactAnalysis   string                   `json:"impact_analysis" binding:"max=10000"`
+	WhatWentWell     string                   `json:"what_went_well" binding:"max=10000"`
+	WhatWentWrong    string                   `json:"what_went_wrong" binding:"max=10000"`
+	LessonsLearned   string                   `json:"lessons_learned" binding:"max=10000"`
+	FiveWhysAnalysis *domain.FiveWhysAnalysis `json:"five_whys_analysis"`
 }
 
 // UpdatePostMortemRequest はポストモーテム更新の request body を表します
 type UpdatePostMortemRequest struct {
-	RootCause        string                     `json:"root_cause" binding:"max=10000"`
-	ImpactAnalysis   string                     `json:"impact_analysis" binding:"max=10000"`
-	WhatWentWell     string                     `json:"what_went_well" binding:"max=10000"`
-	WhatWentWrong    string                     `json:"what_went_wrong" binding:"max=10000"`
-	LessonsLearned   string                     `json:"lessons_learned" binding:"max=10000"`
-	FiveWhysAnalysis *domain.FiveWhysAnalysis   `json:"five_whys_analysis"`
+	RootCause        string                   `json:"root_cause" binding:"max=10000"`
+	ImpactAnalysis   string                   `json:"impact_analysis" binding:"max=10000"`
+	WhatWentWell     string                   `json:"what_went_well" binding:"max=10000"`
+	WhatWentWrong    string                   `json:"what_went_wrong" binding:"max=10000"`
+	LessonsLearned   string                   `json:"lessons_learned" binding:"max=10000"`
+	FiveWhysAnalysis *domain.FiveWhysAnalysis `json:"five_whys_analysis"`
 }
 
 // Create godoc
@@ -62,15 +62,9 @@ func (h *PostMortemHandler) Create(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -106,14 +100,13 @@ func (h *PostMortemHandler) Create(c *gin.Context) {
 // @Router /api/post-mortems/{id} [get]
 // @Security BearerAuth
 func (h *PostMortemHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
+		HandleError(c, err)
 		return
 	}
 
-	pm, err := h.postMortemUsecase.GetPostMortemByID(c.Request.Context(), uint(id))
+	pm, err := h.postMortemUsecase.GetPostMortemByID(c.Request.Context(), id)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -135,14 +128,13 @@ func (h *PostMortemHandler) GetByID(c *gin.Context) {
 // @Router /api/post-mortems/incident/{incidentId} [get]
 // @Security BearerAuth
 func (h *PostMortemHandler) GetByIncidentID(c *gin.Context) {
-	idStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(idStr, 10, 32)
+	incidentID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
-	pm, err := h.postMortemUsecase.GetPostMortemByIncidentID(c.Request.Context(), uint(incidentID))
+	pm, err := h.postMortemUsecase.GetPostMortemByIncidentID(c.Request.Context(), incidentID)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -170,10 +162,10 @@ func (h *PostMortemHandler) GetByIncidentID(c *gin.Context) {
 // @Security BearerAuth
 func (h *PostMortemHandler) GetAll(c *gin.Context) {
 	filters := domain.PostMortemFilters{
-		Status:   c.Query("status"),
-		Search:   c.Query("search"),
-		SortBy:   c.Query("sort_by"),
-		Order:    c.Query("order"),
+		Status: c.Query("status"),
+		Search: c.Query("search"),
+		SortBy: c.Query("sort_by"),
+		Order:  c.Query("order"),
 	}
 
 	if authorIDStr := c.Query("author_id"); authorIDStr != "" {
@@ -232,10 +224,9 @@ func (h *PostMortemHandler) GetAll(c *gin.Context) {
 // @Router /api/post-mortems/{id} [put]
 // @Security BearerAuth
 func (h *PostMortemHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -245,27 +236,15 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
-		return
-	}
-
-	userRole, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
-		return
-	}
-
-	userRoleTyped, ok := userRole.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+	userRoleTyped, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -273,7 +252,7 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 		c.Request.Context(),
 		userIDUint,
 		userRoleTyped,
-		uint(id),
+		id,
 		req.RootCause,
 		req.ImpactAnalysis,
 		req.WhatWentWell,
@@ -304,34 +283,21 @@ func (h *PostMortemHandler) Update(c *gin.Context) {
 // @Router /api/post-mortems/{id}/publish [post]
 // @Security BearerAuth
 func (h *PostMortemHandler) Publish(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
+		HandleError(c, err)
 		return
 	}
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
-		return
-	}
-
-	userRole, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
-		return
-	}
-
-	userRoleTyped, ok := userRole.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+	userRoleTyped, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -339,7 +305,7 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 		c.Request.Context(),
 		userIDUint,
 		userRoleTyped,
-		uint(id),
+		id,
 	)
 	if err != nil {
 		HandleError(c, err)
@@ -364,34 +330,21 @@ func (h *PostMortemHandler) Publish(c *gin.Context) {
 // @Router /api/post-mortems/{id}/unpublish [post]
 // @Security BearerAuth
 func (h *PostMortemHandler) Unpublish(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
+		HandleError(c, err)
 		return
 	}
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
-		return
-	}
-
-	userRole, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
-		return
-	}
-
-	userRoleTyped, ok := userRole.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+	userRoleTyped, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -399,7 +352,7 @@ func (h *PostMortemHandler) Unpublish(c *gin.Context) {
 		c.Request.Context(),
 		userIDUint,
 		userRoleTyped,
-		uint(id),
+		id,
 	)
 	if err != nil {
 		HandleError(c, err)
@@ -424,29 +377,22 @@ func (h *PostMortemHandler) Unpublish(c *gin.Context) {
 // @Router /api/post-mortems/{id} [delete]
 // @Security BearerAuth
 func (h *PostMortemHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post-mortem ID"})
+		HandleError(c, err)
 		return
 	}
 
-	userRole, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
-		return
-	}
-
-	userRoleTyped, ok := userRole.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+	userRoleTyped, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
 	err = h.postMortemUsecase.DeletePostMortem(
 		c.Request.Context(),
 		userRoleTyped,
-		uint(id),
+		id,
 	)
 	if err != nil {
 		HandleError(c, err)
