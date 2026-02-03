@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { User } from "../types/user";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
@@ -267,7 +268,7 @@ export const authApi = {
     employeeNumber: string,
     department: string,
   ) =>
-    apiRequest<{ access_token: string; user: any }>("/auth/register", {
+    apiRequest<{ access_token: string; user: User }>("/auth/register", {
       method: "POST",
       body: {
         name,
@@ -278,7 +279,7 @@ export const authApi = {
       },
     }),
   login: (email: string, password: string) =>
-    apiRequest<{ access_token: string; user: any }>("/auth/login", {
+    apiRequest<{ access_token: string; user: User }>("/auth/login", {
       method: "POST",
       body: { email, password },
     }),
@@ -287,7 +288,7 @@ export const authApi = {
       method: "POST",
     }),
   refresh: () =>
-    apiRequest<{ access_token: string; user: any }>("/auth/refresh", {
+    apiRequest<{ access_token: string; user: User }>("/auth/refresh", {
       method: "POST",
     }),
   requestPasswordReset: (email: string) =>
