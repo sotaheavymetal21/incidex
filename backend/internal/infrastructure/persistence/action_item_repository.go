@@ -79,15 +79,32 @@ func (r *actionItemRepository) FindAll(ctx context.Context, filters domain.Actio
 		return nil, nil, err
 	}
 
-	// ソートを適用します
+	// SQLインジェクション防止のためホワイトリストでバリデーションしてソートを適用します
 	sortBy := filters.SortBy
 	if sortBy == "" {
 		sortBy = "created_at"
 	}
-	order := filters.Order
-	if order == "" {
-		order = "desc"
+
+	// 許可されたソートカラムのホワイトリスト
+	allowedSortColumns := map[string]bool{
+		"id":         true,
+		"title":      true,
+		"status":     true,
+		"priority":   true,
+		"created_at": true,
+		"updated_at": true,
+		"due_date":   true,
 	}
+
+	if !allowedSortColumns[sortBy] {
+		sortBy = "created_at" // 安全なデフォルト値を使用します
+	}
+
+	order := strings.ToLower(filters.Order)
+	if order != "asc" && order != "desc" {
+		order = "desc" // 安全なデフォルト値を使用します
+	}
+
 	query = query.Order(sortBy + " " + order)
 
 	// ページネーションを適用します
