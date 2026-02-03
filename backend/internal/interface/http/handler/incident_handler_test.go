@@ -304,8 +304,8 @@ func TestIncidentHandler_GetByID(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Contains(t, response, "error")
-		assert.Contains(t, response["error"], "Invalid ID")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response["message"], "invalid id")
 		incidentUsecase.AssertNotCalled(t, "GetIncidentByID")
 	})
 
@@ -606,8 +606,8 @@ func TestIncidentHandler_Update(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Contains(t, response, "error")
-		assert.Contains(t, response["error"], "Invalid ID")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response["message"], "invalid id")
 		incidentUsecase.AssertNotCalled(t, "UpdateIncident")
 	})
 
@@ -1366,8 +1366,8 @@ func TestIncidentHandler_AssignIncident(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Contains(t, response, "error")
-		assert.Contains(t, response["error"], "invalid incident ID")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response["message"], "invalid id")
 		incidentUsecase.AssertNotCalled(t, "AssignIncident")
 	})
 
@@ -1398,8 +1398,8 @@ func TestIncidentHandler_AssignIncident(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Contains(t, response, "error")
-		assert.Contains(t, response["error"], "User ID not found")
+		assert.Contains(t, response, "message")
+		assert.Contains(t, response["message"], "User not authenticated")
 		incidentUsecase.AssertNotCalled(t, "AssignIncident")
 	})
 
