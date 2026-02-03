@@ -24,26 +24,26 @@ func NewIncidentHandler(u usecase.IncidentUsecase) *IncidentHandler {
 
 // CreateIncidentRequest はインシデント作成の request body を表します
 type CreateIncidentRequest struct {
-	Title       string   `json:"title" binding:"required,max=500"`
-	Description string   `json:"description" binding:"required"`
-	Severity    string   `json:"severity" binding:"required,oneof=critical high medium low"`
-	Status      string   `json:"status" binding:"required,oneof=open investigating resolved closed"`
-	ImpactScope string   `json:"impact_scope"`
-	DetectedAt  string   `json:"detected_at" binding:"required"`
-	AssigneeID  *uint    `json:"assignee_id"`
-	TagIDs      []uint   `json:"tag_ids"`
+	Title       string `json:"title" binding:"required,max=500"`
+	Description string `json:"description" binding:"required"`
+	Severity    string `json:"severity" binding:"required,oneof=critical high medium low"`
+	Status      string `json:"status" binding:"required,oneof=open investigating resolved closed"`
+	ImpactScope string `json:"impact_scope"`
+	DetectedAt  string `json:"detected_at" binding:"required"`
+	AssigneeID  *uint  `json:"assignee_id"`
+	TagIDs      []uint `json:"tag_ids"`
 }
 
 // UpdateIncidentRequest はインシデント更新の request body を表します
 type UpdateIncidentRequest struct {
-	Title       string  `json:"title" binding:"required,max=500"`
-	Description string  `json:"description" binding:"required"`
-	Severity    string  `json:"severity" binding:"required,oneof=critical high medium low"`
-	Status      string  `json:"status" binding:"required,oneof=open investigating resolved closed"`
-	ImpactScope string  `json:"impact_scope"`
-	DetectedAt  string  `json:"detected_at" binding:"required"`
-	AssigneeID  *uint   `json:"assignee_id"`
-	TagIDs      []uint  `json:"tag_ids"`
+	Title       string `json:"title" binding:"required,max=500"`
+	Description string `json:"description" binding:"required"`
+	Severity    string `json:"severity" binding:"required,oneof=critical high medium low"`
+	Status      string `json:"status" binding:"required,oneof=open investigating resolved closed"`
+	ImpactScope string `json:"impact_scope"`
+	DetectedAt  string `json:"detected_at" binding:"required"`
+	AssigneeID  *uint  `json:"assignee_id"`
+	TagIDs      []uint `json:"tag_ids"`
 }
 
 // IncidentListResponse はインシデント一覧の response を表します
@@ -83,15 +83,9 @@ func (h *IncidentHandler) Create(c *gin.Context) {
 	}
 
 	// JWT context からユーザー ID を取得（middleware で設定済み）
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	userID, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -186,14 +180,13 @@ func (h *IncidentHandler) GetAll(c *gin.Context) {
 
 // GetByID は指定された ID のインシデントを取得します
 func (h *IncidentHandler) GetByID(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		HandleError(c, err)
 		return
 	}
 
-	incident, err := h.incidentUsecase.GetIncidentByID(c.Request.Context(), uint(id))
+	incident, err := h.incidentUsecase.GetIncidentByID(c.Request.Context(), id)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -204,10 +197,9 @@ func (h *IncidentHandler) GetByID(c *gin.Context) {
 
 // Update は既存のインシデントを更新します
 func (h *IncidentHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -218,27 +210,15 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 	}
 
 	// JWT context からユーザー ID とロールを取得
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userIDUint, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
-		return
-	}
-
-	role, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
-		return
-	}
-
-	userRole, ok := role.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
+	userRole, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -253,7 +233,7 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 		c.Request.Context(),
 		userIDUint,
 		userRole,
-		uint(id),
+		id,
 		req.Title,
 		req.Description,
 		domain.Severity(req.Severity),
@@ -273,27 +253,20 @@ func (h *IncidentHandler) Update(c *gin.Context) {
 
 // Delete は指定されたインシデントを削除します
 func (h *IncidentHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		HandleError(c, err)
 		return
 	}
 
 	// JWT context からユーザーロールを取得
-	role, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+	userRole, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userRole, ok := role.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user role type"})
-		return
-	}
-
-	if err := h.incidentUsecase.DeleteIncident(c.Request.Context(), userRole, uint(id)); err != nil {
+	if err := h.incidentUsecase.DeleteIncident(c.Request.Context(), userRole, id); err != nil {
 		HandleError(c, err)
 		return
 	}
@@ -302,16 +275,15 @@ func (h *IncidentHandler) Delete(c *gin.Context) {
 }
 
 // AssignIncidentRequest はインシデント担当者割り当ての request body を表します
-type AssignIncidentRequest struct{
+type AssignIncidentRequest struct {
 	AssigneeID *uint `json:"assignee_id"`
 }
 
 // AssignIncident はインシデントに担当者を割り当てます
 func (h *IncidentHandler) AssignIncident(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -322,19 +294,13 @@ func (h *IncidentHandler) AssignIncident(c *gin.Context) {
 	}
 
 	// context からユーザー ID を取得
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found"})
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userID, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	incident, err := h.incidentUsecase.AssignIncident(c.Request.Context(), userID, uint(id), req.AssigneeID)
+	incident, err := h.incidentUsecase.AssignIncident(c.Request.Context(), userID, id, req.AssigneeID)
 	if err != nil {
 		HandleError(c, err)
 		return
