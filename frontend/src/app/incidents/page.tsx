@@ -14,6 +14,7 @@ import {
   IncidentPagination,
 } from "./components";
 import { useIncidentFilters } from "./hooks/useIncidentFilters";
+import { getSeverityStyle, getStatusStyle } from "./[id]/utils/styles";
 
 const SEVERITY_LABELS: Record<Severity, string> = {
   critical: "Critical",
@@ -27,76 +28,6 @@ const STATUS_LABELS: Record<Status, string> = {
   investigating: "Investigating",
   resolved: "Resolved",
   closed: "Closed",
-};
-
-const getSeverityStyle = (severity: Severity) => {
-  switch (severity) {
-    case "critical":
-      return {
-        background: "var(--critical-light)",
-        color: "var(--critical)",
-        borderColor: "var(--critical)",
-      };
-    case "high":
-      return {
-        background: "var(--high-light)",
-        color: "var(--high)",
-        borderColor: "var(--high)",
-      };
-    case "medium":
-      return {
-        background: "var(--medium-light)",
-        color: "var(--medium)",
-        borderColor: "var(--medium)",
-      };
-    case "low":
-      return {
-        background: "var(--low-light)",
-        color: "var(--low)",
-        borderColor: "var(--low)",
-      };
-    default:
-      return {
-        background: "var(--gray-100)",
-        color: "var(--gray-700)",
-        borderColor: "var(--gray-300)",
-      };
-  }
-};
-
-const getStatusStyle = (status: Status) => {
-  switch (status) {
-    case "open":
-      return {
-        background: "var(--status-open-light)",
-        color: "var(--status-open)",
-        borderColor: "var(--status-open)",
-      };
-    case "investigating":
-      return {
-        background: "var(--status-investigating-light)",
-        color: "var(--status-investigating)",
-        borderColor: "var(--status-investigating)",
-      };
-    case "resolved":
-      return {
-        background: "var(--status-resolved-light)",
-        color: "var(--status-resolved)",
-        borderColor: "var(--status-resolved)",
-      };
-    case "closed":
-      return {
-        background: "var(--status-closed-light)",
-        color: "var(--status-closed)",
-        borderColor: "var(--status-closed)",
-      };
-    default:
-      return {
-        background: "var(--gray-100)",
-        color: "var(--gray-700)",
-        borderColor: "var(--gray-300)",
-      };
-  }
 };
 
 function IncidentsPageContent() {
