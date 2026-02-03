@@ -36,10 +36,9 @@ func NewIncidentActivityHandler(activityUsecase *usecase.IncidentActivityUsecase
 // @Router /api/incidents/{id}/comments [post]
 // @Security BearerAuth
 func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
-	idStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(idStr, 10, 32)
+	incidentID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -49,20 +48,13 @@ func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	// uint に変換
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
-		return
-	}
-
-	if err := h.activityUsecase.AddComment(uint(incidentID), userIDUint, req.Comment); err != nil {
+	if err := h.activityUsecase.AddComment(incidentID, userIDUint, req.Comment); err != nil {
 		HandleError(c, err)
 		return
 	}
@@ -84,10 +76,9 @@ func (h *IncidentActivityHandler) AddComment(c *gin.Context) {
 // @Router /api/incidents/{id}/activities [get]
 // @Security BearerAuth
 func (h *IncidentActivityHandler) GetActivities(c *gin.Context) {
-	idStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(idStr, 10, 32)
+	incidentID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -98,7 +89,7 @@ func (h *IncidentActivityHandler) GetActivities(c *gin.Context) {
 		}
 	}
 
-	activities, err := h.activityUsecase.GetActivities(uint(incidentID), limit)
+	activities, err := h.activityUsecase.GetActivities(incidentID, limit)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -133,10 +124,9 @@ type AddTimelineEventRequest struct {
 // @Router /api/incidents/{id}/timeline [post]
 // @Security BearerAuth
 func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
-	idStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(idStr, 10, 32)
+	incidentID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
@@ -146,16 +136,9 @@ func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	// uint に変換
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID type"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -167,7 +150,7 @@ func (h *IncidentActivityHandler) AddTimelineEvent(c *gin.Context) {
 	}
 
 	activity, err := h.activityUsecase.AddTimelineEvent(
-		uint(incidentID),
+		incidentID,
 		userIDUint,
 		domain.ActivityType(req.EventType),
 		eventTime,
