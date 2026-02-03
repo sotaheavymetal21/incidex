@@ -117,14 +117,13 @@ func (h *AuditLogHandler) GetAll(c *gin.Context) {
 // @Router /api/audit-logs/{id} [get]
 // @Security BearerAuth
 func (h *AuditLogHandler) GetByID(c *gin.Context) {
-	idParam := c.Param("id")
-	id, err := strconv.ParseUint(idParam, 10, 32)
+	id, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid audit log ID"})
+		HandleError(c, err)
 		return
 	}
 
-	log, err := h.auditLogUsecase.GetByID(c.Request.Context(), uint(id))
+	log, err := h.auditLogUsecase.GetByID(c.Request.Context(), id)
 	if err != nil {
 		HandleError(c, err)
 		return
