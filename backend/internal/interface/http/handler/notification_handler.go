@@ -4,7 +4,6 @@ import (
 	"incidex/internal/domain"
 	"incidex/internal/usecase"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,15 +30,9 @@ func NewNotificationHandler(notificationUsecase *usecase.NotificationUsecase) *N
 // @Failure 500 {object} ErrorResponse
 // @Router /notifications/settings [get]
 func (h *NotificationHandler) GetMyNotificationSetting(c *gin.Context) {
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	userID, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -64,15 +57,9 @@ func (h *NotificationHandler) GetMyNotificationSetting(c *gin.Context) {
 // @Failure 500 {object} ErrorResponse
 // @Router /notifications/settings [put]
 func (h *NotificationHandler) UpdateMyNotificationSetting(c *gin.Context) {
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	userID, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+	userID, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -116,13 +103,13 @@ func (h *NotificationHandler) GetUserNotificationSetting(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		HandleError(c, err)
 		return
 	}
 
-	setting, err := h.notificationUsecase.GetSettingByUserID(uint(userID))
+	setting, err := h.notificationUsecase.GetSettingByUserID(userID)
 	if err != nil {
 		HandleError(c, err)
 		return
