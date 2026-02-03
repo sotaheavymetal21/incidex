@@ -182,7 +182,7 @@ func TestUserHandler_GetByID(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Contains(t, response["error"], "invalid user ID")
+		assert.Contains(t, response["message"], "invalid id")
 		userUsecase.AssertNotCalled(t, "GetByID")
 	})
 
@@ -535,7 +535,7 @@ func TestUserHandler_Update(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 
-		assert.Contains(t, response["error"], "invalid user ID")
+		assert.Contains(t, response["message"], "invalid id")
 		userUsecase.AssertNotCalled(t, "Update")
 	})
 
