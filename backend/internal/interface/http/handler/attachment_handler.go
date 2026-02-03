@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"incidex/internal/domain"
 	"incidex/internal/usecase"
 	"net/http"
 	"strconv"
@@ -24,23 +23,16 @@ func NewAttachmentHandler(attachmentUsecase usecase.AttachmentUsecase) *Attachme
 
 // Upload はインシデントへのファイルアップロードを処理します
 func (h *AttachmentHandler) Upload(c *gin.Context) {
-	incidentIDStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(incidentIDStr, 10, 32)
+	incidentID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
 	// context からユーザーを取得（JWT middleware で設定済み）
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
-		return
-	}
-
-	userIDUint, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
@@ -68,7 +60,7 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 	// 添付ファイルをアップロード
 	attachment, err := h.attachmentUsecase.UploadAttachment(
 		c.Request.Context(),
-		uint(incidentID),
+		incidentID,
 		userIDUint,
 		file.Filename,
 		file.Size,
@@ -85,14 +77,13 @@ func (h *AttachmentHandler) Upload(c *gin.Context) {
 
 // GetByIncidentID はインシデントのすべての添付ファイルを取得します
 func (h *AttachmentHandler) GetByIncidentID(c *gin.Context) {
-	incidentIDStr := c.Param("id")
-	incidentID, err := strconv.ParseUint(incidentIDStr, 10, 32)
+	incidentID, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
-	attachments, err := h.attachmentUsecase.GetAttachmentsByIncidentID(c.Request.Context(), uint(incidentID))
+	attachments, err := h.attachmentUsecase.GetAttachmentsByIncidentID(c.Request.Context(), incidentID)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -103,22 +94,21 @@ func (h *AttachmentHandler) GetByIncidentID(c *gin.Context) {
 
 // Download はファイルのダウンロードを処理します
 func (h *AttachmentHandler) Download(c *gin.Context) {
-	attachmentIDStr := c.Param("attachmentId")
-	attachmentID, err := strconv.ParseUint(attachmentIDStr, 10, 32)
+	attachmentID, err := ParseIDParam(c, "attachmentId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid attachment ID"})
+		HandleError(c, err)
 		return
 	}
 
 	// 添付ファイルのメタデータを取得
-	attachment, err := h.attachmentUsecase.GetAttachment(c.Request.Context(), uint(attachmentID))
+	attachment, err := h.attachmentUsecase.GetAttachment(c.Request.Context(), attachmentID)
 	if err != nil {
 		HandleError(c, err)
 		return
 	}
 
 	// ストレージからファイルをダウンロード
-	reader, err := h.attachmentUsecase.DownloadAttachment(c.Request.Context(), uint(attachmentID))
+	reader, err := h.attachmentUsecase.DownloadAttachment(c.Request.Context(), attachmentID)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -138,49 +128,35 @@ func (h *AttachmentHandler) Download(c *gin.Context) {
 
 // Delete は添付ファイルの削除を処理します
 func (h *AttachmentHandler) Delete(c *gin.Context) {
-	incidentIDStr := c.Param("id")
-	_, err := strconv.ParseUint(incidentIDStr, 10, 32)
+	_, err := ParseIDParam(c, "id")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid incident ID"})
+		HandleError(c, err)
 		return
 	}
 
-	attachmentIDStr := c.Param("attachmentId")
-	attachmentID, err := strconv.ParseUint(attachmentIDStr, 10, 32)
+	attachmentID, err := ParseIDParam(c, "attachmentId")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid attachment ID"})
+		HandleError(c, err)
 		return
 	}
 
 	// context からユーザーを取得
-	userIDValue, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+	userIDUint, err := GetUserIDFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
-	userIDUint, ok := userIDValue.(uint)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
-		return
-	}
-
-	roleValue, exists := c.Get("role")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user role not found"})
-		return
-	}
-
-	role, ok := roleValue.(domain.Role)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid role type"})
+	role, err := GetUserRoleFromContext(c)
+	if err != nil {
+		HandleError(c, err)
 		return
 	}
 
 	// 添付ファイルを削除
 	if err := h.attachmentUsecase.DeleteAttachment(
 		c.Request.Context(),
-		uint(attachmentID),
+		attachmentID,
 		userIDUint,
 		role,
 	); err != nil {
